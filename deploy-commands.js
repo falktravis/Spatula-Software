@@ -2,22 +2,19 @@
 /*
 *run this script to register commands in discord server
 
-!do not change it
-unless we are going to make the bot public, then you need to change it
-look in the docs
 
-
-to delete commands go to https://discordjs.guide/slash-commands/deleting-commands.html#deleting-specific-commands
 */
 
 
 const { REST, Routes } = require('discord.js');
 require('dotenv').config();
 const fs = require('node:fs');
+const path = require('node:path');
 
 const commands = [];
 // Grab all the command files from the commands directory you created earlier
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
 for (const file of commandFiles) {
@@ -35,7 +32,8 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 
 		// The put method is used to fully refresh all commands in the guild with the current set
 		const data = await rest.put(
-			Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID),
+			//Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID)
+			Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, process.env.DISCORD_GUILD_ID),
 			{ body: commands },
 		);
 
@@ -45,3 +43,26 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 		console.error(error);
 	}
 })();
+
+/*
+!Command delete/add temp
+
+const { REST, Routes } = require('discord.js');
+require('dotenv').config();
+
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
+
+// ...
+
+// for guild-based commands
+rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID, '1078493726957121608'))
+	.then(() => console.log('Successfully deleted guild command'))
+	.catch(console.error);
+
+// for global commands
+rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1078493726957121608'))
+	.then(() => console.log('Successfully deleted application command'))
+	.catch(console.error);
+
+
+*/

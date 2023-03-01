@@ -2,13 +2,13 @@ const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('link')
-		.setDescription('Set the link')
+		.setName('delete')
+		.setDescription('Delete interval')
         .addStringOption(option => 
-            option.setName('link')
-                .setDescription('link')
+            option.setName('name')
+                .setDescription('name')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply('Link set');
+		await interaction.reply('Deleting');
 	},
 };
