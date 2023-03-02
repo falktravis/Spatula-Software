@@ -38,8 +38,8 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     async function scrollDown(page) {
         try{
             await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
-            await page.waitForFunction(`document.querySelectorAll(".x3ct3a4").length > 25`);
-            //gotta be a better way to get this done, lets reduce queries for processing
+            //await page.waitForFunction(`document.querySelectorAll(".x3ct3a4").length > 25`);
+            await page.waitForFunction(() => document.readyState === "complete");
             return true;    
         } catch (error){
             console.log("Error with scroll: " + error);
