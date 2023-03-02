@@ -1,6 +1,11 @@
 /**
  *              TODO: Figure out a way to make the number of links returned in each query constant
- *              TODO: Run interval only between certain times, workers can only run for a set amount of hours each day
+ *              TODO: Run interval only between certain times
+ *                  -Workers can only run for a set amount of time each day (About 8 Hours)
+ *                  -Accept a start and stop time in command
+ *                  -Check to make sure the time is within the proper bounds in callback, If not throw a error
+ *                  -Make a bool that needs to be true for Interval() to be called
+ *                  -Use a function similar to Interval() to change bool
  *              TODO: Catch any errors and send them to testing channel
  *              TODO: Get some data about how many workers are running and resources being used
  *              TODO: Proxies

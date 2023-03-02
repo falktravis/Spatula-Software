@@ -47,8 +47,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     }
     
     function interval() {
-        //maybe cant run two timeouts at once, try setInterval()?
-        //that leaves the problem of changing the interval every time
         setTimeout(async () => {
             client.channels.cache.get(workerData.channel).send(workerData.name + " - Interval");
             let newPosts = await mainPage.evaluate(() => {
