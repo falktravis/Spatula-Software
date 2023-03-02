@@ -1,11 +1,9 @@
 /**
  *              TODO: Figure out a way to make the number of links returned in each query constant
- *              TODO: Run interval only between certain times
+ *              TODO: Run interval only between certain times, workers can only run for a set amount of hours each day
  *              TODO: Catch any errors and send them to testing channel
+ *              TODO: Get some data about how many workers are running and resources being used
  *              TODO: Proxies
- *              TODO: Do not get results from outside search
- *              TODO: Reduced price message bug
- *              TODO: Make the date look better, add a link to the address
  *              TODO: Don't get results from outside search, while maintaining number of results queried
  * 
  *                          TODO: Get that Shmoney
@@ -51,7 +49,7 @@ client.on(Events.InteractionCreate, async interaction => {
             link: interaction.options.getString("link"),
             min: interaction.options.getInteger("min"),
             max: interaction.options.getInteger("max"),
-            channel: interaction.channelId
+            channel: interaction.channelId,
         }}));
     }
     if(interaction.commandName === "delete"){

@@ -19,26 +19,31 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
     // Set listingStorage, run once in the begging of the day
     let listingStorage;
-    if (await scrollDown(mainPage)){
-        listingStorage = await mainPage.evaluate(() => {
-            const posts = Array.from(document.querySelectorAll(".x3ct3a4"));
-            return posts.map(post => {
-                let link = post.querySelector('a').href;
-                return link.substring(0, link.indexOf("?"));
-                //return post.querySelector('a').href.split("?")[0];
-                //return post.querySelector('a').href.substring(0, 58)
+    try{
+        if (await scrollDown(mainPage)){
+            listingStorage = await mainPage.evaluate(() => {
+                const posts = Array.from(document.querySelectorAll(".x3ct3a4"));
+                return posts.map(post => {
+                    let link = post.querySelector('a').href;
+                    return link.substring(0, link.indexOf("?"));
+                });
             });
-        });
+        }
+    } catch (error){
+        console.log("Error listing storage: " + error);
     }
     console.log(listingStorage);
     console.log(listingStorage.length);
-    
-    //scrolls to bottom of page and returns true if completed
+
     async function scrollDown(page) {
-        const currentHeight = await page.evaluate('document.body.scrollHeight');
-        await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
-        await page.waitForFunction(`document.body.scrollHeight > ${currentHeight}`);
-        return true;
+        try{
+            await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+            await page.waitForFunction(`document.querySelectorAll(".x3ct3a4").length > 25`);
+            //gotta be a better way to get this done, lets reduce queries for processing
+            return true;    
+        } catch (error){
+            console.log("Error with scroll: " + error);
+        }
     }
     
     function interval() {
@@ -57,7 +62,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                     return link.substring(0, link.indexOf("?"));
                 });
             })
-        
+            console.log(newPosts);
             
             for (const post of newPosts) {
                 if(!listingStorage.includes(post)){
@@ -75,8 +80,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                                 title: dom.querySelector('div.xyamay9 h1').innerText,
                                 date: dom.querySelector('div.x1yztbdb span.x676frb.x1nxh6w3').innerText,
                                 description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText,
-                                price: dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText,
-                                //address: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').href
+                                price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[0]
                                 //author:
                             };
                         })
