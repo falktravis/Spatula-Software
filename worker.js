@@ -23,7 +23,10 @@ client.login(process.env.DISCORD_BOT_TOKEN);
         listingStorage = await mainPage.evaluate(() => {
             const posts = Array.from(document.querySelectorAll(".x3ct3a4"));
             return posts.map(post => {
-                return post.querySelector('a').href.substring(0, 58);
+                let link = post.querySelector('a').href;
+                return link.substring(0, link.indexOf("?"));
+                //return post.querySelector('a').href.split("?")[0];
+                //return post.querySelector('a').href.substring(0, 58)
             });
         });
     }
@@ -50,7 +53,8 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                     return posts.indexOf(post) < 10;
                 })
                 return posts.map(post => {
-                    return post.querySelector('a').href.substring(0, 58);
+                    let link = post.querySelector('a').href;
+                    return link.substring(0, link.indexOf("?"));
                 });
             })
         
@@ -71,7 +75,8 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                                 title: dom.querySelector('div.xyamay9 h1').innerText,
                                 date: dom.querySelector('div.x1yztbdb span.x676frb.x1nxh6w3').innerText,
                                 description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText,
-                                price: dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText
+                                price: dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText,
+                                //address: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').href
                                 //author:
                             };
                         })

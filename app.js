@@ -2,9 +2,7 @@
  *              TODO: Figure out a way to make the number of links returned in each query constant
  *              TODO: Run interval only between certain times
  *              TODO: Catch any errors and send them to testing channel
- *              TODO: Delete the worker inside the worker using the name
  *              TODO: Proxies
- *              TODO: Fix the weird link item id problem
  *              TODO: Do not get results from outside search
  *              TODO: Reduced price message bug
  *              TODO: Make the date look better, add a link to the address
