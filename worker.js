@@ -89,7 +89,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
         }
 
         setTimeout(() => {
-
+            
         }, interval * 60000)
     }
 
