@@ -68,30 +68,41 @@ client.login(process.env.DISCORD_BOT_TOKEN);
         }
     }
 
+    /* TODO: Please Test This
+    --Then make use of it by only calling interval if its true
+    --And somehow re calling interval if it goes from false to true
     function handleTime() {
         currentTime = new Date();
+        //range from 0 - 1440
         currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
         let interval;
+        //if user inputs 24, it will be equivilent to currentTime  0
         if(workerData.start < workerData.end){
             if(isRunning){
                 interval = workerData.end - currentTime;
             }else{
-                //if before 12 pm interval = workerData.start + 12pm - currentTime
-                //else workerData.start - currentTime
+                if(currentTime > workerData.end){
+                    interval = (1440 - currentTime) + workerData.start;
+                }else{
+                    interval = workerData.start - currentTime;
+                }
             }
         }else{
             if(isRunning){
-                //if before 12 pm interval = workerData.start + 12pm - currentTime
-                //else workerData.start - currentTime
+                if(currentTime > workerData.start){
+                    interval = (1440 - currentTime) + workerData.end;
+                }else{
+                    interval = workerData.end - currentTime;
+                }
             }else{
-                interval = workerData.end - currentTime;
+                interval = workerData.start - currentTime;
             }
         }
 
         setTimeout(() => {
-
+            isRunning = !isRunning;
         }, interval * 60000)
-    }
+    }*/
 
     function interval() {
         //maybe cant run two timeouts at once, try setInterval()?
