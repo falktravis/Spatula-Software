@@ -24,6 +24,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+client.login(process.env.DISCORD_BOT_TOKEN);
 
 //command set up
 client.commands = new Collection();
@@ -47,15 +48,40 @@ client.on(Events.InteractionCreate, async interaction => {
 	const command = interaction.client.commands.get(interaction.commandName);
 
     if(interaction.commandName === "create"){
-        //sets the name of the worker, name + channel so users can't delete each others workers
-        const name = interaction.options.getString("name") + interaction.channelId;
-        workers.set(name, new Worker('./worker.js', { workerData:{
-            name: interaction.options.getString("name"),
-            link: interaction.options.getString("link"),
-            min: interaction.options.getInteger("min"),
-            max: interaction.options.getInteger("max"),
-            channel: interaction.channelId,
-        }}));
+        let start = interaction.options.getNumber("start");
+        let end = interaction.options.getNumber("end");
+        let min = interaction.options.getInteger("min");
+        let max = interaction.options.getInteger("max");
+
+        //time difference
+        let timeDiff;
+        if(start < end){
+            timeDiff = end - start;
+        }else{
+            timeDiff = 24 - end + start;
+        }
+    
+        //both times are between 1 and 25, the difference is less than or equal to 14
+        if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
+            if(min >= 1 && min <= 120 && max >= 1 && max <= 120){
+                client.channels.cache.get(interaction.channelId).send("All good");
+                //sets the name of the worker, name + channel so users can't delete each others workers
+                const name = interaction.options.getString("name") + interaction.channelId;
+                workers.set(name, new Worker('./worker.js', { workerData:{
+                    name: interaction.options.getString("name"),
+                    link: interaction.options.getString("link"),
+                    min: min,
+                    max: max,
+                    start: start * 60,
+                    end: end * 60,
+                    channel: interaction.channelId,
+                }}));
+            }else{
+                client.channels.cache.get(interaction.channelId).send("Error with Interval\nMin and Max must be between 1 and 120 minutes");
+            }
+        }else{
+            client.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
+        }
     }
     if(interaction.commandName === "delete"){
         const name = interaction.options.getString("name") + interaction.channelId;
@@ -70,8 +96,6 @@ client.on(Events.InteractionCreate, async interaction => {
 		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
 	}
 });
-
-client.login(process.env.DISCORD_BOT_TOKEN);
 
 
 

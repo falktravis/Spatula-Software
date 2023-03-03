@@ -14,13 +14,21 @@ module.exports = {
                 .setRequired(true))
         .addIntegerOption(option => 
             option.setName('min')
-                .setDescription('minimum interval')
+                .setDescription('minimum interval in minutes')
                 .setRequired(true))
         .addIntegerOption(option => 
             option.setName('max')
-                .setDescription('maximum interval')
+                .setDescription('maximum interval in minutes')
+                .setRequired(true))
+        .addNumberOption(option => 
+            option.setName('start')
+                .setDescription('Start time, 24 hour time, no decimals, EST')
+                .setRequired(true))
+        .addNumberOption(option => 
+            option.setName('end')
+                .setDescription('End time, 24 hour time, no decimals, EST')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply('Digging for gold...');
+		await interaction.reply(`Starting ${interaction.options.getString('name')}`);
 	},
 };

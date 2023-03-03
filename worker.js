@@ -20,33 +20,82 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     // Set listingStorage, run once in the begging of the day
     let listingStorage;
     try{
-        if (await scrollDown(mainPage)){
-            listingStorage = await mainPage.evaluate(() => {
-                const posts = Array.from(document.querySelectorAll(".x3ct3a4"));
-                return posts.map(post => {
-                    let link = post.querySelector('a').href;
-                    return link.substring(0, link.indexOf("?"));
-                });
+        listingStorage = await mainPage.evaluate(() => {
+            const posts = Array.from(document.querySelectorAll(".x3ct3a4"));
+            return posts.map(post => {
+                let link = post.querySelector('a').href;
+                return link.substring(0, link.indexOf("?"));
             });
-        }
+        });
     } catch (error){
         console.log("Error listing storage: " + error);
     }
     console.log(listingStorage);
     console.log(listingStorage.length);
 
+/*
+    *Scroll*
+    if (await scrollDown(mainPage)){
+        //set listing here
+    }
     async function scrollDown(page) {
         try{
             await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
-            //await page.waitForFunction(`document.querySelectorAll(".x3ct3a4").length > 25`);
-            await page.waitForFunction(() => document.readyState === "complete");
+            await page.waitForFunction(`document.querySelectorAll(".x3ct3a4").length > 25`);
+            //gotta be a better way to get this done, lets reduce queries for processing
             return true;    
         } catch (error){
             console.log("Error with scroll: " + error);
         }
     }
+*/
     
+    //handle time of day stuff
+    let isRunning;
+    let currentTime = new Date();
+    currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
+    if(workerData.start < workerData.end){
+        if(currentTime > workerData.start && currentTime < workerData.end){
+            isRunning = true;
+        }else{
+            isRunning = false;
+        }
+    }else{
+        if(currentTime > workerData.start && currentTime < workerData.end){
+            isRunning = false;
+        }else{
+            isRunning = true;
+        }
+    }
+
+    function handleTime() {
+        currentTime = new Date();
+        currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
+        let interval;
+        if(workerData.start < workerData.end){
+            if(isRunning){
+                interval = workerData.end - currentTime;
+            }else{
+                //if before 12 pm interval = workerData.start + 12pm - currentTime
+                //else workerData.start - currentTime
+            }
+        }else{
+            if(isRunning){
+                //if before 12 pm interval = workerData.start + 12pm - currentTime
+                //else workerData.start - currentTime
+            }else{
+                interval = workerData.end - currentTime;
+            }
+        }
+
+        setTimeout(() => {
+
+        }, interval * 60000)
+    }
+
     function interval() {
+        //maybe cant run two timeouts at once, try setInterval()?
+        //that leaves the problem of changing the interval every time
         setTimeout(async () => {
             client.channels.cache.get(workerData.channel).send(workerData.name + " - Interval");
             let newPosts = await mainPage.evaluate(() => {
@@ -64,7 +113,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             
             for (const post of newPosts) {
                 if(!listingStorage.includes(post)){
-                    console.log("Post index" + newPosts.indexOf(post));
+                    console.log("Post index: " + newPosts.indexOf(post));
                     listingStorage.push(post);
 
                     try{
