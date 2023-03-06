@@ -27,6 +27,10 @@ module.exports = {
         .addNumberOption(option => 
             option.setName('end')
                 .setDescription('End time, 24 hour time, no decimals, EST')
+                .setRequired(true))
+        .addBooleanOption(option => 
+            option.setName("message")
+                .setDescription('Message the owner of each new post automatically')
                 .setRequired(true)),
 	async execute(interaction) {
 		await interaction.reply(`Starting ${interaction.options.getString('name')}`);

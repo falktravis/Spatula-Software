@@ -1,15 +1,12 @@
 /**
- *              TODO: Figure out a way to make the number of links returned in each query constant
- *              TODO: Run interval only between certain times
- *                  -Workers can only run for a set amount of time each day (About 8 Hours)
- *                  -Accept a start and stop time in command
- *                  -Check to make sure the time is within the proper bounds in callback, If not throw a error
- *                  -Make a bool that needs to be true for Interval() to be called
- *                  -Use a function similar to Interval() to change bool
  *              TODO: Catch any errors and send them to testing channel
  *              TODO: Get some data about how many workers are running and resources being used
  *              TODO: Proxies
- *              TODO: Don't get results from outside search, while maintaining number of results queried
+ *                  -Test and reduce data passed through proxies, mainly images
+ *                  -Data center for now, need some extensive testing (this is what beta testing is for)
+ *              TODO: Auto message, and on click
+ *              TODO: Login in a more universal way
+ *              TODO: Put multiple tabs on one worker?
  * 
  *                          TODO: Get that Shmoney
  * 
@@ -53,6 +50,8 @@ client.on(Events.InteractionCreate, async interaction => {
         let min = interaction.options.getInteger("min");
         let max = interaction.options.getInteger("max");
 
+        //!if user inputs 24, it will be equivilent to currentTime  0
+
         //time difference
         let timeDiff;
         if(start < end){
@@ -64,9 +63,9 @@ client.on(Events.InteractionCreate, async interaction => {
         //both times are between 1 and 25, the difference is less than or equal to 14
         if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
             if(min >= 1 && min <= 120 && max >= 1 && max <= 120){
-                client.channels.cache.get(interaction.channelId).send("All good");
                 //sets the name of the worker, name + channel so users can't delete each others workers
                 const name = interaction.options.getString("name") + interaction.channelId;
+                //!Change the link to force sort by most recent
                 workers.set(name, new Worker('./worker.js', { workerData:{
                     name: interaction.options.getString("name"),
                     link: interaction.options.getString("link"),
@@ -74,6 +73,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     max: max,
                     start: start * 60,
                     end: end * 60,
+                    message: interaction.options.getBoolean("message"),
                     channel: interaction.channelId,
                 }}));
             }else{
