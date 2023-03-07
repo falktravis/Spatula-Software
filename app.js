@@ -55,6 +55,7 @@ client.on(Events.InteractionCreate, async interaction => {
                         autoMessage: interaction.options.getBoolean("auto-message"),
                         channel: interaction.channelId,
                     }}),
+                    autoMessage: interaction.options.getBoolean("auto-message"),
                     children: new Map()
                 });
             }else{
@@ -66,6 +67,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     autoMessage: interaction.options.getBoolean("auto-message"),
                     channel: interaction.channelId,
                 }}),
+                autoMessage: interaction.options.getBoolean("auto-message"),
                 children: new Map()
             });
         }
@@ -88,14 +90,14 @@ client.on(Events.InteractionCreate, async interaction => {
             //both times are between 1 and 25, the difference is less than or equal to 14
             if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
                 //get parent element from map and set new worker as a child
-                console.log("Parent Auto Message: " + facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name")).parent.workerData);
+                console.log("Parent Auto Message: " + facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name")).autoMessage);
                 facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name")).children.set(interaction.options.getString("name"), new Worker('./facebook-child.js', { workerData:{
                     name: interaction.options.getString("name"),
                     parent: interaction.options.getString("parent-name"),
                     link: interaction.options.getString("link"),
                     start: start * 60,
                     end: end * 60,
-                    //autoMessage: facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name")).parent.workerData.autoMessage,
+                    autoMessage: facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name")).autoMessage,
                     channel: interaction.channelId,
                 }}));
             }else{
@@ -122,12 +124,12 @@ client.on(Events.InteractionCreate, async interaction => {
     }
     else if(interaction.commandName === "facebook-delete-parent"){
         if(facebookWorkers.has(interaction.user.id + interaction.options.getString("name"))){
-            let parent = facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name"));
+            let parent = facebookWorkers.get(interaction.user.id + interaction.options.getString("name"));
             parent.children.forEach((child) => {
                 child.terminate();
             });
             parent.parent.terminate();
-            facebookWorkers.delete(interaction.user.id + interaction.options.getString("parent-name"));
+            facebookWorkers.delete(interaction.user.id + interaction.options.getString("name"));
         }else{
             client.channels.cache.get(interaction.channelId).send({ content: "Parent Does not Exist", ephemeral: true });
         }
