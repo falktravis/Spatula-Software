@@ -89,7 +89,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             }else{
                 isCreate = false;
             }
-            console.log("isCreate: " + isCreate);
             intervalFunction(); 
         }else{
             mainPage.close();
@@ -118,25 +117,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
                 try{
                     const newPage = await browser.newPage();
-                    
-                    //login if message is true
-                    if(workerData.message){
-                        await newPage.goto('https://www.facebook.com/login');
-                        await newPage.type('#email', 'falk.travis@gmail.com');
-                        await newPage.type('#pass', 'Bru1ns#18');
-                        await newPage.click('#loginbutton');
-                        
-                        // Wait for navigation to user profile page
-                        await newPage.waitForNavigation();
-                    }
-
                     await newPage.goto(firstPost, { waitUntil: 'domcontentloaded' });
-                    
-                    //get message button and click
-                    if(workerData.message){
-                        const sendMessageButton = await page.$('button[aria-label="Send"][role="button"]');
-                        await sendMessageButton.click();
-                    }
                     
                     let postObj = await newPage.evaluate(() => {
                         let dom = document.querySelector('div.x9f619');
@@ -170,6 +151,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                 mainPage.reload();
                 interval();
             }
-        }, Math.floor((Math.random() * (workerData.max - workerData.min) + workerData.min) * 60000));
+        }, Math.floor((Math.random() * (2) + 2) * 60000));
     } 
 })();

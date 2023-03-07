@@ -2,23 +2,19 @@ const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('create')
-		.setDescription('Create interval')
+		.setName('facebook-create-child')
+		.setDescription('Create Facebook Child')
         .addStringOption(option => 
             option.setName('name')
-                .setDescription('name')
+                .setDescription('Name of Child')
+                .setRequired(true))
+        .addStringOption(option => 
+            option.setName('parent-name')
+                .setDescription('Name of Parent')
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('link')
                 .setDescription('link')
-                .setRequired(true))
-        .addIntegerOption(option => 
-            option.setName('min')
-                .setDescription('minimum interval in minutes')
-                .setRequired(true))
-        .addIntegerOption(option => 
-            option.setName('max')
-                .setDescription('maximum interval in minutes')
                 .setRequired(true))
         .addNumberOption(option => 
             option.setName('start')
@@ -27,12 +23,8 @@ module.exports = {
         .addNumberOption(option => 
             option.setName('end')
                 .setDescription('End time, 24 hour time, no decimals, EST')
-                .setRequired(true))
-        .addBooleanOption(option => 
-            option.setName("message")
-                .setDescription('Message the owner of each new post automatically')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply(`Starting ${interaction.options.getString('name')}`);
+		await interaction.reply(`Starting ${interaction.options.getString('name')} in ${interaction.options.getString('parent-name')}`);
 	},
 };

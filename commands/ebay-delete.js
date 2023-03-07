@@ -2,13 +2,13 @@ const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('delete')
-		.setDescription('Delete interval')
+		.setName('ebay-delete')
+		.setDescription('Delete Ebay Interval')
         .addStringOption(option => 
             option.setName('name')
-                .setDescription('name')
+                .setDescription('Name of Interval')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply('Deleting');
+		await interaction.reply(`Deleting ${interaction.options.getString('name')}`);
 	},
 };
