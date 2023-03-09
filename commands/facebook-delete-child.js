@@ -13,6 +13,6 @@ module.exports = {
 				.setDescription('Name of Parent')
 				.setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply(`Deleting ${interaction.options.getString('name')}`);
+		await interaction.reply(`Deleting ${interaction.options.getString('child-name')} from ${interaction.options.getString('parent-name')}`);
 	},
 };

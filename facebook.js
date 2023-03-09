@@ -117,7 +117,33 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
                 try{
                     const newPage = await browser.newPage();
+                    if(workerData.autoMessage){        
+                        try{
+                            await newPage.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
+                            //!await newPage.type('#email', 'falk.travis@gmail.com');
+                            await newPage.type('#email', workerData.username);
+                            //!await newPage.type('#pass', 'Bru1ns#18');
+                            await newPage.type('#pass', workerData.password);
+                            await newPage.click('button[name="login"]');
+                            await newPage.waitForNavigation();
+                        } catch (error){
+                            console.log("Error with login: " + error);
+                        }
+                    }
                     await newPage.goto(firstPost, { waitUntil: 'domcontentloaded' });
+
+                    if(workerData.autoMessage){                 
+                        try{
+                            const messageTextArea = await newPage.$('label.xzsf02u.x6prxxf textarea');
+                            await messageTextArea.click();
+                            await newPage.keyboard.press('Backspace');
+                            await messageTextArea.type(workerData.message);
+                            const sendMessageButton = await newPage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
+                            await sendMessageButton.click();
+                        } catch (error){
+                            console.log("Error with messaging: " + error);
+                        }
+                    }
                     
                     let postObj = await newPage.evaluate(() => {
                         let dom = document.querySelector('div.x9f619');

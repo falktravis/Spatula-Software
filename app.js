@@ -4,9 +4,11 @@
  *              TODO: Proxies
  *                  -Test and reduce data passed through proxies, mainly images
  *                  -Data center for now, need some extensive testing (this is what beta testing is for)
- *              TODO: Auto message, and on click
- *              TODO: Login in a more universal way
+ *              TODO: Message on click
  *              TODO: Put multiple tabs on one worker?
+ *              TODO: Add commands for changing message and login info
+ *              TODO: Make the message input work
+ *              TODO: Restrict number of workers per user
  * 
  *                          TODO: Get that Shmoney
  * 
@@ -37,123 +39,144 @@ for (const file of commandFiles) {
 	}
 }
 
-const facebookWorkers = new Map();
+const users = new Map();
 
 //listen for commands
 client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
 	const command = interaction.client.commands.get(interaction.commandName);
-
-    if(interaction.commandName === "facebook-create-parent"){
-        if(interaction.options.getBoolean("auto-message") == true){
-            //checks if there is a username a password for auto message
-            if(interaction.options.getString("password") != null && interaction.options.getString("username") != null){
-                facebookWorkers.set(interaction.user.id + interaction.options.getString("name"), {
-                    parent: new Worker('./facebook-parent.js', { workerData:{
-                        username: interaction.options.getString("username"),
-                        password: interaction.options.getString("password"),
-                        autoMessage: interaction.options.getBoolean("auto-message"),
-                        channel: interaction.channelId,
-                    }}),
-                    autoMessage: interaction.options.getBoolean("auto-message"),
-                    children: new Map()
-                });
-            }else{
-                client.channels.cache.get(interaction.channelId).send({ content: 'Error with parent\n If auto-message is true, a username a password is required', ephemeral: true });
-            }
-        }else{
-            facebookWorkers.set(interaction.user.id + interaction.options.getString("name"), {
-                parent: new Worker('./facebook-parent.js', { workerData:{
-                    autoMessage: interaction.options.getBoolean("auto-message"),
-                    channel: interaction.channelId,
-                }}),
-                autoMessage: interaction.options.getBoolean("auto-message"),
-                children: new Map()
-            });
-        }
-        console.log(facebookWorkers);
-    }
-    else if(interaction.commandName === "facebook-create-child"){
-        //checks if parent exists
-        if(facebookWorkers.has(interaction.user.id + interaction.options.getString("parent-name"))){
-            let start = interaction.options.getNumber("start");
-            let end = interaction.options.getNumber("end");
     
-            //time difference
-            let timeDiff;
-            if(start < end){
-                timeDiff = end - start;
-            }else{
-                timeDiff = 24 - end + start;
-            }
-        
-            //both times are between 1 and 25, the difference is less than or equal to 14
-            if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
-                //get parent element from map and set new worker as a child
-                console.log("Parent Auto Message: " + facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name")).autoMessage);
-                facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name")).children.set(interaction.options.getString("name"), new Worker('./facebook-child.js', { workerData:{
-                    name: interaction.options.getString("name"),
-                    parent: interaction.options.getString("parent-name"),
-                    link: interaction.options.getString("link"),
-                    start: start * 60,
-                    end: end * 60,
-                    autoMessage: facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name")).autoMessage,
-                    channel: interaction.channelId,
-                }}));
-            }else{
-                client.channels.cache.get(interaction.channelId).send({ content: "Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours", ephemeral: true });
-            }
-        }else{
-            client.channels.cache.get(interaction.channelId).send({ content: "Parent Does not Exist", ephemeral: true });
-        }
-        console.log(facebookWorkers);
-    }
-    else if(interaction.commandName === "facebook-delete-child"){
-        if(facebookWorkers.has(interaction.user.id + interaction.options.getString("parent-name"))){
-            let parent = facebookWorkers.get(interaction.user.id + interaction.options.getString("parent-name"));
-            if(parent.children.has(interaction.options.getString("child-name"))){
-                parent.children.get(interaction.options.getString("child-name")).terminate();
-                parent.children.delete(interaction.user.id + interaction.options.getString("child-name"));
-            }else{
-                client.channels.cache.get(interaction.channelId).send({ content: "Child Does not Exist", ephemeral: true });
-            }
-        }else{
-            client.channels.cache.get(interaction.channelId).send({ content: "Parent Does not Exist", ephemeral: true });
-        }
-        console.log(facebookWorkers);
-    }
-    else if(interaction.commandName === "facebook-delete-parent"){
-        if(facebookWorkers.has(interaction.user.id + interaction.options.getString("name"))){
-            let parent = facebookWorkers.get(interaction.user.id + interaction.options.getString("name"));
-            parent.children.forEach((child) => {
-                child.terminate();
-            });
-            parent.parent.terminate();
-            facebookWorkers.delete(interaction.user.id + interaction.options.getString("name"));
-        }else{
-            client.channels.cache.get(interaction.channelId).send({ content: "Parent Does not Exist", ephemeral: true });
-        }
-        console.log(facebookWorkers);
-    }
-
 	try {
 		await command.execute(interaction);
 	} catch (error) {
 		console.error(error);
 		await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
 	}
+
+    if(interaction.commandName === "facebook-create-parent"){
+        //checks if user is already created
+        if(!users.has(interaction.user.id)){
+            users.set(interaction.user.id, {
+                facebook: new Map(),
+                ebay: new Map()
+            })
+        }
+
+        if(!users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
+            users.get(interaction.user.id).facebook.set(interaction.options.getString("name"), {
+                username: interaction.options.getString("username"),
+                password: interaction.options.getString("password"),
+                autoMessage: interaction.options.getBoolean("auto-message"),
+                message: interaction.options.getString("message"),
+                children: new Map()
+            });
+            client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
+            console.log(users.get(interaction.user.id).facebook);
+        }else{
+            client.channels.cache.get(interaction.channelId).send({ content: "This name is already used", ephemeral: true });
+        }
+    }
+    else if(interaction.commandName === "facebook-create-child"){
+        //checks if user exists
+        if(users.has(interaction.user.id)){
+            //checks if parent exists
+            if(users.get(interaction.user.id).facebook.has(interaction.options.getString("parent-name"))){
+                if(!users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name")).children.has(interaction.options.getString("name"))){
+                    //!restrict number here
+                    if(interaction.options.getString("link").includes("sortBy=creation_time_descend")){
+                        let start = interaction.options.getNumber("start");
+                        let end = interaction.options.getNumber("end");
+                
+                        //time difference
+                        let timeDiff;
+                        if(start < end){
+                            timeDiff = end - start;
+                        }else{
+                            timeDiff = 24 - end + start;
+                        }
+                    
+                        //both times are between 1 and 25, the difference is less than or equal to 14
+                        if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
+                            //get parent element from map and set new worker as a child
+                            let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name"))
+                            users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name")).children.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
+                                name: interaction.options.getString("name"),
+                                link: interaction.options.getString("link"),
+                                username: parent.username,
+                                password: parent.password,
+                                message: parent.message,
+                                start: start * 60,
+                                end: end * 60,
+                                autoMessage: parent.autoMessage,
+                                channel: interaction.channelId,
+                            }}));
+                            client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
+                        }else{
+                            client.channels.cache.get(interaction.channelId).send({ content: "Search must sort by most recent", ephemeral: true });
+                        }
+                    }else{
+                        client.channels.cache.get(interaction.channelId).send({ content: "Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours", ephemeral: true });
+                    }
+                }else{
+                    client.channels.cache.get(interaction.channelId).send({ content: "A child with this name already exists", ephemeral: true });
+                }
+            }else{
+                client.channels.cache.get(interaction.channelId).send({ content: "Parent does not exist", ephemeral: true });
+            }
+            console.log(users.get(interaction.user.id).facebook);
+        }else{
+            client.channels.cache.get(interaction.channelId).send({ content: "Parent does not exist", ephemeral: true });
+        }
+    }
+    else if(interaction.commandName === "facebook-delete-child"){
+        if(users.has(interaction.user.id)){
+            if(users.get(interaction.user.id).facebook.has(interaction.options.getString("parent-name"))){
+                let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name"));
+                if(parent.children.has(interaction.options.getString("child-name"))){
+                    parent.children.get(interaction.options.getString("child-name")).terminate();
+                    parent.children.delete(interaction.options.getString("child-name"));
+                    client.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("child-name"));
+                }else{
+                    client.channels.cache.get(interaction.channelId).send({ content: "Child does not exist", ephemeral: true });
+                }
+            }else{
+                client.channels.cache.get(interaction.channelId).send({ content: "Parent does not exist", ephemeral: true });
+            }
+            console.log(users.get(interaction.user.id).facebook);
+        }else{
+            client.channels.cache.get(interaction.channelId).send({ content: "Parent does not exist", ephemeral: true });
+        }
+    }
+    else if(interaction.commandName === "facebook-delete-parent"){
+        if(users.has(interaction.user.id)){
+            if(users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
+                let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("name"));
+                parent.children.forEach((child) => {
+                    child.terminate();
+                });
+                users.get(interaction.user.id).facebook.delete(interaction.options.getString("name"));
+                client.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
+            }else{
+                client.channels.cache.get(interaction.channelId).send({ content: "Parent does not exist", ephemeral: true });
+            }
+            console.log(users.get(interaction.user.id).facebook);
+        }else{
+            client.channels.cache.get(interaction.channelId).send({ content: "Parent does not exist", ephemeral: true });
+        }
+    }
+    else if(interaction.commandName === "list"){
+        let list;
+        let user = users.get(interaction.user.id);
+        //check to see if facebook has workers
+        list += "\nFacebook:"
+        user.facebook.forEach((parent, parentKey) => {
+            list += `\n\t${parentKey}`
+            parent.children.forEach((child, childKey) => {
+                list += `\n\t\t${childKey}`
+            })
+        })
+
+        //samezies for Ebay dontcha know 
+        client.channels.cache.get(interaction.channelId).send(list);
+    }
 });
-
-
-
-/*
-    *If we ever need to login to do something*
-
-await mainPage.goto('https://www.facebook.com/');
-await mainPage.type('#email', 'falk.travis@gmail.com');
-await mainPage.type('#pass', 'Bru1ns#18');
-await mainPage.click('button[name="login"]');
-
-// Wait for login to complete and navigate to Facebook Marketplace
-await mainPage.waitForNavigation();
-*/

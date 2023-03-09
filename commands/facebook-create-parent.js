@@ -14,11 +14,15 @@ module.exports = {
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('username')
-                .setDescription('Facebook username, only required if auto-message is true')
-                .setRequired(false))
+                .setDescription('Facebook username, used for messaging')
+                .setRequired(true))
         .addStringOption(option => 
             option.setName('password')
-                .setDescription('Facebook password, only required if auto-message is true')
+                .setDescription('Facebook password, used for messaging')
+                .setRequired(true))
+        .addStringOption(option => 
+            option.setName('message')
+                .setDescription('Message content sent to seller')
                 .setRequired(false)),
 	async execute(interaction) {
 		await interaction.reply(`Starting ${interaction.options.getString('name')}`);
