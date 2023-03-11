@@ -13,7 +13,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     try{
         browser = await puppeteer.launch({ headless: true });
         mainPage = await browser.newPage();
-        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
+        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     } catch (error){
         console.log("Error with main page: " + error);
     }
@@ -81,7 +81,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                 (async () => {
                     try{
                         mainPage = await browser.newPage();
-                        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
+                        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
                     } catch (error){
                         console.log("Error with main page: " + error);
                     }
@@ -117,27 +117,36 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
                 try{
                     const newPage = await browser.newPage();
+                    let isLogin = false;
                     if(workerData.autoMessage){        
                         try{
-                            await newPage.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
+                            await newPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
                             //!await newPage.type('#email', 'falk.travis@gmail.com');
                             await newPage.type('#email', workerData.username);
                             //!await newPage.type('#pass', 'Bru1ns#18');
                             await newPage.type('#pass', workerData.password);
                             await newPage.click('button[name="login"]');
                             await newPage.waitForNavigation();
+                            //!test
+                            if(newPage.url() === 'https://www.facebook.com/'){
+                                isLogin = true;
+                            }else{
+                                client.channels.cache.get(workerData.channel).send(`Facebook Login Invalid at ${workerData.name}\n@everyone`);
+                            }
                         } catch (error){
                             console.log("Error with login: " + error);
                         }
                     }
-                    await newPage.goto(firstPost, { waitUntil: 'domcontentloaded' });
+                    await newPage.goto(firstPost, { waitUntil: 'networkidle0' });
 
-                    if(workerData.autoMessage){                 
+                    if(workerData.autoMessage && isLogin){                 
                         try{
-                            const messageTextArea = await newPage.$('label.xzsf02u.x6prxxf textarea');
-                            await messageTextArea.click();
-                            await newPage.keyboard.press('Backspace');
-                            await messageTextArea.type(workerData.message);
+                            if(workerData.message != null){
+                                const messageTextArea = await newPage.$('label.xzsf02u.x6prxxf textarea');
+                                await messageTextArea.click();
+                                await newPage.keyboard.press('Backspace');
+                                await messageTextArea.type(workerData.message);
+                            }
                             const sendMessageButton = await newPage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
                             await sendMessageButton.click();
                         } catch (error){
@@ -168,6 +177,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                         .setImage(postObj.img)
                         .setTimestamp(new Date())
                     ]});
+                    client.channels.cache.get(workerData.channel).send("@everyone");
                 } catch(error){
                     console.log("error with new page " + error)
                 }
