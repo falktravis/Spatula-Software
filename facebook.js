@@ -12,6 +12,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     let mainPage;
     let isCreate = true;
 
+    //init browser
     try{
         browser = await puppeteer.launch({ headless: true });
         mainPage = await browser.newPage();
@@ -50,6 +51,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
         }
     }
 
+    //sets an interval to turn on/off interval
     function handleTime(intervalFunction) {
         currentTime = new Date();
         //range from 0 - 1440
@@ -105,6 +107,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     }
     handleTime(interval);
 
+    //the meat and cheese
     function interval() {
         setTimeout(async () => {
             client.channels.cache.get(workerData.channel).send(workerData.name + " - Interval");
@@ -117,46 +120,48 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             if(listingStorage != firstPost){
                 listingStorage = firstPost;
 
-                try{
-                    const newPage = await browser.newPage();
-                    let isLogin = false;
-                    if(workerData.autoMessage){        
-                        try{
-                            await newPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
-                            //!await newPage.type('#email', 'falk.travis@gmail.com');
-                            await newPage.type('#email', workerData.username);
-                            //!await newPage.type('#pass', 'Bru1ns#18');
-                            await newPage.type('#pass', workerData.password);
-                            await newPage.click('button[name="login"]');
-                            await newPage.waitForNavigation();
-                            //!test
-                            if(newPage.url() === 'https://www.facebook.com/'){
-                                isLogin = true;
-                            }else{
-                                client.channels.cache.get(workerData.channel).send(`Facebook Login Invalid at ${workerData.name}\n@everyone`);
-                            }
-                        } catch (error){
-                            console.log("Error with login: " + error);
+                const newPage = await browser.newPage();
+                let isLogin = false;
+                if(workerData.autoMessage){        
+                    try{
+                        await newPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
+                        //!await newPage.type('#email', 'falk.travis@gmail.com');
+                        await newPage.type('#email', workerData.username);
+                        //!await newPage.type('#pass', 'Bru1ns#18');
+                        await newPage.type('#pass', workerData.password);
+                        await newPage.click('button[name="login"]');
+                        await newPage.waitForNavigation();
+                        //!test
+                        if(newPage.url() === 'https://www.facebook.com/'){
+                            isLogin = true;
+                        }else{
+                            client.channels.cache.get(workerData.channel).send(`Facebook Login Invalid at ${workerData.name}\n@everyone`);
                         }
+                    } catch (error){
+                        console.log("Error with login: " + error);
                     }
-                    await newPage.goto(firstPost, { waitUntil: 'networkidle0' });
+                }
+                await newPage.goto(firstPost, { waitUntil: 'networkidle0' });
 
-                    if(workerData.autoMessage && isLogin){                 
-                        try{
-                            if(workerData.message != null){
-                                const messageTextArea = await newPage.$('label.xzsf02u.x6prxxf textarea');
-                                await messageTextArea.click();
-                                await newPage.keyboard.press('Backspace');
-                                await messageTextArea.type(workerData.message);
-                            }
-                            const sendMessageButton = await newPage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
-                            await sendMessageButton.click();
-                        } catch (error){
-                            console.log("Error with messaging: " + error);
+                if(workerData.autoMessage && isLogin){                 
+                    try{
+                        if(workerData.message != null){
+                            const messageTextArea = await newPage.$('label.xzsf02u.x6prxxf textarea');
+                            await messageTextArea.click();
+                            await newPage.keyboard.press('Backspace');
+                            await messageTextArea.type(workerData.message);
                         }
+                        const sendMessageButton = await newPage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
+                        await sendMessageButton.click();
+                    } catch (error){
+                        console.log("Error with messaging: " + error);
                     }
-                    
-                    let postObj = await newPage.evaluate(() => {
+                }
+                
+                let postObj;
+                try{
+                    //make a new tab and go to item page to gather info
+                    postObj = await newPage.evaluate(() => {
                         let dom = document.querySelector('div.x9f619');
                         return {
                             img: dom.querySelector('img').src,
@@ -168,7 +173,11 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                         };
                     })
                     newPage.close();
-    
+                } catch(error){
+                    console.log("error with item page: " + error)
+                }
+
+                try{
                     client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
                         .setColor(0x0099FF)
                         .setTitle(postObj.title + " - " + postObj.price)
@@ -180,8 +189,8 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                         .setTimestamp(new Date())
                     ]});
                     client.channels.cache.get(workerData.channel).send("@everyone");
-                } catch(error){
-                    console.log("error with new page " + error)
+                }catch(error){
+                    console.log("error with new item message: " + error);
                 }
             }
 
