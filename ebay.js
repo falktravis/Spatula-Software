@@ -121,23 +121,18 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                 listingStorage = firstPost;
 
                 let postObj;
-                try{
-                    //make a new tab and go to item page to gather info
-                    const newPage = await browser.newPage();
-                    await newPage.goto(firstPost, { waitUntil: 'networkidle0' });
-                    
-                    postObj = await newPage.evaluate(() => {
-                        let dom = document.querySelector('div.x9f619');
+                try{   
+                    postObj = await mainPage.evaluate(() => {
+                        let dom = document.querySelector("ul.srp-results li.s-item");
                         return {
-                            img: ,
-                            title: dom.querySelector('div.xyamay9 h1').innerText,
-                            condition: ,
-                            shipping: ,
-                            description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText,
-                            price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[0]
+                            img: dom.querySelector("img").src,
+                            title: dom.querySelector(".s-item__title").innerText,
+                            condition: dom.querySelector(".s-item__subtitle").innerText,
+                            shipping: dom.querySelector(".s-item__shipping").innerText,
+                            isAuction: dom.querySelector(".s-item__purchase-options").innerText,
+                            price: dom.querySelector(".s-item__price").innerText
                         };
                     })
-                    newPage.close();
                 } catch(error){
                     console.log("error with item page: " + error)
                 }

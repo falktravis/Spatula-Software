@@ -7,8 +7,6 @@
  *              TODO: Message on click
  *              TODO: Put multiple tabs on one worker?
  *              TODO: Add commands for changing message and login info
- *              TODO: Make the message input work
- *              TODO: Restrict number of workers per user
  * 
  *                          TODO: Get that Shmoney
  * 
@@ -172,6 +170,77 @@ client.on(Events.InteractionCreate, async interaction => {
             console.log(users.get(interaction.user.id).facebook);
         }else{
             client.channels.cache.get(interaction.channelId).send("Parent does not exist");
+        }
+    }
+    else if(interaction.commandName === "ebay-create"){
+        //checks if user exists
+        if(!users.has(interaction.user.id)){
+            users.set(interaction.user.id, {
+                workerCount: 0,
+                facebook: new Map(),
+                ebay: new Map()
+            })
+        }
+
+        if(!users.get(interaction.user.id).ebay.has(interaction.options.getString("name"))){
+            if(interaction.options.getString("link").includes("https://www.ebay.com")){
+                if(users.get(interaction.user.id).workerCount < 5){
+                    let start = interaction.options.getNumber("start");
+                    let end = interaction.options.getNumber("end");
+            
+                    console.log("start " + start + "\nend " + end);
+                    //time difference
+                    let timeDiff;
+                    if(start < end){
+                        timeDiff = end - start;
+                    }else{
+                        timeDiff = (24 - end) + start;
+                    }
+                    console.log("Time Diff " + timeDiff)
+                
+                    //both times are between 1 and 25, the difference is less than or equal to 14
+                    if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
+                        //increase the worker count
+                        users.get(interaction.user.id).workerCount++;
+
+                        //fiddle with the link
+                        let link = interaction.options.getString("link");
+
+                        users.get(interaction.user.id).ebay.set(interaction.options.getString("name"), new Worker('./ebay.js', { workerData:{
+                            name: interaction.options.getString("name"),
+                            link: link,
+                            start: start * 60,
+                            end: end * 60,
+                            channel: interaction.channelId,
+                        }}));
+                        client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
+                    }else{
+                        client.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
+                    }
+                }else{
+                    client.channels.cache.get(interaction.channelId).send("You have reached the worker limit, delete one to create another.");
+                }
+            }else{
+                client.channels.cache.get(interaction.channelId).send("Invalid Link");
+            }
+        }else{
+            client.channels.cache.get(interaction.channelId).send("An interval with this name already exists");
+        }
+        console.log(users.get(interaction.user.id).ebay);
+    }
+    else if(interaction.commandName === "ebay-delete"){
+        if(users.has(interaction.user.id)){
+            if(users.get(interaction.user.id).ebay.has(interaction.options.getString("name"))){
+                users.get(interaction.user.id).ebay.get(interaction.options.getString("name")).terminate();
+                users.get(interaction.user.id).ebay.delete(interaction.options.getString("name"));
+                users.get(interaction.user.id).workerCount--;
+                client.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
+            }else{
+                client.channels.cache.get(interaction.channelId).send("Worker does not exist");
+            }
+            console.log(users.get(interaction.user.id).ebay);
+        }else{
+            client.channels.cache.get(interaction.channelId).send("You do not have any workers");
         }
     }
     else if(interaction.commandName === "list"){
