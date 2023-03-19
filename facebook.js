@@ -14,7 +14,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
     //init browser
     try{
-        browser = await puppeteer.launch({ headless: true });
+        browser = await puppeteer.launch({ headless: false });
         mainPage = await browser.newPage();
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     } catch (error){
@@ -117,7 +117,8 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             });
             console.log("First Post Check: " + firstPost);
 
-            if(listingStorage != firstPost){
+            //! Change
+            if(listingStorage == firstPost){
                 listingStorage = firstPost;
 
                 const newPage = await browser.newPage();
@@ -131,7 +132,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                         await newPage.type('#pass', workerData.password);
                         await newPage.click('button[name="login"]');
                         await newPage.waitForNavigation();
-                        //!test
                         if(newPage.url() === 'https://www.facebook.com/'){
                             isLogin = true;
                         }else{
@@ -195,7 +195,9 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             }
 
             if(isRunning){
-                mainPage.reload();
+                await mainPage.reload();
+                await mainPage.waitForNavigation();
+                //await mainPage.waitForNavigation({ waitUntil: 'networkidle0' });
                 interval();
             }
         }, Math.floor((Math.random() * (2) + 2) * 60000));

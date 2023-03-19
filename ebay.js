@@ -15,7 +15,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
     //init browser
     try{
-        browser = await puppeteer.launch({ headless: true });
+        browser = await puppeteer.launch({ headless: false });
         mainPage = await browser.newPage();
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     } catch (error){
@@ -117,13 +117,15 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             });
             console.log("First Post Check: " + firstPost);
 
-            if(listingStorage != firstPost){
+            //! Change
+            if(listingStorage == firstPost){
                 listingStorage = firstPost;
 
                 let postObj;
                 try{   
                     postObj = await mainPage.evaluate(() => {
                         let dom = document.querySelector("ul.srp-results li.s-item");
+                        console.log("SRC" + dom.querySelector("img").src);
                         return {
                             img: dom.querySelector("img").src,
                             title: dom.querySelector(".s-item__title").innerText,
@@ -155,7 +157,8 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             }
 
             if(isRunning){
-                mainPage.reload();
+                await mainPage.reload();
+                await mainPage.waitForNavigation({ waitUntil: 'networkidle0' });
                 interval();
             }
         }, Math.floor((Math.random() * (2) + 2) * 60000));

@@ -7,6 +7,7 @@
  *              TODO: Message on click
  *              TODO: Put multiple tabs on one worker?
  *              TODO: Add commands for changing message and login info
+ *              TODO: Ebay auction and buy now price
  * 
  *                          TODO: Get that Shmoney
  * 
@@ -92,7 +93,7 @@ client.on(Events.InteractionCreate, async interaction => {
                             if(start < end){
                                 timeDiff = end - start;
                             }else{
-                                timeDiff = 24 - end + start;
+                                timeDiff = (24 - start) + end;
                             }
                             console.log("Time Diff " + timeDiff)
                         
@@ -161,6 +162,7 @@ client.on(Events.InteractionCreate, async interaction => {
                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("name"));
                 parent.children.forEach((child) => {
                     child.terminate();
+                    users.get(interaction.user.id).workerCount--;
                 });
                 users.get(interaction.user.id).facebook.delete(interaction.options.getString("name"));
                 client.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
@@ -194,7 +196,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     if(start < end){
                         timeDiff = end - start;
                     }else{
-                        timeDiff = (24 - end) + start;
+                        timeDiff = (24 - start) + end;
                     }
                     console.log("Time Diff " + timeDiff)
                 
