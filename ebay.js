@@ -15,7 +15,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
     //init browser
     try{
-        browser = await puppeteer.launch({ headless: false });
+        browser = await puppeteer.launch({ headless: true });
         mainPage = await browser.newPage();
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     } catch (error){
@@ -110,55 +110,56 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     //the meat and cheese
     function interval() {
         setTimeout(async () => {
-            client.channels.cache.get(workerData.channel).send(workerData.name + " - Interval");
-            let firstPost = await mainPage.evaluate(() => {
-                let link = document.querySelector("ul.srp-results li.s-item a").href;
-                return link.substring(0, link.indexOf("?"));
-            });
-            console.log("First Post Check: " + firstPost);
-
-            //! Change
-            if(listingStorage == firstPost){
-                listingStorage = firstPost;
-
-                let postObj;
-                try{   
-                    postObj = await mainPage.evaluate(() => {
-                        let dom = document.querySelector("ul.srp-results li.s-item");
-                        console.log("SRC" + dom.querySelector("img").src);
-                        return {
-                            img: dom.querySelector("img").src,
-                            title: dom.querySelector(".s-item__title").innerText,
-                            condition: dom.querySelector(".s-item__subtitle").innerText,
-                            shipping: dom.querySelector(".s-item__shipping").innerText,
-                            isAuction: dom.querySelector(".s-item__purchase-options").innerText,
-                            price: dom.querySelector(".s-item__price").innerText
-                        };
-                    })
-                } catch(error){
-                    console.log("error with item page: " + error)
-                }
-    
-                try{
-                    client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
-                        .setColor(0x0099FF)
-                        .setTitle(postObj.title + " - " + postObj.price)
-                        .setURL(firstPost)
-                        .setAuthor({ name: workerData.name })
-                        .setDescription(postObj.description)
-                        .addFields({ name: postObj.date, value: " " })
-                        .setImage(postObj.img)
-                        .setTimestamp(new Date())
-                    ]});
-                    client.channels.cache.get(workerData.channel).send("@everyone");
-                }catch(error){
-                    console.log("error with new item message: " + error);
-                }
-            }
-
+            //checks if the page is within run time
             if(isRunning){
-                await mainPage.reload();
-                await mainPage.waitForNavigation({ waitUntil: 'networkidle0' });
+                client.channels.cache.get(workerData.channel).send(workerData.name + " - Interval");
+                let firstPost = await mainPage.evaluate(() => {
+                    let link = document.querySelector("ul.srp-results li.s-item a").href;
+                    return link.substring(0, link.indexOf("?"));
+                });
+                console.log("First Post Check: " + firstPost);
+
+                //! Change
+                if(listingStorage != firstPost){
+                    listingStorage = firstPost;
+
+                    let postObj;
+                    try{   
+                        postObj = await mainPage.evaluate(() => {
+                            let dom = document.querySelector("ul.srp-results li.s-item");
+                            console.log("SRC" + dom.querySelector("img").src);
+                            return {
+                                img: dom.querySelector("img").src,
+                                title: dom.querySelector(".s-item__title").innerText,
+                                condition: dom.querySelector(".s-item__subtitle").innerText,
+                                shipping: dom.querySelector(".s-item__shipping").innerText,
+                                isAuction: dom.querySelector(".s-item__dynamic").innerText,
+                                price: dom.querySelector(".s-item__price").innerText
+                            };
+                        })
+                    } catch(error){
+                        console.log("error with item page: " + error)
+                    }
+
+                    try{
+                        client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle(postObj.title + " - " + postObj.price)
+                            .setURL(firstPost)
+                            .setAuthor({ name: workerData.name })
+                            .addFields(
+                                { name: postObj.isAuction, value: postObj.shipping },
+                                { name: postObj.condition, value: " " })
+                            .setImage(postObj.img)
+                            .setTimestamp(new Date())
+                        ]});
+                        client.channels.cache.get(workerData.channel).send("New Ebay Post From " + workerData.name + " @everyone");
+                    }catch(error){
+                        console.log("error with new item message: " + error);
+                    }
+                }
+
+                await mainPage.reload({ waitUntil: 'networkidle0' });
                 interval();
             }
         }, Math.floor((Math.random() * (2) + 2) * 60000));

@@ -23,7 +23,24 @@ module.exports = {
         .addNumberOption(option => 
             option.setName('end')
                 .setDescription('End time, 24 hour time, no decimals, EST')
-                .setRequired(true)),
+                .setRequired(true))
+        .addNumberOption(option => 
+            option.setName('distance')
+                .setDescription('Maximum item distance from location')
+                .setRequired(true)
+                .addChoices(				
+                    { name: '1', value: 0 },
+                    { name: '2', value: 1 },
+                    { name: '5', value: 2 },
+                    { name: '10', value: 3 },
+                    { name: '20', value: 4 },
+                    { name: '40', value: 5 },
+                    { name: '60', value: 6 },
+                    { name: '80', value: 7 },
+                    { name: '100', value: 8 },
+                    { name: '250', value: 9 },
+                    { name: '500', value: 10 },
+                )),
 	async execute(interaction) {
 		await interaction.reply(`Starting ${interaction.options.getString('name')} in ${interaction.options.getString('parent-name')}`);
 	},

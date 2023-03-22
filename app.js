@@ -20,7 +20,7 @@ const { Worker } = require('worker_threads');
 //general set up
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Events, GatewayIntentBits, Collection, IntegrationExpireBehavior } = require('discord.js');
+const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
@@ -71,7 +71,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 children: new Map()
             });
             client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
-            console.log(users.get(interaction.user.id).facebook);
         }else{
             client.channels.cache.get(interaction.channelId).send("This name is already used");
         }
@@ -87,7 +86,6 @@ client.on(Events.InteractionCreate, async interaction => {
                             let start = interaction.options.getNumber("start");
                             let end = interaction.options.getNumber("end");
                     
-                            console.log("start " + start + "\nend " + end);
                             //time difference
                             let timeDiff;
                             if(start < end){
@@ -95,7 +93,6 @@ client.on(Events.InteractionCreate, async interaction => {
                             }else{
                                 timeDiff = (24 - start) + end;
                             }
-                            console.log("Time Diff " + timeDiff)
                         
                             //both times are between 1 and 25, the difference is less than or equal to 14
                             if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
@@ -104,7 +101,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
                                 //get parent element from map and set new worker as a child
                                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name"))
-                                users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name")).children.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
+                                users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name")).children.set(interaction.options.getString("name"), new Worker(parent.autoMessage ? './facebookAuto.js' : './facebook.js', { workerData:{
                                     name: interaction.options.getString("name"),
                                     link: interaction.options.getString("link") + "&daysSinceListed=0&sortBy=creation_time_descend",
                                     username: parent.username,
@@ -112,7 +109,7 @@ client.on(Events.InteractionCreate, async interaction => {
                                     message: parent.message,
                                     start: start * 60,
                                     end: end * 60,
-                                    autoMessage: parent.autoMessage,
+                                    distance: interaction.distance,
                                     channel: interaction.channelId,
                                 }}));
                                 client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
@@ -131,7 +128,6 @@ client.on(Events.InteractionCreate, async interaction => {
             }else{
                 client.channels.cache.get(interaction.channelId).send("Parent does not exist");
             }
-            console.log(users.get(interaction.user.id).facebook);
         }else{
             client.channels.cache.get(interaction.channelId).send("Parent does not exist");
         }
@@ -151,7 +147,6 @@ client.on(Events.InteractionCreate, async interaction => {
             }else{
                 client.channels.cache.get(interaction.channelId).send("Parent does not exist");
             }
-            console.log(users.get(interaction.user.id).facebook);
         }else{
             client.channels.cache.get(interaction.channelId).send("Parent does not exist");
         }
@@ -169,7 +164,6 @@ client.on(Events.InteractionCreate, async interaction => {
             }else{
                 client.channels.cache.get(interaction.channelId).send("Parent does not exist");
             }
-            console.log(users.get(interaction.user.id).facebook);
         }else{
             client.channels.cache.get(interaction.channelId).send("Parent does not exist");
         }
@@ -228,7 +222,6 @@ client.on(Events.InteractionCreate, async interaction => {
         }else{
             client.channels.cache.get(interaction.channelId).send("An interval with this name already exists");
         }
-        console.log(users.get(interaction.user.id).ebay);
     }
     else if(interaction.commandName === "ebay-delete"){
         if(users.has(interaction.user.id)){
@@ -240,7 +233,6 @@ client.on(Events.InteractionCreate, async interaction => {
             }else{
                 client.channels.cache.get(interaction.channelId).send("Worker does not exist");
             }
-            console.log(users.get(interaction.user.id).ebay);
         }else{
             client.channels.cache.get(interaction.channelId).send("You do not have any workers");
         }
