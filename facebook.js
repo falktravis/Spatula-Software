@@ -20,27 +20,32 @@ client.login(process.env.DISCORD_BOT_TOKEN);
         console.log("Error with main page: " + error);
     }
 
-    /*
     //set distance
     try{
         if(workerData.distance != 5){
-            await mainPage.click("div.x1ja2u2z.xl56j7k");
-            await mainPage.waitForSelector('div[aria-label="Change location"]');
+            await mainPage.click("div.x1s85apg.xqupn85.x1tsjjzn.xxq74qr.x4v5mdz.xjfs22q.x18a7wqs div");
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
-            const distanceButtonId = await mainPage.$eval('div.x1iyjqo2 div.x4k7w5x', el => el.firstElementChild.id).slice(0, -1) + workerData.distance;
+            const Id = await mainPage.$eval('div.x1iyjqo2 div.x4k7w5x > :first-child', el => el.id);
+            const distanceButtonId = Id.slice(0, -1) + workerData.distance;
             console.log(distanceButtonId);
             await mainPage.click('#' + distanceButtonId);
+            await mainPage.click('[aria-label="Apply"]');
         }
     }catch (error){
         console.log("Error with setting distance: " + error);
-    }*/
+    }
 
     // Set listingStorage, run once in the begging of the day
     let listingStorage;
     try{
         listingStorage = await mainPage.evaluate(() => {
-            let link = document.querySelector(".x3ct3a4 a").href;
-            return link.substring(0, link.indexOf("?"));
+            if(document.querySelector(".xx6bls6") != null){
+                let link = document.querySelector(".x3ct3a4 a").href;
+                return link.substring(0, link.indexOf("?"));
+            }else {
+                return null;
+            }
         });
     } catch (error){
         console.log("Error listing storage: " + error);
@@ -124,15 +129,17 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     //the meat and cheese
     function interval() {
         setTimeout(async () => {
-            client.channels.cache.get(workerData.channel).send(workerData.name + " - Interval");
             let firstPost = await mainPage.evaluate(() => {
-                let link = document.querySelector(".x3ct3a4 a").href;
-                return link.substring(0, link.indexOf("?"));
+                if(document.querySelector(".xx6bls6") != null){
+                    let link = document.querySelector(".x3ct3a4 a").href;
+                    return link.substring(0, link.indexOf("?"));
+                }else {
+                    return null;
+                }
             });
             console.log("First Post Check: " + firstPost);
 
-            //! Change
-            if(listingStorage == firstPost){
+            if(listingStorage != firstPost){
                 listingStorage = firstPost;
 
                 const newPage = await browser.newPage();
@@ -157,7 +164,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                 }
 
                 try{
-                    client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
+                    const notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
                         .setColor(0x0099FF)
                         .setTitle(postObj.title + " - " + postObj.price)
                         .setURL(firstPost)
@@ -169,11 +176,60 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                     ], components: [new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                            .setCustomId('primary')
+                            .setCustomId('message-' + firstPost)
                             .setLabel('Message')
                             .setStyle(ButtonStyle.Primary),
                         )
                     ]});
+
+                    //message button listener
+                    const filter = i => i.customId.split("-")[0] == 'message';
+                    const collector = notification.createMessageComponentCollector({ filter, time: 14400000 });
+                    collector.on('collect', async i => {
+                        console.log("message button click");
+
+                        (async () => {
+                            const messagePage = await browser.newPage();
+                            let isLogin = false;   
+                            try{
+                                await messagePage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
+                                await messagePage.type('#email', workerData.username);
+                                await messagePage.type('#pass', workerData.password);
+                                await messagePage.click('button[name="login"]');
+                                await messagePage.waitForNavigation();
+                                if(messagePage.url() === 'https://www.facebook.com/'){
+                                    isLogin = true;
+                                }else{
+                                    client.channels.cache.get(workerData.channel).send(`Facebook Login Invalid at ${workerData.name}\n@everyone`);
+                                }
+                            } catch (error){ 
+                                console.log("Error with login: " + error);
+                            }
+
+                            await messagePage.goto(i.customId.split("-")[1] , { waitUntil: 'networkidle0' });
+                        
+                            if(isLogin){                 
+                                try{
+                                    if(workerData.message != null){
+                                        const messageTextArea = await messagePage.$('label.xzsf02u.x6prxxf textarea');
+                                        await messageTextArea.click();
+                                        await messagePage.keyboard.press('Backspace');
+                                        await messageTextArea.type(workerData.message);
+                                    }
+                                    const sendMessageButton = await messagePage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
+                                    await sendMessageButton.click();
+                                } catch (error){
+                                    console.log("Error with messaging: " + error);
+                                }
+                            }
+                        })();
+
+                        await i.update({ content: 'Message sent!', components: [] });
+                        collector.stop();
+                    });
+                    collector.on('end', () => {
+                        notification.edit({ components: [] });
+                    });
                 }catch(error){
                     console.log("error with new item message: " + error);
                 }
@@ -186,39 +242,3 @@ client.login(process.env.DISCORD_BOT_TOKEN);
         }, Math.floor((Math.random() * (2) + 2) * 60000));
     } 
 })();
-
-const Message = async () => {
-    const messagePage = await browser.newPage();
-    let isLogin = false;   
-    try{
-        await messagePage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
-        await messagePage.type('#email', workerData.username);
-        await messagePage.type('#pass', workerData.password);
-        await messagePage.click('button[name="login"]');
-        await messagePage.waitForNavigation();
-        if(messagePage.url() === 'https://www.facebook.com/'){
-            isLogin = true;
-        }else{
-            client.channels.cache.get(workerData.channel).send(`Facebook Login Invalid at ${workerData.name}\n@everyone`);
-        }
-    } catch (error){
-        console.log("Error with login: " + error);
-    }
-
-    await newPage.goto("link", { waitUntil: 'networkidle0' });
-
-    if(isLogin){                 
-        try{
-            if(workerData.message != null){
-                const messageTextArea = await newPage.$('label.xzsf02u.x6prxxf textarea');
-                await messageTextArea.click();
-                await newPage.keyboard.press('Backspace');
-                await messageTextArea.type(workerData.message);
-            }
-            const sendMessageButton = await newPage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
-            await sendMessageButton.click();
-        } catch (error){
-            console.log("Error with messaging: " + error);
-        }
-    }
-}

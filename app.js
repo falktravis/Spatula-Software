@@ -4,10 +4,9 @@
  *              TODO: Proxies
  *                  -Test and reduce data passed through proxies, mainly images
  *                  -Data center for now, need some extensive testing (this is what beta testing is for)
- *              TODO: Message on click
  *              TODO: Put multiple tabs on one worker?
  *              TODO: Add commands for changing message and login info
- *              TODO: Ebay auction and buy now price
+ *              TODO: Humanize
  * 
  *                          TODO: Get that Shmoney
  * 
@@ -109,7 +108,7 @@ client.on(Events.InteractionCreate, async interaction => {
                                     message: parent.message,
                                     start: start * 60,
                                     end: end * 60,
-                                    distance: interaction.distance,
+                                    distance: interaction.options.getNumber("distance"),
                                     channel: interaction.channelId,
                                 }}));
                                 client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
@@ -201,6 +200,8 @@ client.on(Events.InteractionCreate, async interaction => {
 
                         //fiddle with the link
                         let link = interaction.options.getString("link");
+                        link = link.substring(0, link.indexOf("&")) + '&_sop=10' + link.substring(link.indexOf('&'));
+                        console.log(link);
 
                         users.get(interaction.user.id).ebay.set(interaction.options.getString("name"), new Worker('./ebay.js', { workerData:{
                             name: interaction.options.getString("name"),

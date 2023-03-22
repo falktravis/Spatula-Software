@@ -13,34 +13,39 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
     //init browser
     try{
-        browser = await puppeteer.launch({ headless: true });
+        browser = await puppeteer.launch({ headless: false });
         mainPage = await browser.newPage();
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     } catch (error){
         console.log("Error with main page: " + error);
     }
 
-    /*
     //set distance
     try{
         if(workerData.distance != 5){
-            await mainPage.click("div.x1ja2u2z.xl56j7k");
-            await mainPage.waitForSelector('div[aria-label="Change location"]');
+            await mainPage.click("div.x1s85apg.xqupn85.x1tsjjzn.xxq74qr.x4v5mdz.xjfs22q.x18a7wqs div");
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
-            const distanceButtonId = await mainPage.$eval('div.x1iyjqo2 div.x4k7w5x', el => el.firstElementChild.id).slice(0, -1) + workerData.distance;
+            const Id = await mainPage.$eval('div.x1iyjqo2 div.x4k7w5x > :first-child', el => el.id);
+            const distanceButtonId = Id.slice(0, -1) + workerData.distance;
             console.log(distanceButtonId);
             await mainPage.click('#' + distanceButtonId);
+            await mainPage.click('[aria-label="Apply"]');
         }
     }catch (error){
         console.log("Error with setting distance: " + error);
-    }*/
+    }
 
     // Set listingStorage, run once in the begging of the day
     let listingStorage;
     try{
         listingStorage = await mainPage.evaluate(() => {
-            let link = document.querySelector(".x3ct3a4 a").href;
-            return link.substring(0, link.indexOf("?"));
+            if(document.querySelector(".xx6bls6") != null){
+                let link = document.querySelector(".x3ct3a4 a").href;
+                return link.substring(0, link.indexOf("?"));
+            }else {
+                return null;
+            }
         });
     } catch (error){
         console.log("Error listing storage: " + error);
@@ -124,14 +129,16 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     //the meat and cheese
     function interval() {
         setTimeout(async () => {
-            client.channels.cache.get(workerData.channel).send(workerData.name + " - Interval");
             let firstPost = await mainPage.evaluate(() => {
-                let link = document.querySelector(".x3ct3a4 a").href;
-                return link.substring(0, link.indexOf("?"));
+                if(document.querySelector(".xx6bls6") != null){
+                    let link = document.querySelector(".x3ct3a4 a").href;
+                    return link.substring(0, link.indexOf("?"));
+                }else {
+                    return null;
+                }
             });
             console.log("First Post Check: " + firstPost);
 
-            //! Change
             if(listingStorage != firstPost){
                 listingStorage = firstPost;
 
@@ -139,9 +146,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                 let isLogin = false;   
                 try{
                     await newPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
-                    //!await newPage.type('#email', 'falk.travis@gmail.com');
                     await newPage.type('#email', workerData.username);
-                    //!await newPage.type('#pass', 'Bru1ns#18');
                     await newPage.type('#pass', workerData.password);
                     await newPage.click('button[name="login"]');
                     await newPage.waitForNavigation();

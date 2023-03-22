@@ -112,7 +112,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
         setTimeout(async () => {
             //checks if the page is within run time
             if(isRunning){
-                client.channels.cache.get(workerData.channel).send(workerData.name + " - Interval");
                 let firstPost = await mainPage.evaluate(() => {
                     let link = document.querySelector("ul.srp-results li.s-item a").href;
                     return link.substring(0, link.indexOf("?"));
@@ -133,7 +132,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                                 title: dom.querySelector(".s-item__title").innerText,
                                 condition: dom.querySelector(".s-item__subtitle").innerText,
                                 shipping: dom.querySelector(".s-item__shipping").innerText,
-                                isAuction: dom.querySelector(".s-item__dynamic").innerText,
+                                isAuction: dom.querySelector(".s-item__bids") == null ? "Buy it now" : dom.querySelector(".s-item__bids").innerText,
                                 price: dom.querySelector(".s-item__price").innerText
                             };
                         })
