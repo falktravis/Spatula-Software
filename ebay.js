@@ -78,7 +78,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                 interval = workerData.start - currentTime;
             }
         }
-        console.log("time to change: " + interval);
         
         if(isRunning){
             if(isCreate == false){
@@ -126,7 +125,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                     try{   
                         postObj = await mainPage.evaluate(() => {
                             let dom = document.querySelector("ul.srp-results li.s-item");
-                            console.log("SRC" + dom.querySelector("img").src);
                             return {
                                 img: dom.querySelector("img").src,
                                 title: dom.querySelector(".s-item__title").innerText,

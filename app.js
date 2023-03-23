@@ -7,6 +7,7 @@
  *              TODO: Put multiple tabs on one worker?
  *              TODO: Add commands for changing message and login info
  *              TODO: Humanize
+ *              TODO: Stuipd fricken distance and results outside search err
  * 
  *                          TODO: Get that Shmoney
  * 

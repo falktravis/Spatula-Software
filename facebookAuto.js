@@ -28,7 +28,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
             const Id = await mainPage.$eval('div.x1iyjqo2 div.x4k7w5x > :first-child', el => el.id);
             const distanceButtonId = Id.slice(0, -1) + workerData.distance;
-            console.log(distanceButtonId);
             await mainPage.click('#' + distanceButtonId);
             await mainPage.click('[aria-label="Apply"]');
         }
@@ -40,7 +39,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     let listingStorage;
     try{
         listingStorage = await mainPage.evaluate(() => {
-            if(document.querySelector(".xx6bls6") != null){
+            if(document.querySelector(".xx6bls6") == null){
                 let link = document.querySelector(".x3ct3a4 a").href;
                 return link.substring(0, link.indexOf("?"));
             }else {
@@ -130,7 +129,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     function interval() {
         setTimeout(async () => {
             let firstPost = await mainPage.evaluate(() => {
-                if(document.querySelector(".xx6bls6") != null){
+                if(document.querySelector(".xx6bls6") == null){
                     let link = document.querySelector(".x3ct3a4 a").href;
                     return link.substring(0, link.indexOf("?"));
                 }else {
