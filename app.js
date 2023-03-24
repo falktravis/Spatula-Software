@@ -7,8 +7,21 @@
  *              TODO: Put multiple tabs on one worker?
  *              TODO: Add commands for changing message and login info
  *              TODO: Humanize
- *              TODO: Stuipd fricken distance and results outside search err
- *              TODO: Reverse isUsed on child delete in both facebook delete commands
+ * 
+ *          *replacement for puppeteer to add plugins*
+ *          npm install puppeteer puppeteer-extra
+ *          *helps us hide from big bad FB*
+ *          npm install puppeteer-extra-plugin-stealth
+ *          *block resources to save bandwidth, for proxys*    
+ *          npm install puppeteer-extra-plugin-block-resources
+ *          *stream line click and wait for navigation*
+ *          npm install puppeteer-extra-plugin-click-and-wait
+ *          *proxy*
+ *          npm install puppeteer-page-proxy
+ *          *humanize mouse movement
+ *          npm install @extra/humanize
+ *          !might not be the best way, more research required
+ *          
  * 
  *                          TODO: Get that Shmoney
  * 
