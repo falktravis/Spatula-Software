@@ -53,12 +53,12 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 // ...
 
 // for guild-based commands
-rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID, '1082858124358197278'))
+rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID, '1087878186857140288'))
 	.then(() => console.log('Successfully deleted guild command'))
 	.catch(console.error);
 
 // for global commands
-rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1082858124358197278'))
+rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1087878186857140288'))
 	.then(() => console.log('Successfully deleted application command'))
 	.catch(console.error);
 

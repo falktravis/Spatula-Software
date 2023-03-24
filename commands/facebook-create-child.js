@@ -16,6 +16,10 @@ module.exports = {
             option.setName('link')
                 .setDescription('link')
                 .setRequired(true))
+        .addBooleanOption(option => 
+            option.setName('login-search')
+                .setDescription('login on search for accurate distance parameter')
+                .setRequired(true))
         .addNumberOption(option => 
             option.setName('start')
                 .setDescription('Start time, 24 hour time, no decimals, EST')
@@ -27,7 +31,7 @@ module.exports = {
         .addNumberOption(option => 
             option.setName('distance')
                 .setDescription('Maximum item distance from location')
-                .setRequired(true)
+                .setRequired(false)
                 .addChoices(				
                     { name: '1', value: 0 },
                     { name: '2', value: 1 },

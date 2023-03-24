@@ -15,19 +15,38 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     try{
         browser = await puppeteer.launch({ headless: false });
         mainPage = await browser.newPage();
+
+        //login burner
+        if(workerData.burnerUsername != undefined){
+            await mainPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
+            await mainPage.type('#email', workerData.burnerUsername);
+            await mainPage.type('#pass', workerData.burnerPassword);
+            await mainPage.click('button[name="login"]');
+            await mainPage.waitForNavigation();
+            console.log(mainPage.url());
+            if(mainPage.url() === 'https://www.facebook.com/' || mainPage.url() === 'https://www.facebook.com/?sk=welcome'){
+                isLogin = true;
+            }else{
+                client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
+            }
+        }
+
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     } catch (error){
-        console.log("Error with main page: " + error);
+        console.log("Error with start up: " + error);
     }
 
     //set distance
     try{
-        if(workerData.distance != 5){
+        if(workerData.distance != 5 && workerData.distance != null && workerData.burnerUsername != undefined){
             await mainPage.click("div.x1s85apg.xqupn85.x1tsjjzn.xxq74qr.x4v5mdz.xjfs22q.x18a7wqs div");
+            //! Error with setting distance: TimeoutError: Waiting for selector `div.x9f619.x14vqqas.xh8yej3` failed: Waiting failed: 30000ms exceeded
             await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
             const Id = await mainPage.$eval('div.x1iyjqo2 div.x4k7w5x > :first-child', el => el.id);
+            console.log(workerData.distance);
             const distanceButtonId = Id.slice(0, -1) + workerData.distance;
+            console.log(distanceButtonId);
             await mainPage.click('#' + distanceButtonId);
             await mainPage.click('[aria-label="Apply"]');
         }
@@ -188,27 +207,16 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                         console.log("message button click");
 
                         (async () => {
+                            //!both accounts on the same browser
                             const messagePage = await browser.newPage();
-                            let isLogin = false;   
                             try{
                                 await messagePage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
-                                await messagePage.type('#email', workerData.username);
-                                await messagePage.type('#pass', workerData.password);
+                                await messagePage.type('#email', workerData.mainUsername);
+                                await messagePage.type('#pass', workerData.mainPassword);
                                 await messagePage.click('button[name="login"]');
                                 await messagePage.waitForNavigation();
                                 if(messagePage.url() === 'https://www.facebook.com/'){
-                                    isLogin = true;
-                                }else{
-                                    client.channels.cache.get(workerData.channel).send(`Facebook Login Invalid at ${workerData.name}\n@everyone`);
-                                }
-                            } catch (error){ 
-                                console.log("Error with login: " + error);
-                            }
-
-                            await messagePage.goto(i.customId.split("-")[1] , { waitUntil: 'networkidle0' });
-                        
-                            if(isLogin){                 
-                                try{
+                                    await messagePage.goto(i.customId.split("-")[1] , { waitUntil: 'networkidle0' });   
                                     if(workerData.message != null){
                                         const messageTextArea = await messagePage.$('label.xzsf02u.x6prxxf textarea');
                                         await messageTextArea.click();
@@ -217,9 +225,11 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                                     }
                                     const sendMessageButton = await messagePage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
                                     await sendMessageButton.click();
-                                } catch (error){
-                                    console.log("Error with messaging: " + error);
+                                }else{
+                                    client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}\n@everyone`);
                                 }
+                            } catch (error){ 
+                                console.log("Error with login and message: " + error);
                             }
                         })();
 

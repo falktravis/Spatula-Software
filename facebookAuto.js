@@ -15,14 +15,29 @@ client.login(process.env.DISCORD_BOT_TOKEN);
     try{
         browser = await puppeteer.launch({ headless: false });
         mainPage = await browser.newPage();
+
+        //login burner
+        if(workerData.burnerUsername != undefined){
+            await mainPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
+            await mainPage.type('#email', workerData.burnerUsername);
+            await mainPage.type('#pass', workerData.burnerPassword);
+            await mainPage.click('button[name="login"]');
+            await mainPage.waitForNavigation();
+            if(mainPage.url() === 'https://www.facebook.com/'){
+                isLogin = true;
+            }else{
+                client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
+            }
+        }
+
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     } catch (error){
-        console.log("Error with main page: " + error);
+        console.log("Error with start up: " + error);
     }
 
     //set distance
     try{
-        if(workerData.distance != 5){
+        if(workerData.distance != 5 && workerData.distance != null && workerData.burnerUsername != undefined){
             await mainPage.click("div.x1s85apg.xqupn85.x1tsjjzn.xxq74qr.x4v5mdz.xjfs22q.x18a7wqs div");
             await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
@@ -141,18 +156,19 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             if(listingStorage != firstPost){
                 listingStorage = firstPost;
 
+                //!both accounts on the same browser
                 const newPage = await browser.newPage();
                 let isLogin = false;   
                 try{
                     await newPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
-                    await newPage.type('#email', workerData.username);
-                    await newPage.type('#pass', workerData.password);
+                    await newPage.type('#email', workerData.mainUsername);
+                    await newPage.type('#pass', workerData.mainPassword);
                     await newPage.click('button[name="login"]');
                     await newPage.waitForNavigation();
                     if(newPage.url() === 'https://www.facebook.com/'){
                         isLogin = true;
                     }else{
-                        client.channels.cache.get(workerData.channel).send(`Facebook Login Invalid at ${workerData.name}\n@everyone`);
+                        client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}\n@everyone`);
                     }
                 } catch (error){
                     console.log("Error with login: " + error);

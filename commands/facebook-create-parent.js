@@ -21,6 +21,10 @@ module.exports = {
                 .setDescription('Facebook password, used for messaging')
                 .setRequired(true))
         .addStringOption(option => 
+            option.setName('burner-logins')
+                .setDescription('Burner logins used for searching, use this syntax (username:password, username:password, etc...)')
+                .setRequired(false))
+        .addStringOption(option => 
             option.setName('message')
                 .setDescription('Message content sent to seller')
                 .setRequired(false)),
