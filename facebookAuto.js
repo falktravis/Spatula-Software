@@ -1,29 +1,78 @@
-const puppeteer = require('puppeteer');
+//require
 const { workerData } = require('worker_threads');
+const puppeteer = require('puppeteer-extra');
+const stealthPlugin = require('puppeteer-extra-plugin-stealth')
+puppeteer.use(stealthPlugin());
 
 //discord.js
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
+//User agents
+const userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/96.0.1',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/96.0.1',
+    // add more user agent strings as needed
+];
+const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+
 (async () => {
-    let browser;
-    let mainPage;
+    //general instantiation
     let isCreate = true;
+    let networkTracking = 0;
+    let newPost;
+    let isNewPost;
 
-    //init browser
+    //init main browser
+    let mainBrowser;
+    let mainPage;
+    let blockRequests = false;
     try{
-        browser = await puppeteer.launch({ headless: false });
-        mainPage = await browser.newPage();
+        //TODO: set static proxy
+        mainBrowser = await puppeteer.launch({
+            headless: false,
+            defaultViewport: { width: 1000, height: 600 },
+            args: ['--disable-notifications' `--user-agent=${randomUserAgent}`]
+        });
+        mainPage = await mainBrowser.newPage();
 
-        //login burner
+        await mainPage.setRequestInterception(true);
+        //track network consumption
+        mainPage.on('response', (response) => {
+            const contentLengthHeader = response.headers()['content-length'];
+            if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
+                console.log(parseInt(contentLengthHeader) + '\n');
+                networkTracking += parseInt(contentLengthHeader);
+            }
+        });
+
+        mainPage.on('request', async request => {
+            const url = request.url();
+            const method = request.method();
+            const headers = request.headers();
+            const resource = request.resourceType();
+
+            //! && blockRequests
+            if(resource != 'document' && resource != 'script'){
+                request.abort();
+            }else{
+                console.log(`Request ${method} ${resource} ${url} with headers ${JSON.stringify(headers)}\n`);
+                request.continue();
+            }
+        })
+
+        //login
         if(workerData.burnerUsername != undefined){
             await mainPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
             await mainPage.type('#email', workerData.burnerUsername);
             await mainPage.type('#pass', workerData.burnerPassword);
             await mainPage.click('button[name="login"]');
             await mainPage.waitForNavigation();
-            if(mainPage.url() === 'https://www.facebook.com/'){
+            console.log(mainPage.url());
+            if(mainPage.url() === 'https://www.facebook.com/' || mainPage.url() === 'https://www.facebook.com/?sk=welcome'){
                 isLogin = true;
             }else{
                 client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
@@ -31,40 +80,93 @@ client.login(process.env.DISCORD_BOT_TOKEN);
         }
 
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+
+        //set distance
+        if(workerData.distance != null && workerData.burnerUsername != undefined){
+            await mainPage.click("div.x1y1aw1k div.x1iyjqo2");
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
+            await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
+            const Id = await mainPage.$eval('[role="listbox"] div.x4k7w5x > :first-child', el => el.id);
+            const distanceButtonId = Id.slice(0, -1) + workerData.distance;
+            await mainPage.click('#' + distanceButtonId);
+            await mainPage.click('[aria-label="Apply"]');
+            await new Promise(r => setTimeout(r, 1000));
+        }
     } catch (error){
         console.log("Error with start up: " + error);
     }
 
-    //set distance
+    //init burner browser
+    let burnerBrowser;
+    let burnerPage;
     try{
-        if(workerData.distance != 5 && workerData.distance != null && workerData.burnerUsername != undefined){
-            await mainPage.click("div.x1s85apg.xqupn85.x1tsjjzn.xxq74qr.x4v5mdz.xjfs22q.x18a7wqs div");
-            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
-            await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
-            const Id = await mainPage.$eval('div.x1iyjqo2 div.x4k7w5x > :first-child', el => el.id);
-            const distanceButtonId = Id.slice(0, -1) + workerData.distance;
-            await mainPage.click('#' + distanceButtonId);
-            await mainPage.click('[aria-label="Apply"]');
-        }
+        //TODO: set rotating proxy
+        burnerBrowser = await puppeteer.launch({
+            headless: false,
+            defaultViewport: { width: 1000, height: 600 },
+            args: ['--disable-notifications' `--user-agent=${randomUserAgent}`]
+        });
+        burnerPage = await burnerBrowser.newPage();
+
+        await burnerPage.setRequestInterception(true);
+        //track network consumption
+        burnerPage.on('response', (response) => {
+            const contentLengthHeader = response.headers()['content-length'];
+            if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
+                console.log(parseInt(contentLengthHeader) + '\n');
+                networkTracking += parseInt(contentLengthHeader);
+            }
+        });
+
+        burnerPage.on('request', async request => {
+            const url = request.url();
+            const method = request.method();
+            const headers = request.headers();
+            const resource = request.resourceType();
+
+            //! && blockRequests
+            if(resource != 'document'){
+                request.abort();
+            }else{
+                console.log(`Request ${method} ${resource} ${url} with headers ${JSON.stringify(headers)}\n`);
+                request.continue();
+            }
+        })
+
+        await burnerPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     }catch (error){
         console.log("Error with setting distance: " + error);
     }
 
     // Set listingStorage, run once in the begging of the day
-    let listingStorage;
+    let burnerListingStorage
+    let mainListingStorage
     try{
-        listingStorage = await mainPage.evaluate(() => {
+        mainListingStorage = await mainPage.evaluate(() => {
             if(document.querySelector(".xx6bls6") == null){
-                let link = document.querySelector(".x3ct3a4 a").href;
-                return link.substring(0, link.indexOf("?"));
+                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a'), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(3)").querySelector('a'), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(4)").querySelector('a')];
+                return links.map((link) => {
+                    if(link != null){
+                        let href = link.href;
+                        return href.substring(0, href.indexOf("?"));
+                    }
+                })
             }else {
                 return null;
             }
         });
-    } catch (error){
-        console.log("Error listing storage: " + error);
+
+        burnerListingStorage = await burnerPage.evaluate(() => {
+            let link = document.querySelector(".x3ct3a4 a").href;
+            let link2 = document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a').href;
+            return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
+        });
+    }catch (error){
+        console.log("Error with setting listings: " + error);
     }
-    console.log(listingStorage);
+    console.log("Main Storage: " + mainListingStorage);
+    console.log("Burner Storage: " + burnerListingStorage);
+    console.log(`Response received: ${networkTracking} bytes`);
     
     //time stuff
     let isRunning;
@@ -146,14 +248,19 @@ client.login(process.env.DISCORD_BOT_TOKEN);
             let firstPost = await mainPage.evaluate(() => {
                 if(document.querySelector(".xx6bls6") == null){
                     let link = document.querySelector(".x3ct3a4 a").href;
-                    return link.substring(0, link.indexOf("?"));
+                    let link2 = document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a');
+                    if(link2 != null){
+                        link2 = link2.href;
+                        return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
+                    }
+                    return [link.substring(0, link.indexOf("?"))];
                 }else {
                     return null;
                 }
             });
             console.log("First Post Check: " + firstPost);
 
-            if(listingStorage != firstPost){
+            if(listingStorage[0] != firstPost[0] && listingStorage[1] != firstPost[0] && firstPost != null){
                 listingStorage = firstPost;
 
                 //!both accounts on the same browser
@@ -225,6 +332,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
                     console.log("error with new item message: " + error);
                 }
             }
+            listingStorage = firstPost;
 
             if(isRunning){
                 await mainPage.reload({ waitUntil: 'networkidle0' });

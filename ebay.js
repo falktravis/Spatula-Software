@@ -1,12 +1,23 @@
 //require
-const puppeteer = require('puppeteer');
 const { workerData } = require('worker_threads');
+const puppeteer = require('puppeteer-extra');
+const stealthPlugin = require('puppeteer-extra-plugin-stealth')
+puppeteer.use(stealthPlugin());
 
 //discord.js
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
+//User agents
+const userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/96.0.1',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/96.0.1',
+    // add more user agent strings as needed
+];
+const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
 
 (async () => {
     let browser;
@@ -15,7 +26,10 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
     //init browser
     try{
-        browser = await puppeteer.launch({ headless: true });
+        browser = await puppeteer.launch({ 
+            headless: true,
+            args: ['--disable-notifications' `--user-agent=${randomUserAgent}`]
+        });
         mainPage = await browser.newPage();
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
     } catch (error){

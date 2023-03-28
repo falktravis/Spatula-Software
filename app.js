@@ -8,10 +8,8 @@
  *              TODO: Add commands for changing message and login info
  *              TODO: Humanize
  * 
- *          *replacement for puppeteer to add plugins*
- *          npm install puppeteer puppeteer-extra
- *          *helps us hide from big bad FB*
- *          npm install puppeteer-extra-plugin-stealth
+ *          *randomize ua to make it seem like different device*
+ *             
  *          *block resources to save bandwidth, for proxys*    
  *          npm install puppeteer-extra-plugin-block-resources
  *          *stream line click and wait for navigation*
@@ -21,6 +19,8 @@
  *          *humanize mouse movement
  *          npm install @extra/humanize
  *          !might not be the best way, more research required
+ * 
+ *              Page.setGeolocation()
  *          
  * 
  *                          TODO: Get that Shmoney
@@ -51,7 +51,6 @@ for (const file of commandFiles) {
 		console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 	}
 }
-
 const users = new Map();
 
 //listen for commands
@@ -191,6 +190,7 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
     else if(interaction.commandName === "facebook-delete-child"){
+        //!not sure this works
         if(users.has(interaction.user.id)){
             if(users.get(interaction.user.id).facebook.has(interaction.options.getString("parent-name"))){
                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name"));
