@@ -245,97 +245,121 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
     //the meat and cheese
     function interval() {
         setTimeout(async () => {
-            let firstPost = await mainPage.evaluate(() => {
-                if(document.querySelector(".xx6bls6") == null){
-                    let link = document.querySelector(".x3ct3a4 a").href;
-                    let link2 = document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a');
-                    if(link2 != null){
-                        link2 = link2.href;
-                        return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
-                    }
-                    return [link.substring(0, link.indexOf("?"))];
-                }else {
-                    return null;
-                }
-            });
-            console.log("First Post Check: " + firstPost);
+            newPost = await burnerPage.$(".x3ct3a4 a").href;
+            console.log("First Post Check: " + newPost);
 
-            if(listingStorage[0] != firstPost[0] && listingStorage[1] != firstPost[0] && firstPost != null){
-                listingStorage = firstPost;
-
-                //!both accounts on the same browser
-                const newPage = await browser.newPage();
-                let isLogin = false;   
-                try{
-                    await newPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
-                    await newPage.type('#email', workerData.mainUsername);
-                    await newPage.type('#pass', workerData.mainPassword);
-                    await newPage.click('button[name="login"]');
-                    await newPage.waitForNavigation();
-                    if(newPage.url() === 'https://www.facebook.com/'){
-                        isLogin = true;
-                    }else{
-                        client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}\n@everyone`);
-                    }
-                } catch (error){
-                    console.log("Error with login: " + error);
-                }
-                await newPage.goto(firstPost, { waitUntil: 'networkidle0' });
-
-                if(isLogin){                 
-                    try{
-                        if(workerData.message != null){
-                            const messageTextArea = await newPage.$('label.xzsf02u.x6prxxf textarea');
-                            await messageTextArea.click();
-                            await newPage.keyboard.press('Backspace');
-                            await messageTextArea.type(workerData.message);
-                        }
-                        const sendMessageButton = await newPage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
-                        await sendMessageButton.click();
-                    } catch (error){
-                        console.log("Error with messaging: " + error);
-                    }
-                }
-                
-                let postObj;
-                try{
-                    //make a new tab and go to item page to gather info
-                    postObj = await newPage.evaluate(() => {
-                        let dom = document.querySelector('div.x9f619');
-                        return {
-                            img: dom.querySelector('img').src,
-                            title: dom.querySelector('div.xyamay9 h1').innerText,
-                            date: dom.querySelector('div.x1yztbdb span.x676frb.x1nxh6w3').innerText,
-                            description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText,
-                            price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[0]
-                            //author:
-                        };
-                    })
-                    newPage.close();
-                } catch(error){
-                    console.log("error with item page: " + error)
-                }
-
-                try{
-                    client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
-                        .setColor(0x0099FF)
-                        .setTitle(postObj.title + " - " + postObj.price)
-                        .setURL(firstPost)
-                        .setAuthor({ name: workerData.name })
-                        .setDescription(postObj.description)
-                        .addFields({ name: postObj.date, value: " " })
-                        .setImage(postObj.img)
-                        .setTimestamp(new Date())
-                    ]});
-                    client.channels.cache.get(workerData.channel).send("New Facebook Post From " + workerData.name + " @everyone");
-                }catch(error){
-                    console.log("error with new item message: " + error);
-                }
+            if(burnerListingStorage[0] != newPost && burnerListingStorage[1] == newPost && newPost != null){
+                burnerListingStorage = await burnerPage.evaluate(() => {
+                    let link2 = document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a').href;
+                    return [newPost, link2.substring(0, link2.indexOf("?"))];
+                });
             }
-            listingStorage = firstPost;
+            else if(burnerListingStorage[0] != newPost && burnerListingStorage[1] != newPost && newPost != null){
+                //!On actual new listing, send main page to check
+                await mainPage.reload({ waitUntil: 'networkidle0' });
+                newPost = mainPage.$(".x3ct3a4 a").href;
+                mainListingStorage.forEach((link) => {
+                    if(newPost = link){
+                        isNewPost = false;
+                    }
+                })
+
+                if(isNewPost){
+                    //!both accounts on the same browser
+                    const newPage = await mainBrowser.newPage();
+                    let isLogin = false;   
+                    try{
+                        await newPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
+                        await newPage.type('#email', workerData.mainUsername);
+                        await newPage.type('#pass', workerData.mainPassword);
+                        await newPage.click('button[name="login"]');
+                        await newPage.waitForNavigation();
+                        if(newPage.url() === 'https://www.facebook.com/'){
+                            isLogin = true;
+                        }else{
+                            client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}\n@everyone`);
+                        }
+                    } catch (error){
+                        console.log("Error with login: " + error);
+                    }
+                    await newPage.goto(newPost, { waitUntil: 'networkidle0' });
+
+                    if(isLogin){                 
+                        try{
+                            if(workerData.message != null){
+                                const messageTextArea = await newPage.$('label.xzsf02u.x6prxxf textarea');
+                                await messageTextArea.click();
+                                await newPage.keyboard.press('Backspace');
+                                await messageTextArea.type(workerData.message);
+                            }
+                            const sendMessageButton = await newPage.$('span.x1lliihq.x1iyjqo2 div.xdt5ytf.xl56j7k');
+                            await sendMessageButton.click();
+                        } catch (error){
+                            console.log("Error with messaging: " + error);
+                        }
+                    }
+                    
+                    let postObj;
+                    try{
+                        //make a new tab and go to item page to gather info
+                        postObj = await newPage.evaluate(() => {
+                            let dom = document.querySelector('div.x9f619');
+                            return {
+                                img: dom.querySelector('img').src,
+                                title: dom.querySelector('div.xyamay9 h1').innerText,
+                                date: dom.querySelector('div.x1yztbdb span.x676frb.x1nxh6w3').innerText,
+                                description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText,
+                                price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[0]
+                                //author:
+                            };
+                        })
+                        newPage.close();
+                    } catch(error){
+                        console.log("error with item page: " + error)
+                    }
+
+                    try{
+                        client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle(postObj.title + " - " + postObj.price)
+                            .setURL(newPost)
+                            .setAuthor({ name: workerData.name })
+                            .setDescription(postObj.description)
+                            .addFields({ name: postObj.date, value: " " })
+                            .setImage(postObj.img)
+                            .setTimestamp(new Date())
+                        ]});
+                        client.channels.cache.get(workerData.channel).send("New Facebook Post From " + workerData.name + " @everyone");
+                    }catch(error){
+                        console.log("error with new item message: " + error);
+                    }
+
+                    //set the main listing storage
+                    mainListingStorage = await mainPage.evaluate(() => {
+                        if(document.querySelector(".xx6bls6") == null){
+                            let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a'), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(3)").querySelector('a'), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(4)").querySelector('a')];
+                            return links.map((link) => {
+                                if(link != null){
+                                    let href = link.href;
+                                    return href.substring(0, href.indexOf("?"));
+                                }
+                            })
+                        }else {
+                            return null;
+                        }
+                    });
+                }
+                isNewPost = true;
+                //set the burner listing storage
+                burnerListingStorage = await burnerPage.evaluate(() => {
+                    let link2 = document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a').href;
+                    return [newPost, link2.substring(0, link2.indexOf("?"))];
+                });
+            }
 
             if(isRunning){
-                await mainPage.reload({ waitUntil: 'networkidle0' });
+                await burnerPage.reload({ waitUntil: 'networkidle0' });
+                console.log(`Response received: ${networkTracking} bytes`);
                 interval();
             }
         }, Math.floor((Math.random() * (2) + 2) * 60000));

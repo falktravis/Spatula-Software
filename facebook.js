@@ -24,7 +24,7 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
     let isCreate = true;
     let networkTracking = 0;
     let newPost;
-    let isNewPost;
+    let isNewPost = true;
 
     //init main browser
     let mainBrowser;
@@ -245,11 +245,7 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
     //the meat and cheese
     function interval() {
         setTimeout(async () => {
-            try{
-                newPost = await burnerPage.$(".x3ct3a4 a").href;
-            }catch (error){
-                console.log("Error with new listing: " + error);
-            }
+            newPost = await burnerPage.$(".x3ct3a4 a").href;
             console.log("First Post Check: " + newPost);
 
             if(burnerListingStorage[0] != newPost && burnerListingStorage[1] == newPost && newPost != null){
@@ -259,47 +255,58 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
                 });
             }
             else if(burnerListingStorage[0] != newPost && burnerListingStorage[1] != newPost && newPost != null){
-                //!On actual new listing, send main page to check
+                await mainPage.reload({ waitUntil: 'networkidle0' });
+                newPost = mainPage.$(".x3ct3a4 a").href;
+                mainListingStorage.forEach((link) => {
+                    if(newPost = link){
+                        isNewPost = false;
+                    }
+                })
 
-                const newPage = await mainBrowser.newPage();
-                await newPage.goto(newPost, { waitUntil: 'networkidle0' });
-                let postObj;
-                try{
-                    //make a new tab and go to item page to gather info
-                    postObj = await newPage.evaluate(() => {
-                        let dom = document.querySelector('div.x9f619');
-                        return {
-                            img: dom.querySelector('img').src,
-                            title: dom.querySelector('div.xyamay9 h1').innerText,
-                            date: dom.querySelector('div.x1yztbdb span.x676frb.x1nxh6w3').innerText,
-                            description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText,
-                            price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[0]
-                        };
-                    })
-                    newPage.close();
-                } catch(error){
-                    console.log("error with item page: " + error)
-                }
-
-                try{
-                    const notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
-                        .setColor(0x0099FF)
-                        .setTitle(postObj.title + " - " + postObj.price)
-                        .setURL(newPost)
-                        .setAuthor({ name: workerData.name })
-                        .setDescription(postObj.description)
-                        .addFields({ name: postObj.date, value: " " })
-                        .setImage(postObj.img)
-                        .setTimestamp(new Date())
-                    ], components: [new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                            .setCustomId('message-' + newPost)
-                            .setLabel('Message')
-                            .setStyle(ButtonStyle.Primary),
-                        )
-                    ]});
-
+                if(isNewPost){
+                    const newPage = await mainBrowser.newPage();
+                    await newPage.goto(newPost, { waitUntil: 'networkidle0' });
+                    let postObj;
+                    try{
+                        //make a new tab and go to item page to gather info
+                        postObj = await newPage.evaluate(() => {
+                            let dom = document.querySelector('div.x9f619');
+                            return {
+                                img: dom.querySelector('img').src,
+                                title: dom.querySelector('div.xyamay9 h1').innerText,
+                                date: dom.querySelector('div.x1yztbdb span.x676frb.x1nxh6w3').innerText,
+                                description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText,
+                                price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[0]
+                            };
+                        })
+                        newPage.close();
+                    } catch(error){
+                        console.log("error with item page: " + error)
+                    }
+    
+                    let notification;
+                    try{
+                        notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
+                            .setColor(0x0099FF)
+                            .setTitle(postObj.title + " - " + postObj.price)
+                            .setURL(newPost)
+                            .setAuthor({ name: workerData.name })
+                            .setDescription(postObj.description)
+                            .addFields({ name: postObj.date, value: " " })
+                            .setImage(postObj.img)
+                            .setTimestamp(new Date())
+                        ], components: [new ActionRowBuilder()
+                            .addComponents(
+                                new ButtonBuilder()
+                                .setCustomId('message-' + newPost)
+                                .setLabel('Message')
+                                .setStyle(ButtonStyle.Primary),
+                            )
+                        ]});
+                    }catch(error){
+                        console.log("error with new item message: " + error);
+                    }
+    
                     //message button listener
                     const filter = i => i.customId.split("-")[0] == 'message';
                     const collector = notification.createMessageComponentCollector({ filter, time: 14400000 });
@@ -339,14 +346,32 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
                     collector.on('end', () => {
                         notification.edit({ components: [] });
                     });
-                }catch(error){
-                    console.log("error with new item message: " + error);
+    
+                    //set the main listing storage
+                    mainListingStorage = await mainPage.evaluate(() => {
+                        if(document.querySelector(".xx6bls6") == null){
+                            let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a'), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(3)").querySelector('a'), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(4)").querySelector('a')];
+                            return links.map((link) => {
+                                if(link != null){
+                                    let href = link.href;
+                                    return href.substring(0, href.indexOf("?"));
+                                }
+                            })
+                        }else {
+                            return null;
+                        }
+                    });
                 }
+                isNewPost = true;
+                //set the burner listing storage
+                burnerListingStorage = await burnerPage.evaluate(() => {
+                    let link2 = document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a').href;
+                    return [newPost, link2.substring(0, link2.indexOf("?"))];
+                });
             }
-            listingStorage = newPost;
 
             if(isRunning){
-                await mainPage.reload({ waitUntil: 'networkidle0' });
+                await burnerPage.reload({ waitUntil: 'networkidle0' });
                 console.log(`Response received: ${networkTracking} bytes`);
                 interval();
             }
