@@ -33,115 +33,120 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
     let networkTracking = 0;
     let newPost;
     let mainPageSetDistance = false;
-
-    //init main browser
     let mainBrowser;
     let mainPage;
-    try{
-        //TODO: set static proxy
-        mainBrowser = await puppeteer.launch({
-            headless: false,
-            defaultViewport: { width: 1000, height: 600 },
-            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
-        });
-
-        await mainPage.setRequestInterception(true);
-        //track network consumption
-        mainPage.on('response', (response) => {
-            const contentLengthHeader = response.headers()['content-length'];
-            if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
-                networkTracking += parseInt(contentLengthHeader);
-            }
-        });
-
-        mainPage.on('request', async request => {
-            const resource = request.resourceType();
-
-            if(mainPageSetDistance){
-                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
-            }else{
-                if(resource != 'document' && resource != 'script'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
-            }
-        })
-
-        //if login is activated
-        if(workerData.burnerUsername != undefined){
-            mainPage = await mainBrowser.newPage();
-    
-            //login   
-            await mainPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
-            await mainPage.type('#email', workerData.burnerUsername);
-            await mainPage.type('#pass', workerData.burnerPassword);
-            await mainPage.click('button[name="login"]');
-            await mainPage.waitForNavigation();
-            console.log(mainPage.url());
-            if(mainPage.url() != 'https://www.facebook.com/' && mainPage.url() != 'https://www.facebook.com/?sk=welcome'){
-                client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
-            }
-    
-            //set distance
-            if(workerData.distance != null){
-                mainPageSetDistance = true;
-                await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
-                await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
-                await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
-                await mainPage.click(`[role="listbox"] div.x4k7w5x > :nth-child(${4})`);
-                await mainPage.click('[aria-label="Apply"]');
-                //wait for the results to update
-                await new Promise(r => setTimeout(r, 1000));
-                mainPageSetDistance = false;
-            }else{
-                await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
-            }
-        }
-    }catch (error){
-        console.log("Error with start up: " + error);
-    }
-
-    //init burner browser
     let burnerBrowser;
     let burnerPage;
-    try{
-        //TODO: set rotating proxy
-        burnerBrowser = await puppeteer.launch({
-            headless: true,
-            defaultViewport: { width: 1000, height: 600 },
-            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
-        });
-        burnerPage = await burnerBrowser.newPage();
 
-        await burnerPage.setRequestInterception(true);
-        //track network consumption
-        burnerPage.on('response', (response) => {
-            const contentLengthHeader = response.headers()['content-length'];
-            if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
-                networkTracking += parseInt(contentLengthHeader);
+    const start = async() => {
+        //init main browser
+        try{
+            //TODO: set static proxy
+            mainBrowser = await puppeteer.launch({
+                headless: false,
+                defaultViewport: { width: 1000, height: 600 },
+                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`] //'--proxy-server=http://falk.travis---gmail.com:cOvTBzl3stlIjrCYqzBsQ_country-UnitedStates@185.187.170.24:3030'
+            });
+            //await page.authenticate({username:user, password:password});
+    
+            //!will this work before we set the page?
+            await mainPage.setRequestInterception(true);
+            //track network consumption
+            mainPage.on('response', (response) => {
+                const contentLengthHeader = response.headers()['content-length'];
+                if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
+                    networkTracking += parseInt(contentLengthHeader);
+                }
+            });
+    
+            mainPage.on('request', async request => {
+                const resource = request.resourceType();
+    
+                if(mainPageSetDistance){
+                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
+                        request.abort();
+                    }else{
+                        request.continue();
+                    }
+                }else{
+                    if(resource != 'document' && resource != 'script'){
+                        request.abort();
+                    }else{
+                        request.continue();
+                    }
+                }
+            })
+    
+            //if login is activated
+            if(workerData.burnerUsername != undefined){
+                mainPage = await mainBrowser.newPage();
+        
+                //login   
+                await mainPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
+                await mainPage.type('#email', workerData.burnerUsername);
+                await mainPage.type('#pass', workerData.burnerPassword);
+                await mainPage.click('button[name="login"]');
+                await mainPage.waitForNavigation();
+                console.log(mainPage.url());
+                if(mainPage.url() != 'https://www.facebook.com/' && mainPage.url() != 'https://www.facebook.com/?sk=welcome'){
+                    client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
+                }
+        
+                //set distance
+                if(workerData.distance != null){
+                    mainPageSetDistance = true;
+                    await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+                    await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+                    await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
+                    await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
+                    await mainPage.click(`[role="listbox"] div.x4k7w5x > :nth-child(${4})`);
+                    await mainPage.click('[aria-label="Apply"]');
+                    //wait for the results to update
+                    await new Promise(r => setTimeout(r, 1000));
+                    mainPageSetDistance = false;
+                }else{
+                    await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+                }
             }
-        });
+        }catch (error){
+            console.log("Error with main page: " + error);
+        }
 
-        burnerPage.on('request', async request => {
-            const resource = request.resourceType();
+        //init burner browser
+        try{
+            //TODO: set rotating proxy
+            burnerBrowser = await puppeteer.launch({
+                headless: true,
+                defaultViewport: { width: 1000, height: 600 },
+                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
+            });
+            burnerPage = await burnerBrowser.newPage();
 
-            if(resource != 'document'){
-                request.abort();
-            }else{
-                request.continue();
-            }
-        });
+            await burnerPage.setRequestInterception(true);
+            //track network consumption
+            burnerPage.on('response', (response) => {
+                const contentLengthHeader = response.headers()['content-length'];
+                if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
+                    networkTracking += parseInt(contentLengthHeader);
+                }
+            });
 
-        await burnerPage.goto(workerData.link, { waitUntil: 'networkidle0' });
-    }catch (error){
-        console.log("Error with setting distance: " + error);
+            burnerPage.on('request', async request => {
+                const resource = request.resourceType();
+
+                if(resource != 'document'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
+            });
+
+            await burnerPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+        }catch (error){
+            console.log("Error with burner page: " + error);
+        }
     }
+    await start();
 
     // Set listingStorage, run once in the begging of the day
     let burnerListingStorage;
@@ -197,8 +202,8 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
 
     //sets an interval to turn on/off interval
     function handleTime(intervalFunction) {
+        //set the time until change
         currentTime = new Date();
-        //range from 0 - 1440
         currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
         let interval;
         if(workerData.start < workerData.end){
@@ -224,12 +229,12 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
         }
         console.log("time to change: " + interval);
         
+        //close the browsers or start up
         if(isRunning){
             if(isCreate == false){
                 (async () => {
                     try{
-                        mainPage = await mainBrowser.newPage();
-                        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+                        await start();
                     } catch (error){
                         console.log("Error with main page: " + error);
                     }
@@ -239,7 +244,8 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
             }
             intervalFunction(); 
         }else{
-            mainPage.close();
+            mainBrowser.close();
+            burnerBrowser.close();
             console.log("page close");
         }
 

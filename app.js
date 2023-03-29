@@ -10,7 +10,6 @@
  * 
  *              -get rid of main facebook page if no login is necessary
  *              -fix main page set distance error (we are blocking a necessary resource)
- *              -fix the time in and out to incorperate the new method
  *          
  * Page.setGeolocation()
  *                          TODO: Get that Shmoney
