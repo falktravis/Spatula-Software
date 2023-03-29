@@ -8,21 +8,11 @@
  *              TODO: Add commands for changing message and login info
  *              TODO: Humanize
  * 
- *          *randomize ua to make it seem like different device*
- *             
- *          *block resources to save bandwidth, for proxys*    
- *          npm install puppeteer-extra-plugin-block-resources
- *          *stream line click and wait for navigation*
- *          npm install puppeteer-extra-plugin-click-and-wait
- *          *proxy*
- *          npm install puppeteer-page-proxy
- *          *humanize mouse movement
- *          npm install @extra/humanize
- *          !might not be the best way, more research required
- * 
- *              Page.setGeolocation()
+ *              -get rid of main facebook page if no login is necessary
+ *              -fix main page set distance error (we are blocking a necessary resource)
+ *              -fix the time in and out to incorperate the new method
  *          
- * 
+ * Page.setGeolocation()
  *                          TODO: Get that Shmoney
  * 
  * Keep in mind that storing a large number of worker threads in memory can be resource-intensive, so you may want to consider using a database or some other storage solution if you have a very large number of worker threads.
@@ -51,6 +41,7 @@ for (const file of commandFiles) {
 		console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 	}
 }
+
 const users = new Map();
 
 //listen for commands
@@ -154,13 +145,14 @@ client.on(Events.InteractionCreate, async interaction => {
                                         }
         
                                         //get parent element from map and set new worker as a child
-                                        parent.children.set(interaction.options.getString("name"), new Worker(parent.autoMessage ? './facebookAuto.js' : './facebook.js', { workerData:{
+                                        parent.children.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
                                             name: interaction.options.getString("name"),
                                             link: interaction.options.getString("link") + "&sortBy=creation_time_descend", //&daysSinceListed=0
                                             mainUsername: parent.username,
                                             mainPassword: parent.password,
                                             burnerUsername: burnerUsername,
                                             burnerPassword: burnerPassword,
+                                            autoMessage: parent.autoMessage,
                                             message: parent.message,
                                             start: start * 60,
                                             end: end * 60,
@@ -250,7 +242,6 @@ client.on(Events.InteractionCreate, async interaction => {
                     let start = interaction.options.getNumber("start");
                     let end = interaction.options.getNumber("end");
             
-                    console.log("start " + start + "\nend " + end);
                     //time difference
                     let timeDiff;
                     if(start < end){
@@ -258,7 +249,6 @@ client.on(Events.InteractionCreate, async interaction => {
                     }else{
                         timeDiff = (24 - start) + end;
                     }
-                    console.log("Time Diff " + timeDiff)
                 
                     //both times are between 1 and 25, the difference is less than or equal to 14
                     if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){

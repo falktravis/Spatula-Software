@@ -11,27 +11,58 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
 //User agents
 const userAgents = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/96.0.1',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/96.0.1',
-    // add more user agent strings as needed
-];
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
+  ];
 const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
 
 (async () => {
     let browser;
     let mainPage;
     let isCreate = true;
+    let networkTracking = 0;
+    let newPost;
 
     //init browser
     try{
         browser = await puppeteer.launch({ 
             headless: true,
-            args: ['--disable-notifications' `--user-agent=${randomUserAgent}`]
+            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
         });
         mainPage = await browser.newPage();
+
+        await mainPage.setRequestInterception(true);
+        //track network consumption
+        mainPage.on('response', (response) => {
+            const contentLengthHeader = response.headers()['content-length'];
+            if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
+                networkTracking += parseInt(contentLengthHeader);
+            }
+        });
+    
+        mainPage.on('request', async request => {
+            const resource = request.resourceType();
+    
+            if(resource != 'document'){
+                request.abort();
+            }else{
+                request.continue();
+            }
+        })
+
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+        console.log(`Response received: ${networkTracking} bytes`);
     } catch (error){
         console.log("Error with main page: " + error);
     }
@@ -41,7 +72,8 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
     try{
         listingStorage = await mainPage.evaluate(() => {
             let link = document.querySelector("ul.srp-results li.s-item a").href;
-            return link.substring(0, link.indexOf("?"));
+            let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
+            return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
         });
     } catch (error){
         console.log("Error listing storage: " + error);
@@ -125,15 +157,17 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
         setTimeout(async () => {
             //checks if the page is within run time
             if(isRunning){
-                let firstPost = await mainPage.evaluate(() => {
+                await mainPage.reload({ waitUntil: 'networkidle0' });
+                console.log(`Response received: ${networkTracking} bytes`);
+
+                newPost = await mainPage.evaluate(() => {
                     let link = document.querySelector("ul.srp-results li.s-item a").href;
                     return link.substring(0, link.indexOf("?"));
                 });
-                console.log("First Post Check: " + firstPost);
+                console.log("First Post Check: " + newPost);
 
-                //! Change
-                if(listingStorage != firstPost){
-                    listingStorage = firstPost;
+                if(listingStorage[0] != newPost && listingStorage[1] != newPost){
+                    listingStorage = [newPost, listingStorage[0]];
 
                     let postObj;
                     try{   
@@ -156,7 +190,7 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
                         client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
                             .setColor(0x0099FF)
                             .setTitle(postObj.title + " - " + postObj.price)
-                            .setURL(firstPost)
+                            .setURL(newPost)
                             .setAuthor({ name: workerData.name })
                             .addFields(
                                 { name: postObj.isAuction, value: postObj.shipping },
@@ -169,8 +203,12 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
                         console.log("error with new item message: " + error);
                     }
                 }
-
-                await mainPage.reload({ waitUntil: 'networkidle0' });
+                else if(listingStorage[0] != newPost && listingStorage[1] == newPost){
+                    listingStorage = await mainPage.evaluate(() => {
+                        let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
+                        return [newPost, link2.substring(0, link2.indexOf("?"))];
+                    });
+                }
                 interval();
             }
         }, Math.floor((Math.random() * (2) + 2) * 60000));
