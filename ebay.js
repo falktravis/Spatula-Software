@@ -34,51 +34,54 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
     let networkTracking = 0;
     let newPost;
 
-    //init browser
-    try{
-        browser = await puppeteer.launch({ 
-            headless: true,
-            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
-        });
-        mainPage = await browser.newPage();
+    const start = async() => {
+        //init browser
+        try{
+            browser = await puppeteer.launch({ 
+                headless: true,
+                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
+            });
+            let pages = await browser.pages();
+            mainPage = pages[0];
 
-        await mainPage.setRequestInterception(true);
-        //track network consumption
-        mainPage.on('response', (response) => {
-            const contentLengthHeader = response.headers()['content-length'];
-            if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
-                networkTracking += parseInt(contentLengthHeader);
-            }
-        });
-    
-        mainPage.on('request', async request => {
-            const resource = request.resourceType();
-    
-            if(resource != 'document'){
-                request.abort();
-            }else{
-                request.continue();
-            }
-        })
+            await mainPage.setRequestInterception(true);
+            //track network consumption
+            mainPage.on('response', (response) => {
+                const contentLengthHeader = response.headers()['content-length'];
+                if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
+                    networkTracking += parseInt(contentLengthHeader);
+                }
+            });
 
-        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
-        console.log(`Response received: ${networkTracking} bytes`);
-    } catch (error){
-        console.log("Error with main page: " + error);
+            mainPage.on('request', async request => {
+                const resource = request.resourceType();
+
+                if(resource != 'document'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
+            })
+
+            await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+            console.log(`Response received: ${networkTracking} bytes`);
+        } catch (error){
+            console.log("Error with main page: " + error);
+        }
+
+        // Set listingStorage, run once in the begging of the day
+        let listingStorage;
+        try{
+            listingStorage = await mainPage.evaluate(() => {
+                let link = document.querySelector("ul.srp-results li.s-item a").href;
+                let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
+                return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
+            });
+        } catch (error){
+            console.log("Error listing storage: " + error);
+        }
+        console.log(listingStorage);
     }
-
-    // Set listingStorage, run once in the begging of the day
-    let listingStorage;
-    try{
-        listingStorage = await mainPage.evaluate(() => {
-            let link = document.querySelector("ul.srp-results li.s-item a").href;
-            let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
-            return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
-        });
-    } catch (error){
-        console.log("Error listing storage: " + error);
-    }
-    console.log(listingStorage);
     
     //time stuff
     let isRunning;
@@ -129,8 +132,7 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
             if(isCreate == false){
                 (async () => {
                     try{
-                        mainPage = await browser.newPage();
-                        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+                        await start();
                     } catch (error){
                         console.log("Error with main page: " + error);
                     }
@@ -140,7 +142,7 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
             }
             intervalFunction(); 
         }else{
-            mainPage.close();
+            browser.close();
             console.log("page close");
         }
 

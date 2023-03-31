@@ -298,17 +298,17 @@ client.on(Events.InteractionCreate, async interaction => {
         let list = ''; 
         let user = users.get(interaction.user.id);
         //check to see if facebook has workers
-        list += "\nFacebook:";
+        list += "\n\tFacebook:";
         user.facebook.forEach((parent, parentKey) => {
-            list += `\n\t${parentKey}`;
+            list += `\n\t\t-${parentKey}`;
             parent.children.forEach((child, childKey) => {
-                list += `\n\t\t${childKey}`;
+                list += `\n\t\t\t+${childKey}`;
             })
         })
 
-        list += "\nEbay:";
+        list += "\n\tEbay:";
         user.ebay.forEach((worker, workerKey) => {
-            list += `\n\t${workerKey}`;
+            list += `\n\t\t${workerKey}`;
         })
 
         client.channels.cache.get(interaction.channelId).send(list);
