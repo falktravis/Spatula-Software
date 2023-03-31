@@ -32,7 +32,6 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
     let isCreate = true;
     let networkTracking = 0;
     let newPost;
-    let mainPageSetDistance = false;
     let mainBrowser;
     let mainPage;
 
@@ -42,7 +41,8 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
             //TODO: set static proxy
             mainBrowser = await puppeteer.launch({
                 headless: true,
-                defaultViewport: { width: 1000, height: 800 },
+                //defaultViewport: { width: 1000, height: 800 },
+                defaultViewport: { width: 1366, height: 768 },
                 args: ['--disable-notifications', `--user-agent=${randomUserAgent}`] //'--proxy-server=http://falk.travis---gmail.com:cOvTBzl3stlIjrCYqzBsQ_country-UnitedStates@185.187.170.24:3030'
             });
             //await page.authenticate({username:user, password:password});
@@ -58,6 +58,8 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                 }
             });
     
+            let mainPageSetDistance = false;
+            let mainPageLogin = true;
             mainPage.on('request', async request => {
                 const resource = request.resourceType();
     
@@ -74,21 +76,50 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                         request.continue();
                     }
                 }
+                /*
+                *expirimental network script restriction
+                if(mainPageSetDistance){
+                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
+                        request.abort();
+                    }else{
+                        request.continue();
+                    }
+                }else if(mainPageLogin){
+                    if(resource != 'document' && resource != 'script'){
+                        request.abort();
+                    }else{
+                        request.continue();
+                    }
+                }else{
+                    if(resource != 'document'){
+                        request.abort();
+                    }else{
+                        request.continue();
+                    }
+                }*/
             })
     
             //if login is activated
             if(workerData.burnerUsername != undefined){
-        
                 //login   
-                await mainPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
-                await mainPage.type('#email', workerData.burnerUsername);
-                await mainPage.type('#pass', workerData.burnerPassword);
-                await mainPage.click('button[name="login"]');
-                await mainPage.waitForNavigation();
-                console.log(mainPage.url());
-                if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/'){
-                    client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
+                const loginSequence = async() => {
+                    await mainPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
+                    await mainPage.type('#email', workerData.burnerUsername);
+                    await mainPage.type('#pass', workerData.burnerPassword);
+                    await mainPage.click('button[name="login"]');
+                    await mainPage.waitForNavigation();
+                    console.log(mainPage.url());
+                    //!Change privacy url
+                    if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('https://www.facebook.com/privacy')){
+                        client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
+                    }else if(mainPage.url().includes('https://www.facebook.com/privacy')){
+                        //Maybe an easier way for this?
+                        console.log("Privacy Url thing...Retrying");
+                        loginSequence();
+                    }
+                    //*If this works implement for both other login sequences, there are 2
                 }
+                mainPageLogin = false;
         
                 //set distance
                 if(workerData.distance != null){
@@ -242,7 +273,7 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                             randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                             messageBrowser = await puppeteer.launch({
                                 headless: true,
-                                defaultViewport: { width: 1000, height: 800 },
+                                defaultViewport: { width: 1366, height: 768 },
                                 args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
                             });
                             let pages = await messageBrowser.pages();
@@ -408,7 +439,7 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                 randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                 messageBrowser = await puppeteer.launch({
                                     headless: true,
-                                    defaultViewport: { width: 1000, height: 800 },
+                                    defaultViewport: { width: 1366, height: 768 },
                                     args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
                                 });
                                 let pages = await messageBrowser.pages();

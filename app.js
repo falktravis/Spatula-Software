@@ -8,9 +8,7 @@
  *              TODO: Add commands for changing message and login info
  *              TODO: Humanize
  * 
- *              -get rid of main facebook page if no login is necessary
- *              -fix main page set distance error (we are blocking a necessary resource)
- *          
+ *              modern-random-ua
  * Page.setGeolocation()
  *                          TODO: Get that Shmoney
  * 
@@ -73,7 +71,7 @@ client.on(Events.InteractionCreate, async interaction => {
                     return{
                         username: login[0],
                         password: login[1],
-                        workerName: null
+                        workerNum: 0
                     }
                 });
             }else{
@@ -133,14 +131,26 @@ client.on(Events.InteractionCreate, async interaction => {
                                         let burnerUsername;
                                         let burnerPassword;
                                         if(interaction.options.getBoolean("login-search")){
-                                            parent.burnerLogins.forEach((e) => {
-                                                if(e.workerName == null){
-                                                    e.workerName = interaction.options.getString("name");
-                                                    burnerUsername = e.username;
-                                                    burnerPassword = e.password;
-                                                    return;
-                                                }
-                                            });
+                                            if(parent.burnerLogins[0].workerNum == 0){
+                                                parent.burnerLogins[0].workerNum++;
+                                                burnerUsername = parent.burnerLogins[0].username;
+                                                burnerPassword = parent.burnerLogins[0].password;
+                                            }else{
+                                                let num = parent.burnerLogins[0].workerNum;
+                                                parent.burnerLogins.forEach((e, i) => {
+                                                    if(e.workerNum < num){
+                                                        e.workerNum++;
+                                                        burnerUsername = e.username;
+                                                        burnerPassword = e.password;
+                                                        return;
+                                                    }else if(i == parent.burnerLogins.length - 1){
+                                                        console.log("Reset burner login rotation");
+                                                        parent.burnerLogins[0].workerNum++;
+                                                        burnerUsername = parent.burnerLogins[0].username;
+                                                        burnerPassword = parent.burnerLogins[0].password;
+                                                    }
+                                                });   
+                                            }
                                         }
         
                                         //get parent element from map and set new worker as a child
