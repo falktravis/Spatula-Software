@@ -1,15 +1,12 @@
 /**
- *              TODO: Catch any errors and send them to testing channel
  *              TODO: Get some data about how many workers are running and resources being used
  *              TODO: Proxies
  *                  -Test and reduce data passed through proxies, mainly images
  *                  -Data center for now, need some extensive testing (this is what beta testing is for)
- *              TODO: Put multiple tabs on one worker?
  *              TODO: Add commands for changing message and login info
- *              TODO: Humanize
  * 
  *              modern-random-ua
- * Page.setGeolocation()
+ *
  *                          TODO: Get that Shmoney
  * 
  * Keep in mind that storing a large number of worker threads in memory can be resource-intensive, so you may want to consider using a database or some other storage solution if you have a very large number of worker threads.
@@ -139,7 +136,7 @@ client.on(Events.InteractionCreate, async interaction => {
                                                 let num = parent.burnerLogins[0].workerNum;
                                                 parent.burnerLogins.forEach((e, i) => {
                                                     if(e.workerNum < num){
-                                                        e.workerNum++;
+                                                        parent.burnerLogins[i].workerNum++;
                                                         burnerUsername = e.username;
                                                         burnerPassword = e.password;
                                                         return;
@@ -191,7 +188,6 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
     else if(interaction.commandName === "facebook-delete-child"){
-        //!not sure this works
         if(users.has(interaction.user.id)){
             if(users.get(interaction.user.id).facebook.has(interaction.options.getString("parent-name"))){
                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name"));
@@ -267,7 +263,6 @@ client.on(Events.InteractionCreate, async interaction => {
                         //fiddle with the link
                         let link = interaction.options.getString("link");
                         link = link.substring(0, link.indexOf("&")) + '&_sop=10' + link.substring(link.indexOf('&'));
-                        console.log(link);
 
                         users.get(interaction.user.id).ebay.set(interaction.options.getString("name"), new Worker('./ebay.js', { workerData:{
                             name: interaction.options.getString("name"),

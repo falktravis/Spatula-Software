@@ -33,6 +33,7 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
     let isCreate = true;
     let networkTracking = 0;
     let newPost;
+    let listingStorage;
 
     const start = async() => {
         //init browser
@@ -67,10 +68,10 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
             console.log(`Response received: ${networkTracking} bytes`);
         } catch (error){
             console.log("Error with main page: " + error);
+            client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
         }
 
         // Set listingStorage, run once in the begging of the day
-        let listingStorage;
         try{
             listingStorage = await mainPage.evaluate(() => {
                 let link = document.querySelector("ul.srp-results li.s-item a").href;
@@ -79,6 +80,7 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
             });
         } catch (error){
             console.log("Error listing storage: " + error);
+            client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
         }
         console.log(listingStorage);
     }
@@ -94,15 +96,15 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
             isRunning = false;
         }
     }else{
-        if(currentTime > workerData.start && currentTime < workerData.end){
-            isRunning = false;
-        }else{
+        if(currentTime > workerData.start || currentTime < workerData.end){
             isRunning = true;
+        }else{
+            isRunning = false;
         }
     }
 
     //sets an interval to turn on/off interval
-    function handleTime(intervalFunction) {
+    async function handleTime(intervalFunction) {
         currentTime = new Date();
         currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
         let interval;
@@ -129,20 +131,12 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
         }
         
         if(isRunning){
-            if(isCreate == false){
-                (async () => {
-                    try{
-                        await start();
-                    } catch (error){
-                        console.log("Error with main page: " + error);
-                    }
-                })();
-            }else{
-                isCreate = false;
-            }
+            isCreate = false;
+            await start();
             intervalFunction(); 
-        }else{
-            browser.close();
+        }else if(isCreate == false){
+            await mainPage.close();
+            await browser.close();
             console.log("page close");
         }
 
@@ -159,14 +153,19 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
         setTimeout(async () => {
             //checks if the page is within run time
             if(isRunning){
-                await mainPage.reload({ waitUntil: 'networkidle0' });
-                console.log(`Response received: ${networkTracking} bytes`);
+                try{
+                    await mainPage.reload({ waitUntil: 'networkidle0' });
 
-                newPost = await mainPage.evaluate(() => {
-                    let link = document.querySelector("ul.srp-results li.s-item a").href;
-                    return link.substring(0, link.indexOf("?"));
-                });
-                console.log("First Post Check: " + newPost);
+                    newPost = await mainPage.evaluate(() => {
+                        let link = document.querySelector("ul.srp-results li.s-item a").href;
+                        return link.substring(0, link.indexOf("?"));
+                    });
+                    console.log("First Post Check: " + newPost);
+                    console.log(`Response received: ${networkTracking} bytes\n`);
+                }catch(error){
+                    console.log("Error getting new post: " + error);
+                    client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
+                }
 
                 if(listingStorage[0] != newPost && listingStorage[1] != newPost){
                     listingStorage = [newPost, listingStorage[0]];
@@ -185,7 +184,8 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
                             };
                         })
                     } catch(error){
-                        console.log("error with item page: " + error)
+                        console.log("error with item page: " + error);
+                        client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
                     }
 
                     try{
@@ -203,13 +203,19 @@ const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)
                         client.channels.cache.get(workerData.channel).send("New Ebay Post From " + workerData.name + " @everyone");
                     }catch(error){
                         console.log("error with new item message: " + error);
+                        client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
                     }
                 }
                 else if(listingStorage[0] != newPost && listingStorage[1] == newPost){
-                    listingStorage = await mainPage.evaluate(() => {
-                        let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
-                        return [newPost, link2.substring(0, link2.indexOf("?"))];
-                    });
+                    try{
+                        listingStorage = [newPost, await mainPage.evaluate(() => {
+                            let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
+                            return link2.substring(0, link2.indexOf("?"));
+                        })];
+                    }catch(error){
+                        console.log("Error re-setting listing storage: " + error);
+                        client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
+                    }
                 }
                 interval();
             }

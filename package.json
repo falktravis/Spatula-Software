@@ -9,8 +9,9 @@
   "author": "Travis Falk",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^14.7.1",
+    "discord.js": "^14.8.0",
     "dotenv": "^16.0.3",
+    "proxy-chain": "^2.3.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
