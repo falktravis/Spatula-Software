@@ -3,6 +3,7 @@ const { workerData } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
+//!uninstall this if not necessary
 const proxyChain = require('proxy-chain');
 
 //discord.js
@@ -43,11 +44,11 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         //init main browser
         try{
             //TODO: set static proxy
-            const newProxyUrl = await proxyChain.anonymizeProxy('http://falk.travis---gmail.com:cOvTBzl3stlIjrCYqzBsQ_country-UnitedStates_session-HnFpBxXx@185.187.170.24:3030');
+            //const newProxyUrl = await proxyChain.anonymizeProxy('http://falk.travis---gmail.com:cOvTBzl3stlIjrCYqzBsQ_country-UnitedStates_session-HnFpBxXx@185.187.170.24:3030');
             mainBrowser = await puppeteer.launch({
                 headless: false,
                 defaultViewport: { width: 1366, height: 768 },
-                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=${newProxyUrl}`]
+                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`] //, `--proxy-server=${newProxyUrl}`
             });
 
             let pages = await mainBrowser.pages();
@@ -63,24 +64,29 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
     
             mainPage.on('request', async request => {
                 const resource = request.resourceType();
+                const URL = request.url();
     
                 if(mainPageSetDistance){
-                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
+                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other' || URL.includes('data:application/x-javascript;')){// || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('wsDwCbh1mU6') || URL.includes('pYL1cbqpX10') || URL.includes('6tMYb_nFhnk') || URL.includes('v3ioYA4') || URL.includes('v3iF5j4')
                         request.abort();
                     }else{
                         request.continue();
+                        console.log(resource + " " + URL + "\n");
                     }
                 }else if(mainPageLogin){
-                    if(resource != 'document' && resource != 'script'){
+                    if(resource != 'document' && resource != 'script' || URL.includes('data:application/x-javascript;') || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('C3CnmLDYuAn')){
+                    // || URL.includes('g4yGS_I143G') || URL.includes('jmY_tZbcjAk') || URL.includes('LgvwffuKmeX') || URL.includes('rJ94RMpIhR7') || URL.includes('IHO-YZS6yVi') || URL.includes('_tJ17sGyxOX') || URL.includes('JB-9wWPJnFi') || URL.includes('UomYXORXfzY') || URL.includes('uCeJ4xtt_Im') || URL.includes('TW3hcH7KQRC')
                         request.abort();
                     }else{
                         request.continue();
+                        console.log(resource + " " + URL + "\n");
                     }
                 }else{
                     if(resource != 'document'){
                         request.abort();
                     }else{
                         request.continue();
+                        console.log(resource + " " + URL + "\n");
                     }
                 }
             });
@@ -98,15 +104,15 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                     await mainPage.type('#email', workerData.burnerUsername);
                     await mainPage.type('#pass', workerData.burnerPassword);
                     await mainPage.click('button[name="login"]');
-                    await mainPage.waitForNavigation();
+                    //!await mainPage.waitForNavigation(); I HAD TO REMOVE THIS FOR NETWORK SHIT
                     console.log(mainPage.url());
                     if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('https://www.facebook.com/login/?privacy_mutation_token')){
                         client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
                     }else if(mainPage.url().includes('https://www.facebook.com/login/?privacy_mutation_token')){
                         //Maybe an easier way for this?
                         console.log("Privacy Url thing...Retrying");
-                        setTimeout(() => {
-                            mainLoginSequence();
+                        setTimeout(async() => {
+                            await mainLoginSequence();
                         }, 3000)
                     }
                 }
@@ -125,9 +131,13 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                     //wait for the results to update
                     await new Promise(r => setTimeout(r, 1000));
                     mainPageSetDistance = false;
+                    await mainPage.reload({ waitUntil: 'domcontentloaded' });
                 }else{
                     await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
                 }
+            }else{
+                mainPageLogin = false;
+                await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
             }
         }catch (error){
             console.log("Error with setting up main page: " + error);
@@ -275,17 +285,20 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
 
                         newPage.on('request', async request => {
                             const resource = request.resourceType();
+                            const URL = request.url();
                             if(pageMessage){
                                 if(resource != 'document' && resource != 'script' && resource != 'stylesheet' && resource != 'other' && resource != 'xhr'){
                                     request.abort();
                                 }else{
                                     request.continue();
+                                    console.log(resource + " " + URL + "\n");
                                 }
                             }else{
                                 if(resource != 'document' && resource != 'script'){
                                     request.abort();
                                 }else{
                                     request.continue();
+                                    console.log(resource + " " + URL + "\n");
                                 }
                             }
                         });
