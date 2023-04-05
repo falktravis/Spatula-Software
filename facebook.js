@@ -74,8 +74,8 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                         console.log(resource + " " + URL + "\n");
                     }
                 }else if(mainPageLogin){
-                    if(resource != 'document' && resource != 'script' || URL.includes('data:application/x-javascript;') || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('C3CnmLDYuAn')){
-                    // || URL.includes('g4yGS_I143G') || URL.includes('jmY_tZbcjAk') || URL.includes('LgvwffuKmeX') || URL.includes('rJ94RMpIhR7') || URL.includes('IHO-YZS6yVi') || URL.includes('_tJ17sGyxOX') || URL.includes('JB-9wWPJnFi') || URL.includes('UomYXORXfzY') || URL.includes('uCeJ4xtt_Im') || URL.includes('TW3hcH7KQRC')
+                    if(resource != 'document' && resource != 'script' || URL.includes('data:application/x-javascript;') || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('kDWUdySDJjX') || URL.includes('UomYXORXfzY')){
+                    // || URL.includes('jmY_tZbcjAk') || URL.includes('rJ94RMpIhR7') || URL.includes('IHO-YZS6yVi') || URL.includes('_tJ17sGyxOX') || URL.includes('JB-9wWPJnFi')
                         request.abort();
                     }else{
                         request.continue();
@@ -131,7 +131,7 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                     //wait for the results to update
                     await new Promise(r => setTimeout(r, 1000));
                     mainPageSetDistance = false;
-                    await mainPage.reload({ waitUntil: 'domcontentloaded' });
+                    //await mainPage.reload({ waitUntil: 'domcontentloaded' });
                 }else{
                     await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
                 }
