@@ -27,7 +27,7 @@ const userAgents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
   ];
-let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+let randomUserAgent;
 
 (async () => {
     //general instantiation
@@ -43,93 +43,91 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         let mainPageLogin = true;
         let mainPageBlockAll = false; //blocks all requests on mainPage
         //init main browser
-        try{
-            //const newProxyUrl = await proxyChain.anonymizeProxy('http://falk.travis---gmail.com:cOvTBzl3stlIjrCYqzBsQ_country-UnitedStates_session-HnFpBxXx@185.187.170.24:3030');
-            mainBrowser = await puppeteer.launch({
-                headless: true,
-                defaultViewport: { width: 1366, height: 768 },
-                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`] //, `--proxy-server=${newProxyUrl}`
-            });
-
-            let pages = await mainBrowser.pages();
-            mainPage = pages[0];
-            await mainPage.setRequestInterception(true);
-            //track network consumption
-            mainPage.on('response', (response) => {
-                const contentLengthHeader = response.headers()['content-length'];
-                console.log("Response: " + (contentLengthHeader || 0) + " " + response.url() + "\n");
-                if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
-                    networkTracking += parseInt(contentLengthHeader);
-                }
-            });
+        const mainPageInitiationSequence = async() => {
+            try{
+                randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+                //const newProxyUrl = await proxyChain.anonymizeProxy('http://falk.travis---gmail.com:cOvTBzl3stlIjrCYqzBsQ_country-UnitedStates_session-HnFpBxXx@185.187.170.24:3030');
+                mainBrowser = await puppeteer.launch({
+                    headless: false,
+                    defaultViewport: { width: 1366, height: 768 },
+                    args: ['--disable-notifications', `--user-agent=${randomUserAgent}`] //, `--proxy-server=${newProxyUrl}`
+                });
     
-            mainPage.on('request', async request => {
-                const resource = request.resourceType();
-                const URL = request.url();
-    
-                if(mainPageSetDistance){
-                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'other' || URL.includes('XvHSVzKh6vq0pF7A3OcjJt')){//v6i5V54
+                let pages = await mainBrowser.pages();
+                mainPage = pages[0];
+                await mainPage.setRequestInterception(true);
+                //track network consumption
+                mainPage.on('response', (response) => {
+                    const contentLengthHeader = response.headers()['content-length'];
+                    console.log("Response: " + (contentLengthHeader || 0) + " " + response.url() + "\n");
+                    if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
+                        networkTracking += parseInt(contentLengthHeader);
+                    }
+                });
+        
+                mainPage.on('request', async request => {
+                    const resource = request.resourceType();
+                    const URL = request.url();
+        
+                    if(mainPageSetDistance){
+                        if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'other' || URL.includes('XvHSVzKh6vq0pF7A3OcjJt') || URL.includes('longtail') || URL.includes('pagead')){//v6i5V54
+                            request.abort();
+                        }else{
+                            request.continue();
+                        }
+                    }else if(mainPageLogin){
+                        if(resource != 'document' && resource != 'script' && resource != 'stylesheet' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){ // && !URL.includes('SuG-IUx2WwG')
+                            request.abort();
+                        }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){ //! find the optimal breaking point URL.includes('SuG-IUx2WwG')
+                            request.continue();
+                            mainPageLogin = false;
+                            mainPageBlockAll = true;
+                            console.log("BLOCK ALL \n\n\n");
+                        }else {
+                            request.continue();
+                        }
+                    }else if(mainPageBlockAll){
                         request.abort();
                     }else{
-                        request.continue();
+                        if(resource != 'document'){
+                            request.abort();
+                        }else{
+                            request.continue();
+                        }
                     }
-                }else if(mainPageLogin){
-                    if(resource != 'document' && resource != 'script' && !URL.includes('SuG-IUx2WwG') || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
-                        request.abort();
-                    }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){ //! find the optimal breaking point URL.includes('SuG-IUx2WwG')
-                        request.continue();
-                        mainPageLogin = false;
-                        mainPageBlockAll = true;
-                        console.log("BLOCK ALL \n\n\n");
-                    }else {
-                        request.continue();
-                    }
-                }else if(mainPageBlockAll){
-                    request.abort();
-                }else{
-                    if(resource != 'document'){
-                        request.abort();
-                    }else{
-                        request.continue();
-                    }
-                }
-            });
-        }catch (error){
-            console.log("Error with starting main page: " + error);
-            client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
+                });
+            }catch (error){
+                console.log("Error with starting main page: " + error);
+                client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
+            }
         }
+        await mainPageInitiationSequence();
 
         try{
             //if login is activated
             if(workerData.burnerUsername != undefined){
                 //login   
-                const mainPageLoginSequence = async() => {
-                    await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
-                    await mainPage.type('#email', workerData.burnerUsername);
+                await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
+                await mainPage.type('#email', workerData.burnerUsername);
+                await mainPage.type('#pass', workerData.burnerPassword);
+                await mainPage.click('button[name="login"]');
+                //await mainPage.waitForNavigation(); //necessary with headless mode
+                console.log(mainPage.url());
+                if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('device-based/regular')){
+                    client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
+                }else if(mainPage.url().includes('device-based/regular')){
+                    console.log("Weird Url thing: ");
+                    await mainPage.click('button._9kpt');
+                    await mainPage.waitForNavigation();
                     await mainPage.type('#pass', workerData.burnerPassword);
                     await mainPage.click('button[name="login"]');
-                    //await new Promise(r => setTimeout(r, 1000));
-                    await mainPage.waitForNavigation(); //necessary with headless mode
+                    await mainPage.waitForNavigation(); //There is a chance this will sometimes simply not work, in that case maybe we just tell them to restart their task
                     console.log(mainPage.url());
-                    if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('privacy_mutation_token')){
-                        client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
-                    }else if(mainPage.url().includes('privacy_mutation_token')){
-                        //Maybe an easier way for this?
-                        console.log("Privacy Url thing...Retrying");
-                        mainBrowser.newPage();
-                        let pages = await mainBrowser.pages();
-                        mainPage.close();
-                        mainPage = pages[0];
-                        mainPage = tempTab;
-                        await new Promise(r => setTimeout(r, 5000));
-                        mainPageLoginSequence();
-                    }
                 }
-                await mainPageLoginSequence();
                 console.log("main page login")
 
                 mainPageLogin = false;
-                console.log(`Response received: ${networkTracking} bytes`);
+                console.log(`${networkTracking} bytes`);
                 console.log("LOGIN BREAK\n\n\n\n");
 
                 //set distance
@@ -160,29 +158,24 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
 
         // Set listingStorage, run once in the begging of the day
         try{
-            if(workerData.burnerUsername != undefined){
-                mainListingStorage = await mainPage.evaluate(() => {
-                    if(document.querySelector(".xx6bls6") == null){
-                        let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
-                        return links.map((link) => {
-                            if(link != null){
-                                let href = link.href;
-                                return href.substring(0, href.indexOf("?"));
-                            }else{
-                                return null;
-                            }
-                        })
-                    }else {
+            mainListingStorage = await mainPage.evaluate(() => {
+                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
+                return links.map((link) => {
+                    if(link != null){
+                        let href = link.href;
+                        return href.substring(0, href.indexOf("?"));
+                    }else{
                         return null;
                     }
-                });
-            }
+                })
+            });
         }catch (error){
             console.log("Error with setting listings: " + error);
             client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
         }
         console.log("Main Storage: " + mainListingStorage);
-        console.log(`Response received: ${networkTracking} bytes`);
+        console.log(`${networkTracking} bytes`);
+        networkTracking = 0;
     }
     
     //time stuff
@@ -256,18 +249,22 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                 try {
                     newPost = await mainPage.evaluate(() => {
                         let link = document.querySelector(".x3ct3a4 a").href;
-                        return link.substring(0, link.indexOf("?"))
+                        if(link != null){
+                            return link.substring(0, link.indexOf("?"));
+                        }else{
+                            return null;
+                        }
                     });
                     console.log("New Post: " + newPost);
                     console.log("Main listing storage: " + mainListingStorage);
-                    console.log(`Response received: ${networkTracking} bytes\n`);
+                    console.log(`${networkTracking} bytes\n`);
                 } catch(error) {
                     console.log("Error with main page conversion: " + error);
                     client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
                 }
             
                 //newPost is actually new
-                //if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost){
+                //if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && newPost != null){
                     console.log("new post");
                     let newPage;
                     let messageBrowser;
@@ -295,6 +292,7 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                         await newPage.setRequestInterception(true);
                         newPage.on('response', (response) => {
                             const contentLengthHeader = response.headers()['content-length'];
+                            console.log("Response: " + (contentLengthHeader || 0) + " " + response.url() + "\n");
                             if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
                                 networkTracking += parseInt(contentLengthHeader);
                             }
@@ -305,20 +303,20 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                             const URL = request.url();
                             if(autoMessage){
                                 if(newPageMessage){
-                                    if(resource != 'document' && resource != 'script' && resource != 'stylesheet' && resource != 'other' && resource != 'xhr'){
+                                    if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'xhr' || URL.includes('pagead') || URL.includes('longtail')){// || URL.includes('v3iG-I4') || URL.includes('v3iEQW4')
                                         request.abort();
                                     }else{
                                         request.continue();
-                                        console.log("Message: " + resource + " " + URL + "\n");
                                     }
                                 }else if(newPageLogin){
-                                    if(resource != 'document' && resource != 'script' && !URL.includes('SuG-IUx2WwG') || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
+                                    if(resource != 'document' && resource != 'script' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
                                         //
                                         request.abort();
-                                    }else if(URL.includes('SuG-IUx2WwG')){
-                                        request.abort();
+                                    }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){
+                                        request.continue();
                                         newPageLogin = false;
                                         newPageBlockAll = true;
+                                        console.log(`${networkTracking} bytes`);
                                         console.log("BLOCK ALL \n\n\n");
                                     }else {
                                         request.continue();
@@ -330,7 +328,6 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                         request.abort();
                                     }else{
                                         request.continue();
-                                        console.log(resource + " " + URL + "\n");
                                     }
                                 }
                             }else{
@@ -338,14 +335,13 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                     request.abort();
                                 }else{
                                     request.continue();
-                                    console.log(resource + " " + URL + "\n");
                                 }
                             }
                         });
                     } catch(error) {
                         console.log("Error with newPage: " + error);
                         client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
-                    }                    
+                    }         
 
                     let isShipping;
                     try {
@@ -371,17 +367,16 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                             await newPage.type('#email', workerData.mainUsername);
                             await newPage.type('#pass', workerData.mainPassword);
                             await newPage.click('button[name="login"]');
-                            //await mainPage.waitForNavigation(); //necessary with headless mode
+                            await newPage.waitForNavigation(); //necessary with headless mode
                             console.log(newPage.url());
-                            if(newPage.url() != 'https://www.facebook.com/?sk=welcome' && newPage.url() != 'https://www.facebook.com/' && !newPage.url().includes('privacy_mutation_token')){
+                            if(newPage.url() != 'https://www.facebook.com/?sk=welcome' && newPage.url() != 'https://www.facebook.com/' && !newPage.url().includes('privacy_mutation_token') && !newPage.url().includes('device-based/regular')){
                                 isLogin = false;
                                 client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}\n@everyone`);
-                            }else if(newPage.url().includes('privacy_mutation_token')){
-                                console.log("Privacy Url thing...Retrying");
-                                setTimeout(() => {
-                                    //!something?
-                                }, 3000)
+                            }else if(newPage.url().includes('privacy_mutation_token') || newPage.url().includes('device-based/regular')){
+                                console.log("Weird Url thing: ");
+
                             }
+
                             //network settings
                             newPageLogin = false;
                             newPageBlockAll = false;
@@ -402,11 +397,12 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                     await messageTextArea.type(workerData.message);
                                 }
                                 await newPage.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
-                                //maybe need to wait for a selector here?
+                                await newPage.waitForSelector('[aria-label="Message Again"]'); //wait for the message to send
                                 autoMessage = false;
                             } catch (error){
                                 console.log("Error with messaging: " + error);
                                 client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
+                                client.channels.cache.get(workerData.channel).send(`Message Failed`);
                             }
                         }
                     }else{
@@ -422,15 +418,15 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                 img: dom.querySelector('img').src,
                                 title: dom.querySelector('div.xyamay9 h1').innerText,
                                 date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1yztbdb span.x676frb.x1nxh6w3').innerText,
-                                description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText,
+                                description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                 shipping: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r span').innerText : dom.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ', //I feel that document.querySelector('div.xod5an3 div.x1gslohp span').innerText wont work
-                                price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[0]
+                                price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[1]
                             };
-                        })
+                        });
                         if(workerData.burnerUsername != undefined){
-                            //messageBrowser.close();
+                            await messageBrowser.close();
                         }else{
-                            //newPage.close();
+                            await newPage.close();
                         }
                         console.log(`New page: ${networkTracking} bytes`);
                     } catch(error){
@@ -438,6 +434,7 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                         client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
                     }
     
+                    
                     //Handle Discord messaging
                     if(workerData.autoMessage || isShipping == true){
                         try{
@@ -504,6 +501,7 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                 await messagePage.setRequestInterception(true);
                                 messagePage.on('response', (response) => {
                                     const contentLengthHeader = response.headers()['content-length'];
+                                    console.log("Response: " + (contentLengthHeader || 0) + " " + response.url() + "\n");
                                     if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
                                         networkTracking += parseInt(contentLengthHeader);
                                     }
@@ -513,19 +511,19 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                     const resource = request.resourceType();
                                     const URL = request.url();
                                     if(messagePageMessage){
-                                        if(resource != 'document' && resource != 'script' && resource != 'stylesheet' && resource != 'other' && resource != 'xhr'){
+                                        if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'xhr' || URL.includes('pagead') || URL.includes('longtail') || URL.includes('v6iEQW4') || URL.includes('v3iY3p4') || URL.includes('v3iSb54') || URL.includes('v3ijBU4')){
                                             request.abort();
                                         }else{
                                             request.continue();
-                                            console.log(resource + " " + URL + "\n");
                                         }
                                     }else if(messagePageLogin){
-                                        if(resource != 'document' && resource != 'script' && !URL.includes('SuG-IUx2WwG') || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
+                                        if(resource != 'document' && resource != 'script' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
                                             request.abort();
-                                        }else if(URL.includes('SuG-IUx2WwG')){
-                                            request.abort();
+                                        }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){
+                                            request.continue();
                                             messagePageLogin = false;
                                             messagePageBlockAll = true;
+                                            console.log(`${networkTracking} bytes`);
                                             console.log("BLOCK ALL \n\n\n");
                                         }else {
                                             request.continue();
@@ -537,7 +535,6 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                             request.abort();
                                         }else{
                                             request.continue();
-                                            console.log(resource + " " + URL + "\n");
                                         }
                                     }
                                 });
@@ -546,37 +543,39 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                                 await messagePage.type('#email', workerData.mainUsername);
                                 await messagePage.type('#pass', workerData.mainPassword);
                                 await messagePage.click('button[name="login"]');
+                                await messagePage.waitForNavigation(); //necessary with headless mode
+                                console.log(messagePage.url());
                                 if(messagePage.url() == 'https://www.facebook.com/?sk=welcome' || messagePage.url() == 'https://www.facebook.com/'){
                                     messagePageMessage = true;
                                     messagePageLogin = false;
                                     messagePageBlockAll = false;
-                                    await messagePage.goto(i.customId.split("-")[1] , { waitUntil: 'domcontentloaded' });    
-                                    if(workerData.message != null){
-                                        await messagePage.click('div.x1daaz14 [aria-label="Send seller a message"]');
-                                        await messagePage.keyboard.press('Backspace');
-                                        const messageTextArea = await messagePage.$('div.x1daaz14 [aria-label="Send seller a message"]');
-                                        await messageTextArea.type(workerData.message);
+                                    try{
+                                        await messagePage.goto(i.customId.split("-")[1] , { waitUntil: 'domcontentloaded' });    
+                                        if(workerData.message != null){
+                                            await messagePage.click('div.x1daaz14 [aria-label="Send seller a message"]');
+                                            await messagePage.keyboard.press('Backspace');
+                                            const messageTextArea = await messagePage.$('div.x1daaz14 [aria-label="Send seller a message"]');
+                                            await messageTextArea.type(workerData.message);
+                                        }
+                                        await messagePage.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
+                                        await messagePage.waitForSelector('[aria-label="Message Again"]'); //wait for the message to send
+                                        client.channels.cache.get(workerData.channel).send(`Sent!`);
+                                    }catch(error){
+                                        console.log(error);
+                                        client.channels.cache.get(workerData.channel).send(`Message Failed`);
                                     }
-                                    await messagePage.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
-                                    //might have to perform some kind of wait function here
                                     await messageBrowser.close();
-            
                                     console.log(`Message page: ${networkTracking} bytes`);
-                                }else if(newPage.url().includes('privacy_mutation_token')){
-                                    console.log("Privacy Url thing...Retrying");
-                                    setTimeout(() => {
-                                        //!something?
-                                    }, 3000)
+                                }else if(messagePage.url().includes('privacy_mutation_token') || messagePage.url().includes('device-based/regular')){
+                                    console.log("Weird Url thing: ");
+
                                 }else{
                                     client.channels.cache.get(workerData.channel).send(`Facebook Message Login Invalid at ${workerData.name}\n@everyone`);
                                 }
-
                             } catch (error){ 
                                 console.log("Error with manual message: " + error);
                                 client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
                             }
-
-                            client.channels.cache.get(workerData.channel).send(`Sent!`);
                             collector.stop();
                         });
                         collector.on('end', () => {
@@ -588,17 +587,15 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                     try {
                         if(workerData.burnerUsername != undefined){
                             mainListingStorage = await mainPage.evaluate(() => {
-                                if(document.querySelector(".xx6bls6") == null){
-                                    let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
-                                    return links.map((link) => {
-                                        if(link != null){
-                                            let href = link.href;
-                                            return href.substring(0, href.indexOf("?"));
-                                        }
-                                    })
-                                }else {
-                                    return null;
-                                }
+                                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')]; //will the second selector return null properly?
+                                return links.map((link) => {
+                                    if(link != null){
+                                        let href = link.href;
+                                        return href.substring(0, href.indexOf("?"));
+                                    }else{
+                                        return null;
+                                    }
+                                })
                             });
                         }
                     } catch(error) {
@@ -608,6 +605,6 @@ let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                 //}
                 interval();
             }
-        }, Math.floor((Math.random() * (2) + 2) * 60000));
+        }, Math.floor((Math.random() * (1) + 1) * 60000)); //!Math.floor((Math.random() * (2) + 2) * 60000)
     } 
 })();
