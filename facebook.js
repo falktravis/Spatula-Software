@@ -4,7 +4,6 @@ const puppeteer = require('puppeteer-extra');
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
 //!uninstall this if not necessary
-const proxyChain = require('proxy-chain');
 
 //discord.js
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
@@ -46,15 +45,15 @@ let randomUserAgent;
         const mainPageInitiationSequence = async() => {
             try{
                 randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-                //const newProxyUrl = await proxyChain.anonymizeProxy('http://falk.travis---gmail.com:cOvTBzl3stlIjrCYqzBsQ_country-UnitedStates_session-HnFpBxXx@185.187.170.24:3030');
                 mainBrowser = await puppeteer.launch({
                     headless: false,
                     defaultViewport: { width: 1366, height: 768 },
-                    args: ['--disable-notifications', `--user-agent=${randomUserAgent}`] //, `--proxy-server=${newProxyUrl}`
+                    args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://proxy.packetstream.io:31112`]
                 });
     
                 let pages = await mainBrowser.pages();
                 mainPage = pages[0];
+                await mainPage.authorize({'username': 'grumpypop1024', 'password': '1pp36Wc7ds9CgPSH_country-UnitedStates_session-12jYTplQ'});
                 await mainPage.setRequestInterception(true);
                 //track network consumption
                 mainPage.on('response', (response) => {
