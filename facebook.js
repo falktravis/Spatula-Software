@@ -53,7 +53,7 @@ let randomUserAgent;
     
                 let pages = await mainBrowser.pages();
                 mainPage = pages[0];
-                await mainPage.authorize({'username': 'grumpypop1024', 'password': '1pp36Wc7ds9CgPSH_country-UnitedStates_session-12jYTplQ'});
+                await mainPage.authenticate({ 'username':'grumpypop1024', 'password':'1pp36Wc7ds9CgPSH_country-UnitedStates_session-a91QhpDp' });
                 await mainPage.setRequestInterception(true);
                 //track network consumption
                 mainPage.on('response', (response) => {
