@@ -19,27 +19,53 @@ const { Worker } = require('worker_threads');
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-client.login(process.env.DISCORD_BOT_TOKEN);
+const discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
+discordClient.login(process.env.DISCORD_BOT_TOKEN);
+
+//Database connection
+const { MongoClient, ServerApiVersion } = require('mongodb');
+const uri = "mongodb+srv://SpatulaSoftware:jpTANtS4n59oqlam@spatula-software.tyas5mn.mongodb.net/?retryWrites=true&w=majority";
+const mongoClient = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+let mainProxies;
+let burnerProxies;
+(async () => {
+    try {
+        await mongoClient.connect();
+        await mongoClient.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        mainProxies = mongoClient.db('Spatula-Software').collection('Main-Proxies');
+        burnerProxies = mongoClient.db('Spatula-Software').collection('Burner-Proxies');
+    } catch(error){
+        await mongoClient.close();
+        console.log("Mongo Connection " + error);
+    }
+})();    
 
 //command set up
-client.commands = new Collection();
+discordClient.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
 	const filePath = path.join(commandsPath, file);
 	const command = require(filePath);
 	if ('data' in command && 'execute' in command) {
-		client.commands.set(command.data.name, command);
+		discordClient.commands.set(command.data.name, command);
 	} else {
 		console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 	}
 }
 
+//pre populate this with data from supabase 
 const users = new Map();
 
 //listen for commands
-client.on(Events.InteractionCreate, async interaction => {
+discordClient.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
 	const command = interaction.client.commands.get(interaction.commandName);
     
@@ -75,6 +101,28 @@ client.on(Events.InteractionCreate, async interaction => {
                 burnerLogins = null;
             }
 
+            //main proxy assignment algorithm
+            let mainProxy;
+            mainProxy = await mainProxies.findOne({PastUsers: interaction.options.getString("username"), CurrentUsers: {$lt: 5}}, {sort: {CurrentUsers: 1}});
+            //check for proxies within normal useage bounds
+            if(mainProxy == null){
+                let userPriority = await mainProxies.findOne({PastUsers: interaction.options.getString("username")}, {sort: {CurrentUsers: 1}});
+                let currentPriority = await mainProxies.findOne({}, {sort: {CurrentUsers: 1}});
+                if(userPriority.CurrentUsers <= currentPriority.CurrentUsers){
+                    mainProxy = userPriority.Proxy;
+                    //increase current users but this account is already in the currentUsers array
+                    mainProxies.updateOne({id: userPriority.id}, {$set: {CurrentUsers: (userPriority.CurrentUsers + 1)}});
+                }else{
+                    mainProxy = currentPriority.Proxy;
+                    //increase current users and add to past users list
+                    mainProxies.updateOne({id: currentPriority.id}, {$set: {CurrentUsers: (currentPriority.CurrentUsers + 1)}, $push: {PastUsers: interaction.options.getString("username")}});
+                }
+            }else{
+                //increase current users but this account is already in the currentUsers array
+                mainProxies.updateOne({id: mainProxy.id}, {$set: {CurrentUsers: (mainProxy.CurrentUsers + 1)}});
+                mainProxy = mainProxy.Proxy;
+            }                      
+
             if(!users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                 users.get(interaction.user.id).facebook.set(interaction.options.getString("name"), {
                     username: interaction.options.getString("username"),
@@ -82,14 +130,15 @@ client.on(Events.InteractionCreate, async interaction => {
                     burnerLogins: burnerLogins,
                     autoMessage: interaction.options.getBoolean("auto-message"),
                     message: interaction.options.getString("message"),
+                    mainProxy: mainProxy,
                     children: new Map()
                 });
-                client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
+                discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
             }else{
-                client.channels.cache.get(interaction.channelId).send("This name is already used");
+                discordClient.channels.cache.get(interaction.channelId).send("This name is already used");
             }
         }else{
-            client.channels.cache.get(interaction.channelId).send("Invalid burner-logins syntax");
+            discordClient.channels.cache.get(interaction.channelId).send("Invalid burner-logins syntax");
         }
     }
     else if(interaction.commandName === "facebook-create-child"){
@@ -100,12 +149,12 @@ client.on(Events.InteractionCreate, async interaction => {
                 if (interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
                     if(users.get(interaction.user.id).workerCount < 5){
                         if(interaction.options.getBoolean("login-search") == false && interaction.options.getNumber("distance") != null){
-                            client.channels.cache.get(interaction.channelId).send("You can not specify a distance without login-search");
+                            discordClient.channels.cache.get(interaction.channelId).send("You can not specify a distance without login-search");
                         }else{
                             //get parent
                             let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name"))
                             if(interaction.options.getBoolean("login-search") == true && parent.burnerLogins == null){
-                                client.channels.cache.get(interaction.channelId).send("Parent must have burner logins to use login-search");
+                                discordClient.channels.cache.get(interaction.channelId).send("Parent must have burner logins to use login-search");
                             }else{
                                 if(!parent.children.has(interaction.options.getString("name"))){
                                     let start = interaction.options.getNumber("start");
@@ -149,6 +198,29 @@ client.on(Events.InteractionCreate, async interaction => {
                                                 });   
                                             }
                                         }
+
+                                        //burner proxy assignment algorithm
+                                        let burnerProxy;
+                                        if(interaction.options.getBoolean("login-search") == true){
+                                            burnerProxy = await burnerProxies.findOne({PastUsers: burnerUsername, CurrentUsers: {$lt: 3}}, {sort: {CurrentUsers: 1}});
+                                            if(burnerProxy == null){
+                                                let userPriority = await burnerProxies.findOne({PastUsers: burnerUsername}, {sort: {CurrentUsers: 1}});
+                                                let currentPriority = await burnerProxies.findOne({}, {sort: {CurrentUsers: 1}});
+                                                if(userPriority.CurrentUsers <= currentPriority.CurrentUsers){
+                                                    burnerProxy = userPriority.Proxy;
+                                                    //increase current users
+                                                    burnerProxies.updateOne({id: userPriority.id}, {$set: {CurrentUsers: (userPriority.CurrentUsers + 1)}});
+                                                }else{
+                                                    burnerProxy = currentPriority.Proxy;
+                                                    //increase current users and add to past users list
+                                                    mainProxies.updateOne({id: currentPriority.id}, {$set: {CurrentUsers: (currentPriority.CurrentUsers + 1)}, $push: {PastUsers: burnerUsername}});
+                                                }
+                                            }else{
+                                                //increase current users
+                                                burnerProxies.updateOne({id: burnerProxy.id}, {$set: {CurrentUsers: (burnerProxy.CurrentUsers + 1)}, $push: {PastUsers: burnerUsername}});
+                                                burnerProxy = burnerProxy.Proxy;
+                                            }
+                                        }
         
                                         //get parent element from map and set new worker as a child
                                         parent.children.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
@@ -160,31 +232,33 @@ client.on(Events.InteractionCreate, async interaction => {
                                             burnerPassword: burnerPassword,
                                             autoMessage: parent.autoMessage,
                                             message: parent.message,
+                                            burnerProxy: burnerProxy,
+                                            mainProxy: parent.mainProxy,
                                             start: start * 60,
                                             end: end * 60,
                                             distance: interaction.options.getNumber("distance"),
                                             channel: interaction.channelId,
                                         }}));
-                                        client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
+                                        discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
                                     }else{
-                                        client.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
+                                        discordClient.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
                                     }
                                 }else{
-                                    client.channels.cache.get(interaction.channelId).send("A child with this name already exists");
+                                    discordClient.channels.cache.get(interaction.channelId).send("A child with this name already exists");
                                 }
                             }
                         }
                     }else{
-                        client.channels.cache.get(interaction.channelId).send("You have reached the worker limit, delete one to create another.");
+                        discordClient.channels.cache.get(interaction.channelId).send("You have reached the worker limit, delete one to create another.");
                     }
                 }else{
-                    client.channels.cache.get(interaction.channelId).send("Invalid Link");
+                    discordClient.channels.cache.get(interaction.channelId).send("Invalid Link");
                 }
             }else{
-                client.channels.cache.get(interaction.channelId).send("Parent does not exist");
+                discordClient.channels.cache.get(interaction.channelId).send("Parent does not exist");
             }
         }else{
-            client.channels.cache.get(interaction.channelId).send("Parent does not exist");
+            discordClient.channels.cache.get(interaction.channelId).send("You do not have an active plan");
         }
     }
     else if(interaction.commandName === "facebook-delete-child"){
@@ -203,15 +277,15 @@ client.on(Events.InteractionCreate, async interaction => {
                     parent.children.get(interaction.options.getString("child-name")).terminate();
                     parent.children.delete(interaction.options.getString("child-name"));
                     users.get(interaction.user.id).workerCount--;
-                    client.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("child-name"));
+                    discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("child-name"));
                 }else{
-                    client.channels.cache.get(interaction.channelId).send("Child does not exist");
+                    discordClient.channels.cache.get(interaction.channelId).send("Child does not exist");
                 }
             }else{
-                client.channels.cache.get(interaction.channelId).send("Parent does not exist");
+                discordClient.channels.cache.get(interaction.channelId).send("Parent does not exist");
             }
         }else{
-            client.channels.cache.get(interaction.channelId).send("Parent does not exist");
+            discordClient.channels.cache.get(interaction.channelId).send("Parent does not exist");
         }
     }
     else if(interaction.commandName === "facebook-delete-parent"){
@@ -223,12 +297,12 @@ client.on(Events.InteractionCreate, async interaction => {
                     users.get(interaction.user.id).workerCount--;
                 });
                 users.get(interaction.user.id).facebook.delete(interaction.options.getString("name"));
-                client.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
+                discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
             }else{
-                client.channels.cache.get(interaction.channelId).send("Parent does not exist");
+                discordClient.channels.cache.get(interaction.channelId).send("Parent does not exist");
             }
         }else{
-            client.channels.cache.get(interaction.channelId).send("Parent does not exist");
+            discordClient.channels.cache.get(interaction.channelId).send("Parent does not exist");
         }
     }
     else if(interaction.commandName === "ebay-create"){
@@ -271,18 +345,18 @@ client.on(Events.InteractionCreate, async interaction => {
                             end: end * 60,
                             channel: interaction.channelId,
                         }}));
-                        client.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
+                        discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
                     }else{
-                        client.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
+                        discordClient.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
                     }
                 }else{
-                    client.channels.cache.get(interaction.channelId).send("You have reached the worker limit, delete one to create another.");
+                    discordClient.channels.cache.get(interaction.channelId).send("You have reached the worker limit, delete one to create another.");
                 }
             }else{
-                client.channels.cache.get(interaction.channelId).send("Invalid Link");
+                discordClient.channels.cache.get(interaction.channelId).send("Invalid Link");
             }
         }else{
-            client.channels.cache.get(interaction.channelId).send("An interval with this name already exists");
+            discordClient.channels.cache.get(interaction.channelId).send("An interval with this name already exists");
         }
     }
     else if(interaction.commandName === "ebay-delete"){
@@ -291,12 +365,12 @@ client.on(Events.InteractionCreate, async interaction => {
                 users.get(interaction.user.id).ebay.get(interaction.options.getString("name")).terminate();
                 users.get(interaction.user.id).ebay.delete(interaction.options.getString("name"));
                 users.get(interaction.user.id).workerCount--;
-                client.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
+                discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
             }else{
-                client.channels.cache.get(interaction.channelId).send("Worker does not exist");
+                discordClient.channels.cache.get(interaction.channelId).send("Worker does not exist");
             }
         }else{
-            client.channels.cache.get(interaction.channelId).send("You do not have any workers");
+            discordClient.channels.cache.get(interaction.channelId).send("You do not have any workers");
         }
     }
     else if(interaction.commandName === "list"){
@@ -316,6 +390,6 @@ client.on(Events.InteractionCreate, async interaction => {
             list += `\n\t\t${workerKey}`;
         })
 
-        client.channels.cache.get(interaction.channelId).send(list);
+        discordClient.channels.cache.get(interaction.channelId).send(list);
     }
 });

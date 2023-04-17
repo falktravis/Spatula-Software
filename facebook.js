@@ -3,8 +3,6 @@ const { workerData } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
-//!uninstall this if not necessary
-const proxyChain = require('proxy-chain');
 
 //discord.js
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
@@ -42,17 +40,27 @@ let randomUserAgent;
         const mainPageInitiationSequence = async() => {
             try{
                 randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-                //const newProxyUrl = await proxyChain.anonymizeProxy('http://falk.travis---gmail.com:cOvTBzl3stlIjrCYqzBsQ_country-UnitedStates_session-HnFpBxXx@185.187.170.24:3030');
-                mainBrowser = await puppeteer.launch({
-                    headless: false,
-                    defaultViewport: { width: 1366, height: 768 },
-                    args: ['--disable-notifications', `--user-agent=${randomUserAgent}`] //, `--proxy-server=${newProxyUrl}`
-                });
+                if(workerData.burnerProxy == null){
+                    //send rotating proxy info
+                    mainBrowser = await puppeteer.launch({
+                        headless: false,
+                        defaultViewport: { width: 1366, height: 768 },
+                        args: ['--disable-notifications', `--user-agent=${randomUserAgent}`] 
+                    });
+                }else{
+                    //send workerData.burnerProxy
+                    mainBrowser = await puppeteer.launch({
+                        headless: false,
+                        defaultViewport: { width: 1366, height: 768 },
+                        args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://proxy.packetstream.io:31112`]
+                    });
+                }
                 let pages = await mainBrowser.pages();
                 mainPage = pages[0];
+                mainPage.authenticate({ 'username':'grumpypop1024', 'password':'1pp36Wc7ds9CgPSH_country-UnitedStates_session-a91QhpDp' });
 
                 //block network stuff if login-search = true
-                if(workerData.burnerUsername != undefined){
+                if(workerData.burnerUsername == undefined){
                     await mainPage.setRequestInterception(true);
                     mainPage.on('request', async request => {
                         const resource = request.resourceType();
@@ -75,10 +83,11 @@ let randomUserAgent;
             if(workerData.burnerUsername != undefined){
                 //login   
                 await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
+                //await new Promise(r => setTimeout(r, (Math.random() * 300 + 100)));
                 await mainPage.type('#email', workerData.burnerUsername);
                 await mainPage.type('#pass', workerData.burnerPassword);
                 await mainPage.click('button[name="login"]');
-                //await mainPage.waitForNavigation(); //necessary with headless mode
+                await mainPage.waitForNavigation(); //necessary with headless mode
                 console.log(mainPage.url());
                 if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('device-based/regular')){
                     client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}\n@everyone`);
@@ -131,8 +140,6 @@ let randomUserAgent;
             client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
         }
         console.log("Main Storage: " + mainListingStorage);
-        console.log(`${networkTracking} bytes`);
-        networkTracking = 0;
     }
     
     //time stuff
@@ -226,19 +233,15 @@ let randomUserAgent;
                     let messageBrowser;
 
                     try {
-                        //If the login-search is false, mainPage will not be logged in to anything and we don't need to waste on a new browser
-                        if(workerData.burnerUsername != undefined){
-                            randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-                            messageBrowser = await puppeteer.launch({
-                                headless: false,
-                                defaultViewport: { width: 1366, height: 768 },
-                                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
-                            });
-                            let pages = await messageBrowser.pages();
-                            newPage = pages[0];
-                        }else{
-                            newPage = await mainBrowser.newPage();
-                        }
+                        //Use workerData.mainProxy
+                        randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+                        messageBrowser = await puppeteer.launch({
+                            headless: false,
+                            defaultViewport: { width: 1366, height: 768 },
+                            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
+                        });
+                        let pages = await messageBrowser.pages();
+                        newPage = pages[0];
                     } catch(error) {
                         console.log("Error with newPage: " + error);
                         client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
@@ -274,7 +277,12 @@ let randomUserAgent;
                                 client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}\n@everyone`);
                             }else if(newPage.url().includes('privacy_mutation_token') || newPage.url().includes('device-based/regular')){
                                 console.log("Weird Url thing: ");
-
+                                await newPage.click('button._9kpt');
+                                await newPage.waitForNavigation();
+                                await newPage.type('#pass', workerData.burnerPassword);
+                                await newPage.click('button[name="login"]');
+                                await newPage.waitForNavigation(); //There is a chance this will sometimes simply not work, in that case maybe we just tell them to restart their task
+                                console.log(newPage.url());
                             }
 
                             await newPage.goto(newPost, { waitUntil: 'domcontentloaded' });
@@ -317,12 +325,7 @@ let randomUserAgent;
                                 price: "$" + dom.querySelector('div.x1xmf6yo span.x193iq5w.xeuugli.x13faqbe.x1vvkbs.x1xmvt09.x1lliihq.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.xudqn12.x676frb').innerText.split("$")[1]
                             };
                         });
-                        if(workerData.burnerUsername != undefined){
-                            await messageBrowser.close();
-                        }else{
-                            await newPage.close();
-                        }
-                        console.log(`New page: ${networkTracking} bytes`);
+                        await messageBrowser.close();
                     } catch(error){
                         console.log("error with getting item data: " + error);
                         client.channels.cache.get('1091532766522376243').send('Facebook error: ' + error);
@@ -378,6 +381,7 @@ let randomUserAgent;
                             try{
                                 i.reply("Sending...");
                                 randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+                                //workerData.mainProxy
                                 messageBrowser = await puppeteer.launch({
                                     headless: false,
                                     defaultViewport: { width: 1366, height: 768 },
@@ -390,7 +394,7 @@ let randomUserAgent;
                                 await messagePage.type('#email', workerData.mainUsername);
                                 await messagePage.type('#pass', workerData.mainPassword);
                                 await messagePage.click('button[name="login"]');
-                                //await messagePage.waitForNavigation(); //necessary with headless mode
+                                await messagePage.waitForNavigation(); //necessary with headless mode
                                 console.log(messagePage.url());
                                 if(messagePage.url() == 'https://www.facebook.com/?sk=welcome' || messagePage.url() == 'https://www.facebook.com/'){
                                     try{
@@ -409,10 +413,14 @@ let randomUserAgent;
                                         client.channels.cache.get(workerData.channel).send(`Message Failed`);
                                     }
                                     await messageBrowser.close();
-                                    console.log(`Message page: ${networkTracking} bytes`);
-                                }else if(messagePage.url().includes('privacy_mutation_token') || messagePage.url().includes('device-based/regular')){
+                                }else if(messagePage.url().includes('device-based/regular')){
                                     console.log("Weird Url thing: ");
-
+                                    await messagePage.click('button._9kpt');
+                                    await messagePage.waitForNavigation();
+                                    await messagePage.type('#pass', workerData.burnerPassword);
+                                    await messagePage.click('button[name="login"]');
+                                    await messagePage.waitForNavigation(); //There is a chance this will sometimes simply not work, in that case maybe we just tell them to restart their task
+                                    console.log(messagePage.url());
                                 }else{
                                     client.channels.cache.get(workerData.channel).send(`Facebook Message Login Invalid at ${workerData.name}\n@everyone`);
                                 }
@@ -449,6 +457,6 @@ let randomUserAgent;
                 //}
                 interval();
             }
-        }, Math.floor((Math.random() * (1) + 1) * 60000)); //!Math.floor((Math.random() * (2) + 2) * 60000)
+        }, 1000000000); //!Math.floor((Math.random() * (2) + 2) * 60000)
     } 
 })();
