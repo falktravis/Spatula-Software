@@ -149,6 +149,14 @@ client.on(Events.InteractionCreate, async interaction => {
                                                 });   
                                             }
                                         }
+
+                                        //burner proxy assignment algorithm
+                                        let burnerProxy;
+                                        if(interaction.options.getBoolean("login-search") == true){
+                                            burnerProxy = await proxyDB.findOne({CurrentUser: "null"});
+                                            proxyDB.updateOne({id: burnerProxy.id}, {$set: {CurrentUser: interaction.options.getString("username")}});
+                                            burnerProxy = burnerProxy.Proxy;
+                                        }
         
                                         //get parent element from map and set new worker as a child
                                         parent.children.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
