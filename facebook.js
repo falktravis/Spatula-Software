@@ -57,7 +57,7 @@ let randomUserAgent;
                 }
                 let pages = await mainBrowser.pages();
                 mainPage = pages[0];
-                mainPage.authenticate({ 'username':'grumpypop1024', 'password':'1pp36Wc7ds9CgPSH_country-UnitedStates_session-a91QhpDp' });
+                mainPage.authenticate({ 'username':'grumpypop1024', 'password':'1pp36Wc7ds9CgPSH_country-UnitedStates_session-XPV69uxg' });
 
                 //block network stuff if login-search = true
                 if(workerData.burnerUsername == undefined){
