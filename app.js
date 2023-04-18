@@ -35,8 +35,30 @@ for (const file of commandFiles) {
 		console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 	}
 }
-
 const users = new Map();
+
+//Database connection
+const { MongoClient, ServerApiVersion } = require('mongodb');
+const uri = "mongodb+srv://SpatulaSoftware:jpTANtS4n59oqlam@spatula-software.tyas5mn.mongodb.net/?retryWrites=true&w=majority";
+const mongoClient = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+let proxyDB;
+(async () => {
+    try {
+        await mongoClient.connect();
+        await mongoClient.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        proxyDB = mongoClient.db('Spatula-Software').collection('Proxies');
+    } catch(error){
+        await mongoClient.close();
+        console.log("Mongo Connection " + error);
+    }
+})();
 
 //listen for commands
 client.on(Events.InteractionCreate, async interaction => {
@@ -74,6 +96,12 @@ client.on(Events.InteractionCreate, async interaction => {
             }else{
                 burnerLogins = null;
             }
+
+            //main proxy assignment algorithm
+            let mainProxy;
+            mainProxy = await proxyDB.findOne({CurrentUser: "null"});
+            proxyDB.updateOne({id: mainProxy.id}, {$set: {CurrentUser: interaction.options.getString("username")}});
+            mainProxy = mainProxy.Proxy;    
 
             if(!users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                 users.get(interaction.user.id).facebook.set(interaction.options.getString("name"), {
