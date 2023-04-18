@@ -32,15 +32,13 @@ const mongoClient = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
-let mainProxies;
-let burnerProxies;
+let proxyDB;
 (async () => {
     try {
         await mongoClient.connect();
         await mongoClient.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
-        mainProxies = mongoClient.db('Spatula-Software').collection('Main-Proxies');
-        burnerProxies = mongoClient.db('Spatula-Software').collection('Burner-Proxies');
+        proxyDB = mongoClient.db('Spatula-Software').collection('Proxies');
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -103,25 +101,9 @@ discordClient.on(Events.InteractionCreate, async interaction => {
 
             //main proxy assignment algorithm
             let mainProxy;
-            mainProxy = await mainProxies.findOne({PastUsers: interaction.options.getString("username"), CurrentUsers: {$lt: 5}}, {sort: {CurrentUsers: 1}});
-            //check for proxies within normal useage bounds
-            if(mainProxy == null){
-                let userPriority = await mainProxies.findOne({PastUsers: interaction.options.getString("username")}, {sort: {CurrentUsers: 1}});
-                let currentPriority = await mainProxies.findOne({}, {sort: {CurrentUsers: 1}});
-                if(userPriority.CurrentUsers <= currentPriority.CurrentUsers){
-                    mainProxy = userPriority.Proxy;
-                    //increase current users but this account is already in the currentUsers array
-                    mainProxies.updateOne({id: userPriority.id}, {$set: {CurrentUsers: (userPriority.CurrentUsers + 1)}});
-                }else{
-                    mainProxy = currentPriority.Proxy;
-                    //increase current users and add to past users list
-                    mainProxies.updateOne({id: currentPriority.id}, {$set: {CurrentUsers: (currentPriority.CurrentUsers + 1)}, $push: {PastUsers: interaction.options.getString("username")}});
-                }
-            }else{
-                //increase current users but this account is already in the currentUsers array
-                mainProxies.updateOne({id: mainProxy.id}, {$set: {CurrentUsers: (mainProxy.CurrentUsers + 1)}});
-                mainProxy = mainProxy.Proxy;
-            }                      
+            mainProxy = await proxyDB.findOne({CurrentUser: "null"});
+            proxyDB.updateOne({id: mainProxy.id}, {$set: {CurrentUser: interaction.options.getString("username")}});
+            mainProxy = mainProxy.Proxy;                  
 
             if(!users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                 users.get(interaction.user.id).facebook.set(interaction.options.getString("name"), {
@@ -202,24 +184,9 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                         //burner proxy assignment algorithm
                                         let burnerProxy;
                                         if(interaction.options.getBoolean("login-search") == true){
-                                            burnerProxy = await burnerProxies.findOne({PastUsers: burnerUsername, CurrentUsers: {$lt: 3}}, {sort: {CurrentUsers: 1}});
-                                            if(burnerProxy == null){
-                                                let userPriority = await burnerProxies.findOne({PastUsers: burnerUsername}, {sort: {CurrentUsers: 1}});
-                                                let currentPriority = await burnerProxies.findOne({}, {sort: {CurrentUsers: 1}});
-                                                if(userPriority.CurrentUsers <= currentPriority.CurrentUsers){
-                                                    burnerProxy = userPriority.Proxy;
-                                                    //increase current users
-                                                    burnerProxies.updateOne({id: userPriority.id}, {$set: {CurrentUsers: (userPriority.CurrentUsers + 1)}});
-                                                }else{
-                                                    burnerProxy = currentPriority.Proxy;
-                                                    //increase current users and add to past users list
-                                                    mainProxies.updateOne({id: currentPriority.id}, {$set: {CurrentUsers: (currentPriority.CurrentUsers + 1)}, $push: {PastUsers: burnerUsername}});
-                                                }
-                                            }else{
-                                                //increase current users
-                                                burnerProxies.updateOne({id: burnerProxy.id}, {$set: {CurrentUsers: (burnerProxy.CurrentUsers + 1)}, $push: {PastUsers: burnerUsername}});
-                                                burnerProxy = burnerProxy.Proxy;
-                                            }
+                                            burnerProxy = await proxyDB.findOne({CurrentUser: "null"});
+                                            proxyDB.updateOne({id: burnerProxy.id}, {$set: {CurrentUser: interaction.options.getString("username")}});
+                                            burnerProxy = burnerProxy.Proxy;
                                         }
         
                                         //get parent element from map and set new worker as a child
