@@ -43,7 +43,7 @@ let proxyDB;
         await mongoClient.close();
         console.log("Mongo Connection " + error);
     }
-})();    
+})();
 
 //command set up
 discordClient.commands = new Collection();
