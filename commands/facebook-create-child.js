@@ -20,6 +20,10 @@ module.exports = {
             option.setName('login-search')
                 .setDescription('login on search for accurate distance parameter')
                 .setRequired(true))
+        .addBooleanOption(option => 
+            option.setName('auto-message')
+                .setDescription('If true, Spatula will automatically message the seller of every new listing')
+                .setRequired(true))
         .addNumberOption(option => 
             option.setName('start')
                 .setDescription('Start time, 24 hour time, no decimals, EST')

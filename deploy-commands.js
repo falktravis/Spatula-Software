@@ -42,7 +42,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 	}
 })();
 
-
 /*
 *delete command
 
@@ -54,14 +53,15 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 // ...
 
 // for guild-based commands
-rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID, '1088586824257118368'))
+rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID, '1088586824257118369'))
 	.then(() => console.log('Successfully deleted guild command'))
 	.catch(console.error);
 
 // for global commands
-rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1088586824257118368'))
+rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1088586824257118369'))
 	.then(() => console.log('Successfully deleted application command'))
 	.catch(console.error);
+
 
 
 */

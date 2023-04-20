@@ -100,19 +100,22 @@ discordClient.on(Events.InteractionCreate, async interaction => {
             }
 
             //main proxy assignment algorithm
-            let mainProxy;
-            mainProxy = await proxyDB.findOne({CurrentUser: "null"});
-            proxyDB.updateOne({id: mainProxy.id}, {$set: {CurrentUser: interaction.options.getString("username")}});
-            mainProxy = mainProxy.Proxy;                  
+            let messageProxy;
+            messageProxy = await proxyDB.findOne({CurrentUser: interaction.options.getString("username")});
+            if(messageProxy == null){
+                messageProxy = await proxyDB.findOne({CurrentUser: null});
+                console.log(messageProxy);
+                proxyDB.updateOne({_id: messageProxy._id}, {$set: {CurrentUser: interaction.options.getString("username")}});
+            }
+            messageProxy = messageProxy.Proxy;                  
 
             if(!users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                 users.get(interaction.user.id).facebook.set(interaction.options.getString("name"), {
                     username: interaction.options.getString("username"),
                     password: interaction.options.getString("password"),
                     burnerLogins: burnerLogins,
-                    autoMessage: interaction.options.getBoolean("auto-message"),
                     message: interaction.options.getString("message"),
-                    mainProxy: mainProxy,
+                    messageProxy: messageProxy,
                     children: new Map()
                 });
                 discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
@@ -172,7 +175,7 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                                         burnerPassword = e.password;
                                                         return;
                                                     }else if(i == parent.burnerLogins.length - 1){
-                                                        console.log("Reset burner login rotation");
+                                                        discordClient.channels.cache.get(interaction.channelId).send("Warning: More active tasks than burner accounts");
                                                         parent.burnerLogins[0].workerNum++;
                                                         burnerUsername = parent.burnerLogins[0].username;
                                                         burnerPassword = parent.burnerLogins[0].password;
@@ -182,12 +185,16 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                         }
 
                                         //burner proxy assignment algorithm
-                                        let burnerProxy;
+                                        let searchProxy;
                                         if(interaction.options.getBoolean("login-search") == true){
-                                            burnerProxy = await proxyDB.findOne({CurrentUser: "null"});
-                                            proxyDB.updateOne({id: burnerProxy.id}, {$set: {CurrentUser: interaction.options.getString("username")}});
-                                            burnerProxy = burnerProxy.Proxy;
+                                            searchProxy = await proxyDB.findOne({CurrentUser: burnerUsername});
+                                            if(searchProxy == null){
+                                                searchProxy = await proxyDB.findOne({CurrentUser: null});
+                                                proxyDB.updateOne({_id: searchProxy._id}, {$set: {CurrentUser: burnerUsername}});
+                                            }
+                                            searchProxy = searchProxy.Proxy;
                                         }
+                                        console.log(searchProxy);
         
                                         //get parent element from map and set new worker as a child
                                         parent.children.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
@@ -197,10 +204,10 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                             mainPassword: parent.password,
                                             burnerUsername: burnerUsername,
                                             burnerPassword: burnerPassword,
-                                            autoMessage: parent.autoMessage,
+                                            autoMessage: interaction.options.getBoolean("auto-message"),
                                             message: parent.message,
-                                            burnerProxy: burnerProxy,
-                                            mainProxy: parent.mainProxy,
+                                            searchProxy: searchProxy,
+                                            messageProxy: parent.messageProxy,
                                             start: start * 60,
                                             end: end * 60,
                                             distance: interaction.options.getNumber("distance"),
@@ -233,18 +240,27 @@ discordClient.on(Events.InteractionCreate, async interaction => {
             if(users.get(interaction.user.id).facebook.has(interaction.options.getString("parent-name"))){
                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name"));
                 if(parent.children.has(interaction.options.getString("child-name"))){
+                    let child = parent.children.get(interaction.options.getString("child-name"));
+
                     //make the burner account open for use again
                     parent.burnerLogins.forEach((e) => {
                         if(e.workerName == interaction.options.getString("child-name")){
                             e.workerName = null;
+                            proxyDB.updateOne({CurrentUser: e.username}, {$set: {CurrentUser: null}});
                             return;
                         }
                     });
 
-                    parent.children.get(interaction.options.getString("child-name")).terminate();
-                    parent.children.delete(interaction.options.getString("child-name"));
-                    users.get(interaction.user.id).workerCount--;
-                    discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("child-name"));
+                    child.postMessage({ action: 'closeBrowsers' });
+                    child.on('message', (message) => {
+                        if(message.action = 'terminate'){
+                            console.log('terminate');
+                            child.terminate();
+                            parent.children.delete(interaction.options.getString("child-name"));
+                            users.get(interaction.user.id).workerCount--;
+                            discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("child-name"));
+                        }
+                    })
                 }else{
                     discordClient.channels.cache.get(interaction.channelId).send("Child does not exist");
                 }
@@ -260,9 +276,32 @@ discordClient.on(Events.InteractionCreate, async interaction => {
             if(users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("name"));
                 parent.children.forEach((child) => {
-                    child.terminate();
-                    users.get(interaction.user.id).workerCount--;
+                    child.postMessage({ action: 'closeBrowsers' });
+                    child.on('message', (message) => {
+                        if(message.action == 'terminate'){
+                            console.log('terminate');
+                            child.terminate();
+                            users.get(interaction.user.id).workerCount--;
+                        }
+                    })
                 });
+
+                //reset currentUser in database
+                parent.burnerLogins.forEach((e) => {
+                    proxyDB.updateOne({CurrentUser: e.username}, {$set: {CurrentUser: null}});
+                });
+
+                //reset currentUser for parent proxy if it is not used by another task
+                let usernameIsCurrent = 0;
+                users.get(interaction.user.id).facebook.forEach((e) => {
+                    if(e.username == parent.username){
+                        usernameIsCurrent++;
+                    }
+                })
+                if(usernameIsCurrent <= 1){
+                    proxyDB.updateOne({CurrentUser: parent.username}, {$set: {CurrentUser: null}});
+                }
+
                 users.get(interaction.user.id).facebook.delete(interaction.options.getString("name"));
                 discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
             }else{

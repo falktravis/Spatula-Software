@@ -8,10 +8,6 @@ module.exports = {
             option.setName('name')
                 .setDescription('Name of Parent')
                 .setRequired(true))
-        .addBooleanOption(option => 
-            option.setName('auto-message')
-                .setDescription('If true Spatula will automatically message the seller of every new listing')
-                .setRequired(true))
         .addStringOption(option => 
             option.setName('username')
                 .setDescription('Facebook username, used for messaging')
