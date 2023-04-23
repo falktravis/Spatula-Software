@@ -59,6 +59,23 @@ for (const file of commandFiles) {
 	}
 }
 
+//worker message listening function
+const workerHandleMessage = (message, child, parent, user, username) => {
+    if(message.action == 'failure'){
+        users.get(user).facebook.get(parent).children.get(child).terminate();
+        users.get(user).facebook.get(parent).children.delete(child);
+        proxyDB.updateOne({CurrentUser: username}, {$set: {CurrentUser: null}});
+        users.get(user).workerCount--;
+    }else if(message.action === 'updateBurnerCookies'){
+        //!change this to update the proper Obj
+        proxyDB.updateOne({}, {$set: {Cookies: message.cookies}});
+    }else if(message.action === 'updateMessageCookies'){
+        //!change this to update the proper Obj
+        proxyDB.updateOne({}, {$set: {Cookies: message.cookies}});
+        users.get(user).facebook.get(parent).children.get(child).removeListener('message', workerHandleMessage);
+    }
+}
+
 //pre populate this with data from supabase 
 const users = new Map();
 
@@ -100,14 +117,13 @@ discordClient.on(Events.InteractionCreate, async interaction => {
             }
 
             //main proxy assignment algorithm
-            let messageProxy;
-            messageProxy = await proxyDB.findOne({CurrentUser: interaction.options.getString("username")});
-            if(messageProxy == null){
-                messageProxy = await proxyDB.findOne({CurrentUser: null});
-                console.log(messageProxy);
-                proxyDB.updateOne({_id: messageProxy._id}, {$set: {CurrentUser: interaction.options.getString("username")}});
+            let messageAccountObj;
+            messageAccountObj = await proxyDB.findOne({CurrentUser: interaction.options.getString("username")});
+            if(messageAccountObj == null){
+                messageAccountObj = await proxyDB.findOne({CurrentUser: null});
+                console.log(messageAccountObj);
+                proxyDB.updateOne({_id: messageAccountObj._id}, {$set: {CurrentUser: interaction.options.getString("username")}});
             }
-            messageProxy = messageProxy.Proxy;                  
 
             if(!users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                 users.get(interaction.user.id).facebook.set(interaction.options.getString("name"), {
@@ -115,7 +131,8 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                     password: interaction.options.getString("password"),
                     burnerLogins: burnerLogins,
                     message: interaction.options.getString("message"),
-                    messageProxy: messageProxy,
+                    messageProxy: messageAccountObj.Proxy,
+                    messageCookies: messageAccountObj.Cookies,
                     children: new Map()
                 });
                 discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
@@ -185,16 +202,20 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                         }
 
                                         //burner proxy assignment algorithm
-                                        let searchProxy;
+                                        //!switch searchProxy name and get cookies from object
+                                        let burnerAccountObj;
                                         if(interaction.options.getBoolean("login-search") == true){
-                                            searchProxy = await proxyDB.findOne({CurrentUser: burnerUsername});
-                                            if(searchProxy == null){
-                                                searchProxy = await proxyDB.findOne({CurrentUser: null});
-                                                proxyDB.updateOne({_id: searchProxy._id}, {$set: {CurrentUser: burnerUsername}});
+                                            burnerAccountObj = await proxyDB.findOne({CurrentUser: burnerUsername});
+                                            if(burnerAccountObj == null){
+                                                burnerAccountObj = await proxyDB.findOne({CurrentUser: null});
+                                                proxyDB.updateOne({_id: burnerAccountObj._id}, {$set: {CurrentUser: burnerUsername}});
                                             }
-                                            searchProxy = searchProxy.Proxy;
                                         }
-                                        console.log(searchProxy);
+                                        console.log(burnerAccountObj);
+
+                                        //!just testing
+                                        let test = await proxyDB.findOne({});
+                                        test = test.Cookies;
         
                                         //get parent element from map and set new worker as a child
                                         parent.children.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
@@ -206,13 +227,19 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                             burnerPassword: burnerPassword,
                                             autoMessage: interaction.options.getBoolean("auto-message"),
                                             message: parent.message,
-                                            searchProxy: searchProxy,
+                                            searchProxy: burnerAccountObj.Proxy,
                                             messageProxy: parent.messageProxy,
+                                            burnerCookies: test, //burnerAccountObj.Cookies
+                                            messageCookies: parent.messageCookies,
                                             start: start * 60,
                                             end: end * 60,
                                             distance: interaction.options.getNumber("distance"),
                                             channel: interaction.channelId,
                                         }}));
+
+                                        //Set message listener for updating cookies and login error handling
+                                        parent.children.get(interaction.options.getString("name")).on('message', message => workerHandleMessage(message, interaction.options.getString("name"), interaction.options.getString("parent-name"), interaction.user.id, burnerUsername));
+
                                         discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
                                     }else{
                                         discordClient.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
@@ -251,9 +278,12 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                         }
                     });
 
+                    //Message the worker to close browsers
                     child.postMessage({ action: 'closeBrowsers' });
+
+                    //On completion worker messages back to terminate
                     child.on('message', (message) => {
-                        if(message.action = 'terminate'){
+                        if(message.action == 'terminate'){
                             console.log('terminate');
                             child.terminate();
                             parent.children.delete(interaction.options.getString("child-name"));
@@ -276,7 +306,10 @@ discordClient.on(Events.InteractionCreate, async interaction => {
             if(users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("name"));
                 parent.children.forEach((child) => {
+                    //Message the worker to close browsers
                     child.postMessage({ action: 'closeBrowsers' });
+                    
+                    //On completion worker messages back to terminate
                     child.on('message', (message) => {
                         if(message.action == 'terminate'){
                             console.log('terminate');
@@ -291,6 +324,7 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                     proxyDB.updateOne({CurrentUser: e.username}, {$set: {CurrentUser: null}});
                 });
 
+                //!This feels wrong
                 //reset currentUser for parent proxy if it is not used by another task
                 let usernameIsCurrent = 0;
                 users.get(interaction.user.id).facebook.forEach((e) => {
