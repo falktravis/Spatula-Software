@@ -19,7 +19,7 @@ module.exports = {
         .addStringOption(option => 
             option.setName('burner-logins')
                 .setDescription('Burner logins used for searching, use this syntax (username:password, username:password, etc...)')
-                .setRequired(false))
+                .setRequired(true))
         .addStringOption(option => 
             option.setName('message')
                 .setDescription('Message content sent to seller')

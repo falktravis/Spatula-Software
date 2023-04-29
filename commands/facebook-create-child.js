@@ -17,10 +17,6 @@ module.exports = {
                 .setDescription('link')
                 .setRequired(true))
         .addBooleanOption(option => 
-            option.setName('login-search')
-                .setDescription('login on search for accurate distance parameter')
-                .setRequired(true))
-        .addBooleanOption(option => 
             option.setName('auto-message')
                 .setDescription('If true, Spatula will automatically message the seller of every new listing')
                 .setRequired(true))
@@ -35,7 +31,7 @@ module.exports = {
         .addNumberOption(option => 
             option.setName('distance')
                 .setDescription('Maximum item distance from location')
-                .setRequired(false)
+                .setRequired(true)
                 .addChoices(				
                     { name: '1', value: 1 },
                     { name: '2', value: 2 },
