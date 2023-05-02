@@ -38,6 +38,20 @@ const errorMessage = (message, error) => {
     client.channels.cache.get(workerData.channel).send(message + ': ' + error);
 }
 
+//Queue stuff
+const handleQueue = async () => {
+    //run the command
+    await sendMessage(messageQueue[0]);
+
+    //delete the executed command from queue
+    messageQueue.shift();
+    console.log(messageQueue);
+    //check the queue for more commands and run it back if necessary
+    if(messageQueue.length > 0){
+        await handleQueue();
+    }
+}
+
 //general instantiation
 const userAgents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
@@ -64,6 +78,7 @@ let itemBrowser;
 let mainListingStorage;
 let burnerCookies = cookieCheckpoint(workerData.burnerCookies);
 let messageCookies = cookieCheckpoint(workerData.messageCookies);
+let messageQueue = [];
 
 const sendMessage = async (link) => {
     let isLogin = true;  
@@ -126,7 +141,7 @@ const sendMessage = async (link) => {
                 isLogin = false;
                 client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}\n@everyone`);
             }else{
-                if(mainPage.url().includes('mobileprotection')){
+                if(itemPage.url().includes('mobileprotection')){
                     await mainPage.click('label.uiLinkButton');
                     await mainPage.waitForNavigation();//necessary with headless mode?
                     console.log("mobile protection");
@@ -146,7 +161,7 @@ const sendMessage = async (link) => {
     try {
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         itemBrowser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
         });
@@ -159,10 +174,6 @@ const sendMessage = async (link) => {
         //set cookies/login if the login was a success
         if(isLogin){
             await itemPage.setCookie(...messageCookies);
-
-            //Update cookies
-            messageCookies = await itemPage.cookies();
-            messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
         }
     } catch (error) {
         errorMessage('Error with item page instantiation for cookie login', error);
@@ -170,20 +181,63 @@ const sendMessage = async (link) => {
 
     try{
         //navigate to the product page
-        await itemPage.goto(link, { waitUntil: 'domcontentloaded' });
+        await itemPage.goto(link, { waitUntil: 'networkidle0' }); 
 
-        if(isLogin && itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]') != null){   
-            if(workerData.message != null){
-                await itemPage.click('div.x1daaz14 [aria-label="Send seller a message"]');
-                await itemPage.keyboard.press('Backspace');
-                const messageTextArea = await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]');
-                await messageTextArea.type(workerData.message);
+        //Update cookies
+        if(isLogin){
+            messageCookies = await itemPage.cookies();
+            messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+        }
+
+        //Send the message
+        if(isLogin){
+            if(!itemPage.url().includes('unavailable_product')){
+                if(await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]')){//regular, pickup listing
+                    console.log("local pickup only message sequence");
+                    if(workerData.message != null){
+                        await itemPage.click('div.x1daaz14 [aria-label="Send seller a message"]');
+                        await itemPage.keyboard.press('Backspace');
+                        const messageTextArea = await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]');
+                        await messageTextArea.type(workerData.message);
+                    }
+                    await itemPage.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
+                    await itemPage.waitForSelector('[aria-label="Message Again"]');
+                    await client.channels.cache.get(workerData.channel).send("Message Sent!");
+                }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
+                    console.log("shipping message sequence");
+                    await itemPage.click('[aria-label="Message"]');
+                    await itemPage.waitForSelector('[aria-label="Please type your message to the seller"]');
+                    if(workerData.message != null){
+                        await itemPage.click('[aria-label="Please type your message to the seller"]');
+                        const messageTextArea = await itemPage.$('[aria-label="Please type your message to the seller"]');
+                        await messageTextArea.type(workerData.message);
+                    }
+                    await itemPage.click('[aria-label="Send Message"]');
+                    await itemPage.waitForSelector('[aria-label="Message Again"]');
+                    await client.channels.cache.get(workerData.channel).send("Message Sent!");
+                }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
+                    let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.x1xlr1w8.x1a1m0xk').innerText});
+                    await client.channels.cache.get(workerData.channel).send("Message Failed: item " + listingConditionText);
+                }else if(await itemPage.$('span.xk50ysn.x1a1m0xk')){//Check for the weird out of stock thing //!I have no clue if this is actually a thing
+                    let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.xk50ysn.x1a1m0xk').innerText});
+                    await client.channels.cache.get(workerData.channel).send("Message Failed: item " + listingConditionText);
+                }else{
+                    await client.channels.cache.get(workerData.channel).send("Message Failed");
+                }
+            }else{
+                await client.channels.cache.get(workerData.channel).send("Product Unavailable");
             }
-            await itemPage.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
-            await itemPage.waitForSelector('[aria-label="Message Again"]'); //wait for the message to send
         }
     } catch (error){
         errorMessage('Error with messaging', error);
+    }
+
+    try {
+        if(!workerData.autoMessage){
+            await itemBrowser.close();
+        }
+    } catch (error) {
+        errorMessage('Error with closing itemBrowser', error);
     }
 }
 
@@ -434,33 +488,16 @@ const sendMessage = async (link) => {
                             return null;
                         }
                     });
-                    console.log("New Post: " + newPost);
                     console.log("Main listing storage: " + mainListingStorage);
                 } catch(error) {
                     errorMessage('Error with main page conversion', error);
                 }
             
                 //newPost is actually new
-                if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && newPost != null){
-                    console.log("new post");
-                    let isShipping;
-
-                    //Determine whether the item is shipped or local pickup
-                    try {
-                        let shippingText = await mainPage.evaluate(() => {
-                            return document.querySelector('.x3ct3a4 span.xuxw1ft').innerText;
-                        })
-                        console.log(shippingText);
-                        if(shippingText == "Ships to you"){
-                            isShipping = true;
-                        }else{
-                            isShipping = false;
-                        }
-                    } catch(error) {
-                        errorMessage('Error with shipping detection', error);
-                    }
+                //if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && newPost != null){
+                    console.log("New Post: " + newPost);
             
-                    if(workerData.autoMessage && isShipping == false){
+                    if(workerData.autoMessage){
                         await sendMessage(newPost);
                     }else{
                         try{
@@ -478,7 +515,7 @@ const sendMessage = async (link) => {
                         postObj = await itemPage.evaluate(() => {
                             let dom = document.querySelector('div.x9f619');
                             return {
-                                img: dom.querySelector('img').src,
+                                img: dom.querySelector('span.x78zum5 img').src,
                                 title: dom.querySelector('div.xyamay9 h1').innerText,
                                 date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
                                 description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
@@ -488,18 +525,18 @@ const sendMessage = async (link) => {
                         });
 
                         //close itemBrowser if it was used for autoMessage, otherwise just close the page
-                        if(itemBrowser != null){
+                        if(workerData.autoMessage){
                             await itemBrowser.close();
                             itemBrowser = null;
                         }else{
-                            itemPage.close();
+                            await itemPage.close();
                         }
                     } catch(error){
                         errorMessage('Error with getting item data', error);
                     }
                     
                     //Handle Discord messaging
-                    if(workerData.autoMessage || isShipping == true){
+                    if(workerData.autoMessage){
                         try{
                             client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
                                 .setColor(0x0099FF)
@@ -543,8 +580,16 @@ const sendMessage = async (link) => {
                         const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
                         collector.on('collect', async i => {
                             i.reply("Sending...");
-                            await sendMessage(i.customId.split("-")[1]);
-                            await client.channels.cache.get(workerData.channel).send("Sent!");
+
+                            //push message into the queue
+                            messageQueue.push(i.customId.split("-")[1]);
+                            console.log(messageQueue);
+                            //run the queue handler if it is not already going
+                            if(messageQueue.length == 1){
+                                await handleQueue();
+                                console.log('message finish');
+                            }
+
                             collector.stop();
                         });
                         collector.on('end', () => {
@@ -554,27 +599,25 @@ const sendMessage = async (link) => {
     
                     //set the main listing storage if necessary
                     try {
-                        if(workerData.burnerUsername != undefined){
-                            mainListingStorage = await mainPage.evaluate(() => {
-                                if(document.querySelector('div.xx6bls6') == null){
-                                    let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
-                                    return links.map((link) => {
-                                        if(link != null){
-                                            let href = link.href;
-                                            return href.substring(0, href.indexOf("?"));
-                                        }else{
-                                            return null;
-                                        }
-                                    })
-                                }else{
-                                    return [null, null];
-                                }
-                            });
-                        }
+                        mainListingStorage = await mainPage.evaluate(() => {
+                            if(document.querySelector('div.xx6bls6') == null){
+                                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
+                                return links.map((link) => {
+                                    if(link != null){
+                                        let href = link.href;
+                                        return href.substring(0, href.indexOf("?"));
+                                    }else{
+                                        return null;
+                                    }
+                                })
+                            }else{
+                                return [null, null];
+                            }
+                        });
                     } catch(error) {
                         errorMessage('Error with re-setting mainListingStorage', error);
                     }
-                }
+                //}
                 interval();
             }
         }, Math.floor((Math.random() * (2) + 3) * 60000)); 

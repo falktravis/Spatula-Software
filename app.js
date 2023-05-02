@@ -89,20 +89,39 @@ let commandQueue = [];
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
-	const command = interaction.client.commands.get(interaction.commandName);
 
-    console.log(interaction);
-    commandQueue.push(interaction);
-    if(commandQueue.length == 0){
-        //run a function that will run the first element in the queue, .shift() the array, and continue to run elements until the queue is empty.
-    }
-    
-	try {
+    const command = interaction.client.commands.get(interaction.commandName);
+
+    try {
 		await command.execute(interaction);
 	} catch (error) {
 		console.error(error);
 		await interaction.reply('There was an error while executing this command!');
 	}
+
+    //push command into the queue
+    commandQueue.push(interaction);
+
+    //run the queue handler if it is not already going
+    if(commandQueue.length == 1){
+        handleQueue();
+    }
+});
+
+const handleQueue = async () => {
+    //run the command
+    await executeCommand(commandQueue[0]);
+
+    //delete the executed command from queue
+    commandQueue.shift();
+
+    //check the queue for more commands and run it back if necessary
+    if(commandQueue.length > 0){
+        handleQueue();
+    }
+}
+
+const executeCommand = async (interaction) => {
 
     if(interaction.commandName === "facebook-create-parent"){
         //checks if user is already created
@@ -180,37 +199,32 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                 //Burner account info
                                 let burnerUsername;
                                 let burnerPassword;
+                                for(let i = 0; i < parent.burnerLogins.length && burnerUsername == null; i++){
 
-                                //If there is only one item in the array
-                                if(parent.burnerLogins.length == 1){
+                                    //Checks that the current item is not the last
+                                    if(i == 0){
+                                        if(parent.burnerLogins[i].workerNum < parent.burnerLogins[i + 1].workerNum){
+                                            parent.burnerLogins[i].workerNum++;
+                                            burnerUsername = parent.burnerLogins[i].username;
+                                            burnerPassword = parent.burnerLogins[i].password;
+                                        }
+                                    }else{ //The last item is compared to the previous item instead of the next one
+                                        if(parent.burnerLogins[i].workerNum < parent.burnerLogins[i - 1].workerNum){
+                                            parent.burnerLogins[i].workerNum++;
+                                            burnerUsername = parent.burnerLogins[i].username;
+                                            burnerPassword = parent.burnerLogins[i].password;
+                                        }
+                                    }
+                                }
+
+                                //Runs when all workerNum are the same
+                                if(burnerUsername == null){
                                     parent.burnerLogins[0].workerNum++;
                                     burnerUsername = parent.burnerLogins[0].username;
                                     burnerPassword = parent.burnerLogins[0].password;
-                                }else{
-                                    while(burnerUsername == null){
-                                        //Run this loop until a clean login is found
-                                        for(let i = 0; i < parent.burnerLogins.length && burnerUsername == null; i++){
 
-                                            //Checks that the current item is not the last
-                                            if(i != parent.burnerLogins.length - 1){
-                                                if(parent.burnerLogins[i].workerNum <= parent.burnerLogins[i + 1].workerNum){
-                                                    parent.burnerLogins[i].workerNum++;
-                                                    burnerUsername = parent.burnerLogins[i].username;
-                                                    burnerPassword = parent.burnerLogins[i].password;
-                                                }
-                                            }else{ //The last item is compared to the previous item instead of the next one
-                                                if(parent.burnerLogins[i].workerNum < parent.burnerLogins[i - 1].workerNum){
-                                                    parent.burnerLogins[i].workerNum++;
-                                                    burnerUsername = parent.burnerLogins[i].username;
-                                                    burnerPassword = parent.burnerLogins[i].password;
-                                                }
-                                            }
-    
-                                        }
-
-                                        if(burnerUsername == null){
-                                            discordClient.channels.cache.get(interaction.channelId).send("Warning: More active tasks than burner accounts");
-                                        }
+                                    if(parent.burnerLogins[0].workerNum > 1){
+                                        discordClient.channels.cache.get(interaction.channelId).send("Warning: More active tasks than burner accounts");
                                     }
                                 }
 
@@ -219,7 +233,8 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                 //burner cookies assignment algorithm
                                 let burnerAccountObj = await burnerAccountDB.findOne({Username: burnerUsername});
                                 if(burnerAccountObj == null){
-                                    burnerAccountObj = await burnerAccountDB.insertOne({Username: burnerUsername, Cookies: null, PreviousProxies: []});
+                                    await burnerAccountDB.insertOne({Username: burnerUsername, Cookies: null, PreviousProxies: []});
+                                    burnerAccountObj = await burnerAccountDB.findOne({Username: burnerUsername});
                                 }
 
                                 //burner proxy assignment algorithm
@@ -257,7 +272,7 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                                 //get parent element from map and set new worker as a child
                                 parent.children.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
                                     name: interaction.options.getString("name"),
-                                    link: interaction.options.getString("link") + "&sortBy=creation_time_descend", //&daysSinceListed=0
+                                    link: interaction.options.getString("link") + "&sortBy=creation_time_descend", //&availability=in%20stock
                                     mainUsername: parent.username,
                                     mainPassword: parent.password,
                                     burnerUsername: burnerUsername,
@@ -313,7 +328,9 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                             console.log('terminate');
 
                             //set cookies in db
-                            burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}});
+                            if(message.burnerCookies != null){
+                                burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}});
+                            }
 
                             //reduce active task count by one
                             burnerProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentTasks: -1 } });
@@ -348,8 +365,7 @@ discordClient.on(Events.InteractionCreate, async interaction => {
             if(users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("name"));
 
-                //Store the parent cookies for use in the db
-                let mainAccountCookies;
+                let mainAccountCookiesIsSet = false;
 
                 parent.children.forEach((child) => {
                     //Message the worker to close browsers
@@ -360,14 +376,20 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                         if(message.action == 'terminate'){
                             console.log('terminate');
 
-                            //set cookies in db
-                            burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}});
-
                             //reduce active task count by one
                             burnerProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentTasks: -1 } });
 
+                            //set cookies in db
+                            if(message.burnerCookies != null){
+                                burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}});
+                            }
+
                             //Store main account cookies
-                            mainAccountCookies = message.messageCookies;
+                            if(mainAccountCookiesIsSet == false && message.messageCookies != null){
+                                mainAccountDB.updateOne({Username: parent.username}, {$set: {Cookies: message.messageCookies}});
+                                console.log(message.messageCookies);
+                                mainAccountCookiesIsSet = true;
+                            }
 
                             //delete the son of a bitch
                             child.terminate();
@@ -375,9 +397,6 @@ discordClient.on(Events.InteractionCreate, async interaction => {
                         }
                     })
                 });
-
-                //Store main Account cookies in the db
-                await mainAccountDB.updateOne({Username: parent.username}, {$set: {Cookies: mainAccountCookies}});
 
                 users.get(interaction.user.id).facebook.delete(interaction.options.getString("name"));
                 discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
@@ -475,4 +494,11 @@ discordClient.on(Events.InteractionCreate, async interaction => {
 
         discordClient.channels.cache.get(interaction.channelId).send(list);
     }
-});
+    else if(interaction.commandName === 'update-burner-proxies' && interaction.user.id === '456168609639694376'){
+        //Replace every current proxy with one from the new list
+        //If there are more proxies in the new list than current documents, simply add more
+    }
+    else if(interaction.commandName === 'add-main-proxies' && interaction.user.id === '456168609639694376'){
+        //Insert packet stream proxies in the format given and splice out the password, then insert the new proxies as database documents
+    }
+}
