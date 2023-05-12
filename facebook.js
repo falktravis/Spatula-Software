@@ -9,17 +9,41 @@ const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
+//Closes browsers before terminating the task with facebook-delete command
+parentPort.on('message', async (message) => {
+    if(message.action === 'closeBrowsers') {
+        console.log('close browsers');
+        if(mainBrowser != null){
+            await mainBrowser.close();
+        }
+        if(itemBrowser != null){
+            await itemBrowser.close();
+        }
+
+        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername, proxy: workerData.searchProxy});
+    }else if(message.action === 'newProxies'){
+
+        //set new proxies
+        burnerStaticProxy = message.burnerProxy;
+        if(workerData.messageType != 3){
+            messageStaticProxy = message.messageProxy;
+        }
+
+        //restart burner account page
+        await mainBrowser.close();
+        start();
+
+        //message the main script back
+        parentPort.postMessage({action: 'usernames', messageUsername: workerData.messageUsername, burnerUsername: workerData.burnerUsername});
+    }
+});
+
 //checks cookies for expired
 const cookieCheckpoint = (cookies) => {
     //If the worker data passes null, return null back
     if(cookies == null){
         return null;
     }
-
-    //testing information to make sure that datr is always going to be the lowest expire value
-    cookies.forEach(cookie => {
-        console.log(cookie.name + ": " + cookie.expires + "\n");
-    });
 
     //compare the datr cookie against the current date
     const datr = cookies.find(cookie => cookie.name === 'datr');
@@ -52,6 +76,297 @@ const handleQueue = async () => {
     }
 }
 
+const sendMessage = async (link) => {
+
+    //browser with static isp
+    try {
+        randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+        itemBrowser = await puppeteer.launch({
+            headless: true,
+            defaultViewport: { width: 1366, height: 768 },
+            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
+        });
+        let pages = await itemBrowser.pages();
+        itemPage = pages[0];
+
+        //authenticate proxy
+        await itemPage.authenticate({ 'username':'falktravis', 'password': messageStaticProxy });
+
+        //set cookies/login if the login was a success
+        await itemPage.setCookie(...messageCookies);
+
+        //network shit
+        await itemPage.setRequestInterception(true);
+        itemPage.on('request', async request => {
+            const resource = request.resourceType();
+            if(resource == 'image' || resource == 'media'){//resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'
+                request.abort();
+            }else{
+                request.continue();
+            }
+        });
+    } catch (error) {
+        errorMessage('Error with item page instantiation for cookie login', error);
+    }
+
+    try{
+        //navigate to the product page
+        await itemPage.goto(link, { waitUntil: 'networkidle0' }); 
+
+        //Update cookies
+        messageCookies = await itemPage.cookies();
+        messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+
+        //Send the message
+        if(!itemPage.url().includes('unavailable_product')){
+            if(await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]')){//regular, pickup listing
+                console.log("local pickup only message sequence");
+                if(workerData.message != null){
+                    await itemPage.click('div.x1daaz14 [aria-label="Send seller a message"]');
+                    await itemPage.keyboard.press('Backspace');
+                    const messageTextArea = await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]');
+                    await messageTextArea.type(workerData.message);
+                }
+                await itemPage.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
+                await itemPage.waitForSelector('[aria-label="Message Again"]');
+                await client.channels.cache.get(workerData.channel).send("Message Sent!");
+            }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
+                console.log("shipping message sequence");
+                await itemPage.click('[aria-label="Message"]');
+                await itemPage.waitForSelector('[aria-label="Please type your message to the seller"]');
+                if(workerData.message != null){
+                    await itemPage.click('[aria-label="Please type your message to the seller"]');
+                    const messageTextArea = await itemPage.$('[aria-label="Please type your message to the seller"]');
+                    await messageTextArea.type(workerData.message);
+                }
+                await itemPage.click('[aria-label="Send Message"]');
+                await itemPage.waitForSelector('[aria-label="Message Again"]');
+                await client.channels.cache.get(workerData.channel).send("Message Sent!");
+            }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
+                let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.x1xlr1w8.x1a1m0xk').innerText});
+                await client.channels.cache.get(workerData.channel).send("Message Failed: item " + listingConditionText);
+            }else if(await itemPage.$('span.xk50ysn.x1a1m0xk')){//Check for the weird out of stock thing //!I have no clue if this is actually a thing
+                let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.xk50ysn.x1a1m0xk').innerText});
+                await client.channels.cache.get(workerData.channel).send("Message Failed: item " + listingConditionText);
+            }else{
+                await client.channels.cache.get(workerData.channel).send("Message Failed");
+            }
+        }else{
+            await client.channels.cache.get(workerData.channel).send("Product Unavailable");
+        }
+    } catch (error){
+        errorMessage('Error with messaging', error);
+    }
+
+    try {
+        if(workerData.messageType != 1){//if its not auto messaging
+            await itemBrowser.close();
+        }
+    } catch (error) {
+        errorMessage('Error with closing itemBrowser', error);
+    }
+}
+
+//collect burner account cookies
+const collectBurnerCookies = async () => {
+    let mainPageLogin = true;
+    let mainPageBlockAll = false;
+    let isProxyWorks = true; //Used to stop the task when proxy fails
+
+    try{
+        randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+        mainBrowser = await puppeteer.launch({
+            headless: true,
+            defaultViewport: { width: 1366, height: 768 },
+            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
+        });
+        let pages = await mainBrowser.pages();
+        mainPage = pages[0];
+
+        //authenticate proxy
+        //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${burnerLoginProxy}` });
+
+        //track network consumption and block the bull shit
+        await mainPage.setRequestInterception(true);
+        mainPage.on('request', async request => {
+            const resource = request.resourceType();
+            const URL = request.url();
+
+            if(mainPageLogin){
+                if(resource != 'document' && resource != 'script' && resource != 'stylesheet' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){ // && !URL.includes('SuG-IUx2WwG')
+                    request.abort();
+                }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){
+                    request.continue();
+                    mainPageLogin = false;
+                    mainPageBlockAll = true;
+                }else {
+                    request.continue();
+                }
+            }else if(mainPageBlockAll){
+                request.abort();
+            }else{
+                if(resource != 'document'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
+            }
+        });
+    }catch (error){
+        errorMessage('Error with main page initiation for login', error);
+    }
+
+    //Catch proxy errors
+    try{
+        await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
+    }catch(error){
+        console.log("Burner Resi proxy error");
+        //message the main script we need a new proxy
+        parentPort.postMessage({action: 'proxyFailure', username: workerData.burnerUsername, isBurner: true});
+        //await the response with a promise
+        burnerLoginProxy = await new Promise(resolve => {
+            parentPort.on('message', message => {
+              resolve(message);
+            });
+        });
+
+        await mainBrowser.close();
+        collectBurnerCookies();
+    }
+
+    //login   
+    try{
+        if(isProxyWorks){
+            await mainPage.type('#email', workerData.burnerUsername);
+            await mainPage.type('#pass', workerData.burnerPassword);
+            await mainPage.click('button[name="login"]');
+            await mainPage.waitForNavigation(); //necessary with headless mode
+            console.log(mainPage.url());
+            if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
+                await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
+    
+                //end the task
+                await mainBrowser.close();
+                parentPort.postMessage({action: 'loginFailure'});
+            }else{
+                if(mainPage.url().includes('mobileprotection')){
+                    await mainPage.click('label.uiLinkButton');
+                    await mainPage.waitForNavigation();//necessary with headless mode?
+                    console.log("mobile protection");
+                }
+    
+                //get the cookies for login on isp page
+                burnerCookies = await mainPage.cookies();
+                burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+            }
+            mainBrowser.close();
+        }
+    }catch (error){
+        errorMessage('Error with logging in on main page - no cookie', error);
+    }
+}
+
+
+//Collect message account cookies
+const collectMessageCookies = async () => {
+    let itemPageLogin = true;
+    let itemPageBlockAll = false;
+    let isProxyWorks = true; //Used to stop the task when proxy fails
+
+    try {
+        //Instantiate the page with packetstream proxies for login
+        randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+        itemBrowser = await puppeteer.launch({
+            headless: true,
+            defaultViewport: { width: 1366, height: 768 },
+            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
+        });
+        let pages = await itemBrowser.pages();
+        itemPage = pages[0];
+
+        //authenticate proxy
+        //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${messageLoginProxy}` });
+                
+        //network shit
+        await itemPage.setRequestInterception(true);
+        itemPage.on('request', async request => {
+            const resource = request.resourceType();
+            const URL = request.url();
+            if(itemPageLogin){
+                if(resource != 'document' && resource != 'script' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
+                    request.abort();
+                }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){
+                    request.continue();
+                    itemPageLogin = false;
+                    itemPageBlockAll = true;
+                }else {
+                    request.continue();
+                }
+            }else if(itemPageBlockAll){
+                request.abort();
+            }else{
+                if(resource != 'document' && resource != 'script'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
+            }
+        });
+    } catch(error) {
+        errorMessage('Error with item page instantiation for login', error);
+    }      
+        
+    //Catch proxy errors
+    try{
+        await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });//I had networkidle0 b4
+    }catch(error){
+        console.log("Main Resi proxy error");
+        //message the main script we need a new proxy
+        parentPort.postMessage({action: 'proxyFailure', username: workerData.messageUsername, isBurner: false});
+        //await the response with a promise
+        messageLoginProxy = await new Promise(resolve => {
+            parentPort.on('message', message => {
+              resolve(message);
+            });
+        });
+
+        await itemBrowser.close();
+        collectMessageCookies();
+    }
+
+    //login
+    try{
+        if(isProxyWorks){
+            await itemPage.type('#email', workerData.messageUsername);
+            await itemPage.type('#pass', workerData.messagePassword);
+            await itemPage.click('button[name="login"]');
+            await itemPage.waitForNavigation(); //necessary with headless mode
+            console.log(itemPage.url());
+            if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
+                client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
+    
+                //end the task
+                await mainBrowser.close();
+                parentPort.postMessage({action: 'loginFailure'});
+            }else{
+                if(itemPage.url().includes('mobileprotection')){
+                    await mainPage.click('label.uiLinkButton');
+                    await mainPage.waitForNavigation();//necessary with headless mode?
+                    console.log("mobile protection");
+                }
+    
+                //Set cookies
+                messageCookies = await itemPage.cookies();
+                messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+                console.log(messageCookies);
+            }
+            await itemBrowser.close();
+        }
+    } catch (error){
+        errorMessage('Error with message login', error);
+    }
+}
+
 //general instantiation
 const userAgents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
@@ -78,271 +393,17 @@ let itemBrowser;
 let mainListingStorage;
 let burnerCookies = cookieCheckpoint(workerData.burnerCookies);
 let messageCookies = cookieCheckpoint(workerData.messageCookies);
+let messageLoginProxy = workerData.messageLoginProxy;
+let burnerLoginProxy = workerData.burnerLoginProxy;
+let burnerStaticProxy = workerData.burnerStaticProxy;
+let messageStaticProxy = workerData.messageStaticProxy;
 let messageQueue = [];
-
-const sendMessage = async (link) => {
-    let isLogin = true;  
-    let itemPageLogin = true;
-    let itemPageBlockAll = false;
-    randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-
-    //If there are no current cookies for the message account we need to get them
-    if(messageCookies == null){
-        try {
-            //Instantiate the page with packetstream proxies for login
-            itemBrowser = await puppeteer.launch({
-                headless: true,
-                defaultViewport: { width: 1366, height: 768 },
-                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
-            });
-            let pages = await itemBrowser.pages();
-            itemPage = pages[0];
-
-            //authenticate proxy
-            //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${workerData.messageProxy}` });
-                    
-            //network shit
-            await itemPage.setRequestInterception(true);
-            itemPage.on('request', async request => {
-                const resource = request.resourceType();
-                const URL = request.url();
-                if(itemPageLogin){
-                    if(resource != 'document' && resource != 'script' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
-                        request.abort();
-                    }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){
-                        request.continue();
-                        itemPageLogin = false;
-                        itemPageBlockAll = true;
-                    }else {
-                        request.continue();
-                    }
-                }else if(itemPageBlockAll){
-                    request.abort();
-                }else{
-                    if(resource != 'document' && resource != 'script'){
-                        request.abort();
-                    }else{
-                        request.continue();
-                    }
-                }
-            });
-        } catch(error) {
-            errorMessage('Error with item page instantiation for login', error);
-        }      
-            
-        try{
-            await itemPage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
-            await itemPage.type('#email', workerData.mainUsername);
-            await itemPage.type('#pass', workerData.mainPassword);
-            await itemPage.click('button[name="login"]');
-            await itemPage.waitForNavigation(); //necessary with headless mode
-            console.log(itemPage.url());
-            if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
-                isLogin = false;
-                client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}\n@everyone`);
-            }else{
-                if(itemPage.url().includes('mobileprotection')){
-                    await mainPage.click('label.uiLinkButton');
-                    await mainPage.waitForNavigation();//necessary with headless mode?
-                    console.log("mobile protection");
-                }
-
-                //Set cookies
-                messageCookies = await itemPage.cookies();
-                messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-            }
-            await itemBrowser.close();
-        } catch (error){
-            errorMessage('Error with message login', error);
-        }
-    }
-
-    //browser with static isp
-    try {
-        randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-        itemBrowser = await puppeteer.launch({
-            headless: false,
-            defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
-        });
-        let pages = await itemBrowser.pages();
-        itemPage = pages[0];
-
-        //authenticate proxy
-        await itemPage.authenticate({ 'username':'falktravis', 'password': workerData.searchProxy });
-
-        //set cookies/login if the login was a success
-        if(isLogin){
-            await itemPage.setCookie(...messageCookies);
-        }
-    } catch (error) {
-        errorMessage('Error with item page instantiation for cookie login', error);
-    }
-
-    try{
-        //navigate to the product page
-        await itemPage.goto(link, { waitUntil: 'networkidle0' }); 
-
-        //Update cookies
-        if(isLogin){
-            messageCookies = await itemPage.cookies();
-            messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-        }
-
-        //Send the message
-        if(isLogin){
-            if(!itemPage.url().includes('unavailable_product')){
-                if(await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]')){//regular, pickup listing
-                    console.log("local pickup only message sequence");
-                    if(workerData.message != null){
-                        await itemPage.click('div.x1daaz14 [aria-label="Send seller a message"]');
-                        await itemPage.keyboard.press('Backspace');
-                        const messageTextArea = await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]');
-                        await messageTextArea.type(workerData.message);
-                    }
-                    await itemPage.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
-                    await itemPage.waitForSelector('[aria-label="Message Again"]');
-                    await client.channels.cache.get(workerData.channel).send("Message Sent!");
-                }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
-                    console.log("shipping message sequence");
-                    await itemPage.click('[aria-label="Message"]');
-                    await itemPage.waitForSelector('[aria-label="Please type your message to the seller"]');
-                    if(workerData.message != null){
-                        await itemPage.click('[aria-label="Please type your message to the seller"]');
-                        const messageTextArea = await itemPage.$('[aria-label="Please type your message to the seller"]');
-                        await messageTextArea.type(workerData.message);
-                    }
-                    await itemPage.click('[aria-label="Send Message"]');
-                    await itemPage.waitForSelector('[aria-label="Message Again"]');
-                    await client.channels.cache.get(workerData.channel).send("Message Sent!");
-                }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
-                    let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.x1xlr1w8.x1a1m0xk').innerText});
-                    await client.channels.cache.get(workerData.channel).send("Message Failed: item " + listingConditionText);
-                }else if(await itemPage.$('span.xk50ysn.x1a1m0xk')){//Check for the weird out of stock thing //!I have no clue if this is actually a thing
-                    let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.xk50ysn.x1a1m0xk').innerText});
-                    await client.channels.cache.get(workerData.channel).send("Message Failed: item " + listingConditionText);
-                }else{
-                    await client.channels.cache.get(workerData.channel).send("Message Failed");
-                }
-            }else{
-                await client.channels.cache.get(workerData.channel).send("Product Unavailable");
-            }
-        }
-    } catch (error){
-        errorMessage('Error with messaging', error);
-    }
-
-    try {
-        if(!workerData.autoMessage){
-            await itemBrowser.close();
-        }
-    } catch (error) {
-        errorMessage('Error with closing itemBrowser', error);
-    }
-}
+let networkData = 0;
+let mainPageInitiate = true;
 
 (async () => {
 
-    //Closes browsers before terminating the task with facebook-delete command
-    parentPort.on('message', async (message) => {
-        if (message.action === 'closeBrowsers') {
-            console.log('facebook message');
-            if(mainBrowser != null){
-                await mainBrowser.close();
-            }
-            if(itemBrowser != null){
-                await itemBrowser.close();
-            }
-
-            parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername, proxy: workerData.searchProxy});
-        }
-    });
-
     const start = async () => {
-
-        // get cookies if there are none from the db
-        if(burnerCookies == null){
-            try{
-                let mainPageLogin = true;
-                let mainPageBlockAll = false;
-                randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-    
-                mainBrowser = await puppeteer.launch({
-                    headless: true,
-                    defaultViewport: { width: 1366, height: 768 },
-                    args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
-                });
-                let pages = await mainBrowser.pages();
-                mainPage = pages[0];
-    
-                //authenticate proxy
-                //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${workerData.messageProxy}` });
-    
-                //track network consumption and block the bull shit
-                await mainPage.setRequestInterception(true);
-                mainPage.on('request', async request => {
-                    const resource = request.resourceType();
-                    const URL = request.url();
-        
-                    if(mainPageLogin){
-                        if(resource != 'document' && resource != 'script' && resource != 'stylesheet' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){ // && !URL.includes('SuG-IUx2WwG')
-                            request.abort();
-                        }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){
-                            request.continue();
-                            mainPageLogin = false;
-                            mainPageBlockAll = true;
-                        }else {
-                            request.continue();
-                        }
-                    }else if(mainPageBlockAll){
-                        request.abort();
-                    }else{
-                        if(resource != 'document'){
-                            request.abort();
-                        }else{
-                            request.continue();
-                        }
-                    }
-                });
-            }catch (error){
-                errorMessage('Error with main page initiation for login', error);
-            }
-    
-            //If there is no cookie, login to generate one
-            try{
-                //login   
-                await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
-                await mainPage.type('#email', workerData.burnerUsername);
-                await mainPage.type('#pass', workerData.burnerPassword);
-                await mainPage.click('button[name="login"]');
-                await mainPage.waitForNavigation(); //necessary with headless mode
-                console.log(mainPage.url());
-                if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
-                    await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, restart your task\n@everyone`);
-
-                    //end the task
-                    await mainBrowser.close();
-                    parentPort.postMessage({action: 'failure'});
-                }else{
-                    if(mainPage.url().includes('mobileprotection')){
-                        await mainPage.click('label.uiLinkButton');
-                        await mainPage.waitForNavigation();//necessary with headless mode?
-                        console.log("mobile protection");
-                    }
-
-                    //close messageLoginListener
-                    parentPort.postMessage({action: 'success'});
-
-                    //get the cookies for login on isp page
-                    burnerCookies = await mainPage.cookies();
-                    burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-                }
-                mainBrowser.close();
-                console.log('main page login');
-            }catch (error){
-                errorMessage('Error with logging in on main page - no cookie', error);
-            }
-        }
 
         try{
             //initialize the static isp proxy page
@@ -355,13 +416,43 @@ const sendMessage = async (link) => {
             mainPage = pages[0];
 
             //authenticate proxy
-            await mainPage.authenticate({ 'username':'falktravis', 'password': workerData.searchProxy });
+            await mainPage.authenticate({ 'username':'falktravis', 'password': burnerStaticProxy });
+
+            //network shit
+            await mainPage.setRequestInterception(true);
+            mainPage.on('response', async request => {
+                const URL = request.url();
+                const headers = request.headers();
+                const contentLength = headers['content-length'];
+                if(contentLength != undefined){
+                    networkData += parseInt(contentLength);
+                }
+            });
+
+            mainPage.on('request', async request => {
+                const resource = request.resourceType();
+
+                if(mainPageInitiate){
+                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
+                        request.abort();
+                    }else{
+                        //console.log(resource + " " + URL);
+                        request.continue();
+                    }
+                }else{
+                    if(resource != 'document'){
+                        request.abort();
+                    }else{
+                        request.continue();
+                    }
+                }
+            });
             
             //Set cookies in browser
             await mainPage.setCookie(...burnerCookies);
 
             //go to the search page
-            await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+            await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
             
             //update burnerCookies
             burnerCookies = await mainPage.cookies();
@@ -407,13 +498,16 @@ const sendMessage = async (link) => {
             errorMessage('Error with setting listings', error);
         }
         console.log("Main Storage: " + mainListingStorage);
+        mainPageInitiate = false;
+        console.log("Data: " + networkData);
     }
     
-    //!Please go through and add some comments, I have no clue what is going on
     //time stuff
     let isRunning;
     let currentTime = new Date();
     currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
+
+    //Determine if the script should be running originally
     if(workerData.start < workerData.end){
         if(currentTime > workerData.start && currentTime < workerData.end){
             isRunning = true;
@@ -429,7 +523,7 @@ const sendMessage = async (link) => {
     }
 
     //sets an interval to turn on/off interval
-    async function handleTime(intervalFunction) {
+    const handleTime = async (intervalFunction) => {
         currentTime = new Date();
         currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
         let interval;
@@ -456,6 +550,22 @@ const sendMessage = async (link) => {
         }
         
         if(isRunning){
+            //collect cookies if its the first time running
+            if(isCreate == true){
+                if(burnerCookies == null){
+                    await collectBurnerCookies();
+                }
+
+                if(messageCookies == null && workerData.messageType != 3){
+                    await collectMessageCookies();
+                }
+                                
+                //close messageLoginListener if it was necessary
+                if((workerData.burnerCookies == null && burnerCookies != null) || (workerData.messageCookies == null && workerData.messageType != 3 && messageCookies != null)){
+                    parentPort.postMessage({action: 'success'});
+                }
+            }
+
             isCreate = false;
             await start();
             intervalFunction(); 
@@ -489,115 +599,161 @@ const sendMessage = async (link) => {
                         }
                     });
                     console.log("Main listing storage: " + mainListingStorage);
+                    console.log("Data: " + networkData);
                 } catch(error) {
                     errorMessage('Error with main page conversion', error);
                 }
             
                 //newPost is actually new
-                //if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && newPost != null){
-                    console.log("New Post: " + newPost);
+                if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && newPost != null){
             
-                    if(workerData.autoMessage){
-                        await sendMessage(newPost);
-                    }else{
-                        try{
-                            itemPage = await mainBrowser.newPage();
-                            await itemPage.goto(newPost, { waitUntil: 'domcontentloaded' });
-                        }catch(error){
-                            errorMessage('Error with product page initiation, no message', error);
-                        }
-                    }
-                    
+                    let postNum = 1;
+                    while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && postNum  <= 10){
+                        console.log("New Post: " + newPost + " post num: " + postNum);
 
-                    let postObj;
-                    try{
-                        //make a new tab and go to item page to gather info
-                        postObj = await itemPage.evaluate(() => {
-                            let dom = document.querySelector('div.x9f619');
-                            return {
-                                img: dom.querySelector('span.x78zum5 img').src,
-                                title: dom.querySelector('div.xyamay9 h1').innerText,
-                                date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
-                                description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                shipping: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r span').innerText : dom.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                price: "$" + dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
-                            };
-                        });
+                        let postObj;
+                        if(workerData.messageType == 1){//auto message
+                            await sendMessage(newPost);
 
-                        //close itemBrowser if it was used for autoMessage, otherwise just close the page
-                        if(workerData.autoMessage){
-                            await itemBrowser.close();
-                            itemBrowser = null;
+                            //get post data
+                            try{
+                                postObj = await itemPage.evaluate(() => {
+                                    let dom = document.querySelector('div.x9f619');
+                                    return {
+                                        img: dom.querySelector('span.x78zum5 img').src,
+                                        title: dom.querySelector('div.xyamay9 h1').innerText,
+                                        date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
+                                        description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                        shipping: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r span').innerText : dom.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                        price: "$" + dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
+                                    };
+                                });
+
+                                await itemBrowser.close();
+                                itemBrowser = null;
+                            } catch(error){
+                                errorMessage('Error with getting item data', error);
+                            }
                         }else{
-                            await itemPage.close();
-                        }
-                    } catch(error){
-                        errorMessage('Error with getting item data', error);
-                    }
-                    
-                    //Handle Discord messaging
-                    if(workerData.autoMessage){
-                        try{
-                            client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
-                                .setColor(0x0099FF)
-                                .setTitle(postObj.title + " - " + postObj.price)
-                                .setURL(newPost)
-                                .setAuthor({ name: workerData.name })
-                                .setDescription(postObj.description)
-                                .addFields({ name: postObj.date, value: postObj.shipping })
-                                .setImage(postObj.img)
-                                .setTimestamp(new Date())
-                            ]});
-                            client.channels.cache.get(workerData.channel).send("New Facebook Post From " + workerData.name + " @everyone");
-                        }catch(error){
-                            errorMessage('Error with item notification', error);
-                        }
-                    }else{
-                        let notification;
-                        try{
-                            notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
-                                .setColor(0x0099FF)
-                                .setTitle(postObj.title + " - " + postObj.price)
-                                .setURL(newPost)
-                                .setAuthor({ name: workerData.name })
-                                .setDescription(postObj.description)
-                                .addFields({ name: postObj.date, value: postObj.shipping })
-                                .setImage(postObj.img)
-                                .setTimestamp(new Date())
-                            ], components: [new ActionRowBuilder()
-                                .addComponents(
-                                    new ButtonBuilder()
-                                    .setCustomId('message-' + newPost)
-                                    .setLabel('Message')
-                                    .setStyle(ButtonStyle.Primary),
-                                )
-                            ]});
-                        }catch(error){
-                            errorMessage('Error with new item notification with message button', error);
-                        }
-
-                        const filter = i => i.customId.split("-")[0] == 'message';
-                        const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
-                        collector.on('collect', async i => {
-                            i.reply("Sending...");
-
-                            //push message into the queue
-                            messageQueue.push(i.customId.split("-")[1]);
-                            console.log(messageQueue);
-                            //run the queue handler if it is not already going
-                            if(messageQueue.length == 1){
-                                await handleQueue();
-                                console.log('message finish');
+                            //initiate the new page for collecting data
+                            try{
+                                itemPage = await mainBrowser.newPage();
+                                await itemPage.setRequestInterception(true);
+                                itemPage.on('request', async request => {
+                                    const resource = request.resourceType();
+                                    if(resource != 'document'){
+                                        request.abort();
+                                    }else{
+                                        request.continue();
+                                    }
+                                });
+                                await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
+                            }catch(error){
+                                errorMessage('Error with product page initiation, no message', error);
                             }
 
-                            collector.stop();
-                        });
-                        collector.on('end', () => {
-                            notification.edit({ components: [] });
-                        });
+                            //get post data
+                            try{
+                                postObj = await itemPage.evaluate(() => {
+                                    return {
+                                        img: document.querySelector('img').src,
+                                        title: document.querySelector('div.xyamay9 h1').innerText,
+                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
+                                        description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                        shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                        price: "$" + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
+                                    };
+                                });
+
+                                await itemPage.close();
+                            } catch(error){
+                                errorMessage('Error with getting item data', error);
+                            }
+                        }
+                        
+                        //Handle Discord messaging
+                        if(workerData.messageType != 2){//if its not manual messaging
+                            try{
+                                await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
+                                    .setColor(0x0099FF)
+                                    .setTitle(postObj.title + " - " + postObj.price)
+                                    .setURL(newPost)
+                                    .setAuthor({ name: workerData.name })
+                                    .setDescription(postObj.description)
+                                    .addFields({ name: postObj.date, value: postObj.shipping })
+                                    .setImage(postObj.img)
+                                    .setTimestamp(new Date())
+                                ]});
+                            }catch(error){
+                                errorMessage('Error with item notification', error);
+                            }
+                        }else{
+                            let notification;
+                            try{
+                                notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
+                                    .setColor(0x0099FF)
+                                    .setTitle(postObj.title + " - " + postObj.price)
+                                    .setURL(newPost)
+                                    .setAuthor({ name: workerData.name })
+                                    .setDescription(postObj.description)
+                                    .addFields({ name: postObj.date, value: postObj.shipping })
+                                    .setImage(postObj.img)
+                                    .setTimestamp(new Date())
+                                ], components: [new ActionRowBuilder()
+                                    .addComponents(
+                                        new ButtonBuilder()
+                                        .setCustomId('message-' + newPost)
+                                        .setLabel('Message')
+                                        .setStyle(ButtonStyle.Primary),
+                                    )
+                                ]});
+                            }catch(error){
+                                errorMessage('Error with new item notification with message button', error);
+                            }
+    
+                            try {
+                                const filter = i => i.customId.split("-")[0] == 'message';
+                                const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
+                                collector.on('collect', async i => {
+                                    i.reply("Sending...");
+        
+                                    //push message into the queue
+                                    messageQueue.push(i.customId.split("-")[1]);
+                                    //run the queue handler if it is not already going
+                                    if(messageQueue.length == 1){
+                                        await handleQueue();
+                                        console.log('message finish');
+                                    }
+        
+                                    collector.stop();
+                                });
+                                collector.on('end', () => {
+                                    notification.edit({ components: [] });
+                                });
+                            } catch (error) {
+                                errorMessage('Error collecting new item notification button', error);
+                            }
+                        }
+
+                        //Update newPost
+                        postNum++;
+                        try {
+                            newPost = await mainPage.evaluate((num) => {
+                                let link = document.querySelector(`div.x139jcc6.x1nhvcw1 > :nth-child(${num}) a`).href;
+                                return link.substring(0, link.indexOf("?"));
+                            }, postNum);
+                            console.log(newPost);
+                        } catch (error) {
+                            errorMessage('Error re-setting new post', error);
+                        }
+                    }
+
+                    //Check for a post hard cap
+                    if(postNum > 10){
+                        client.channels.cache.get(workerData.channel).send("Too many new posts to notify, I honestly have no idea how you did this it should be impossible, make your query more specific");
                     }
     
-                    //set the main listing storage if necessary
+                    //set the main listing storage
                     try {
                         mainListingStorage = await mainPage.evaluate(() => {
                             if(document.querySelector('div.xx6bls6') == null){
@@ -617,7 +773,7 @@ const sendMessage = async (link) => {
                     } catch(error) {
                         errorMessage('Error with re-setting mainListingStorage', error);
                     }
-                //}
+                }
                 interval();
             }
         }, Math.floor((Math.random() * (2) + 3) * 60000)); 

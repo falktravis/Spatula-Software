@@ -1,5 +1,5 @@
 //require
-const { workerData } = require('worker_threads');
+const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
@@ -8,6 +8,80 @@ puppeteer.use(stealthPlugin());
 const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
+
+//Closes browsers before terminating the task with ebay-delete command
+parentPort.on('message', async (message) => {
+    if(message.action === 'closeBrowsers') {
+        console.log('close browser');
+        await browser.close();
+
+        parentPort.postMessage({action: 'terminate', proxy: proxy});
+    }else if(message.action === 'newProxy'){
+
+        //set new proxy
+        proxy = message.burnerProxy;
+
+        //restart burner account page
+        await browser.close();
+        start();
+    }
+});
+
+//error message send function
+const errorMessage = (message, error) => {
+    console.log(message + ': ' + error);
+    client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
+    client.channels.cache.get(workerData.channel).send(message + ': ' + error);
+}
+
+const setListingStorage = async () => {
+    try{
+        listingStorage = await mainPage.evaluate(() => {
+            let link = document.querySelector("ul.srp-results li.s-item a").href;
+            let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
+            return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
+        });
+    } catch (error){
+        errorMessage('Error setting listing storage', error);
+    }
+}
+
+const sendNotification = async (postNum) => {
+    let postObj;
+    try{   
+        postObj = await mainPage.evaluate((num) => {
+            let dom = document.querySelector(`ul.srp-results > :nth-child(${num})`);//ul.srp-results li.s-item
+            return {
+                img: dom.querySelector("img").src,
+                title: dom.querySelector(".s-item__title").innerText,
+                condition: dom.querySelector(".s-item__subtitle").innerText,
+                shipping: dom.querySelector(".s-item__shipping").innerText,
+                isAuction: dom.querySelector(".s-item__bids") == null ? "Buy it now" : dom.querySelector(".s-item__bids").innerText,
+                price: dom.querySelector(".s-item__price").innerText,
+                link: dom.querySelector('a').href
+            };
+        }, postNum)
+    } catch(error){
+        errorMessage('Error collecting post data', error);
+    }
+
+    try{
+        client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
+            .setColor(0x0099FF)
+            .setTitle(postObj.title + " - " + postObj.price)
+            .setURL(postObj.link)
+            .setAuthor({ name: workerData.name })
+            .addFields(
+                { name: postObj.isAuction, value: postObj.shipping },
+                { name: postObj.condition, value: " " })
+            .setImage(postObj.img)
+            .setTimestamp(new Date())
+        ]});
+        client.channels.cache.get(workerData.channel).send("New Ebay Post From " + workerData.name + " @everyone");
+    }catch(error){
+        errorMessage('Error sending Ebay notification', error);
+    }
+}
 
 //User agents
 const userAgents = [
@@ -26,199 +100,104 @@ const userAgents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
   ];
 const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+let browser;
+let mainPage;
+let newPost;
+let listingStorage;
+let proxy = workerData.proxy;
 
 (async () => {
-    let browser;
-    let mainPage;
-    let isCreate = true;
-    let networkTracking = 0;
-    let newPost;
-    let listingStorage;
 
-    const start = async() => {
+    const start = async () => {
         //init browser
         try{
             browser = await puppeteer.launch({ 
-                headless: true,
-                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]
+                headless: false,
+                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`], 
             });
             let pages = await browser.pages();
             mainPage = pages[0];
 
-            await mainPage.setRequestInterception(true);
-            //track network consumption
-            mainPage.on('response', (response) => {
-                const contentLengthHeader = response.headers()['content-length'];
-                if (contentLengthHeader && !isNaN(parseInt(contentLengthHeader))) {
-                    networkTracking += parseInt(contentLengthHeader);
-                }
-            });
+            //authenticate proxy
+            await mainPage.authenticate({ 'username':'falktravis', 'password': proxy });
 
+            //track network consumption and block the bull shit
+            await mainPage.setRequestInterception(true);
             mainPage.on('request', async request => {
                 const resource = request.resourceType();
-
                 if(resource != 'document'){
                     request.abort();
                 }else{
                     request.continue();
                 }
-            })
-
-            await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
-            console.log(`Response received: ${networkTracking} bytes`);
-        } catch (error){
-            console.log("Error with main page: " + error);
-            client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
-        }
-
-        // Set listingStorage, run once in the begging of the day
-        try{
-            listingStorage = await mainPage.evaluate(() => {
-                let link = document.querySelector("ul.srp-results li.s-item a").href;
-                let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
-                return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
             });
+
+            await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
+
+            /*//change language hopefully
+            await mainPage.click('#gh-eb-Geo-a-default');
+            await mainPage.click('[lang="en-US"]');
+            await mainPage.waitForNavigation();*/
         } catch (error){
-            console.log("Error listing storage: " + error);
-            client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
+            errorMessage('Error launching browser', error);
         }
+
+        await setListingStorage();
         console.log(listingStorage);
     }
-    
-    //time stuff
-    let isRunning;
-    let currentTime = new Date();
-    currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
-    if(workerData.start < workerData.end){
-        if(currentTime > workerData.start && currentTime < workerData.end){
-            isRunning = true;
-        }else{
-            isRunning = false;
-        }
-    }else{
-        if(currentTime > workerData.start || currentTime < workerData.end){
-            isRunning = true;
-        }else{
-            isRunning = false;
-        }
-    }
-
-    //sets an interval to turn on/off interval
-    async function handleTime(intervalFunction) {
-        currentTime = new Date();
-        currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
-        let interval;
-        if(workerData.start < workerData.end){
-            if(isRunning){
-                interval = workerData.end - currentTime;
-            }else{
-                if(currentTime >= workerData.end){
-                    interval = (1440 - currentTime) + workerData.start;
-                }else{
-                    interval = workerData.start - currentTime;
-                }
-            }
-        }else{
-            if(isRunning){
-                if(currentTime >= workerData.start){
-                    interval = (1440 - currentTime) + workerData.end;
-                }else{
-                    interval = workerData.end - currentTime;
-                }
-            }else{
-                interval = workerData.start - currentTime;
-            }
-        }
-        
-        if(isRunning){
-            isCreate = false;
-            await start();
-            intervalFunction(); 
-        }else if(isCreate == false){
-            await mainPage.close();
-            await browser.close();
-            console.log("page close");
-        }
-
-        setTimeout(() => {
-            isRunning = !isRunning;
-            console.log(isRunning);
-            handleTime(intervalFunction);
-        }, interval * 60000)
-    }
-    handleTime(interval);
+    await start();
 
     //the meat and cheese
     function interval() {
         setTimeout(async () => {
             //checks if the page is within run time
-            if(isRunning){
-                try{
-                    await mainPage.reload({ waitUntil: 'networkidle0' });
+            try{
+                await mainPage.reload({ waitUntil: 'domcontentloaded' });
 
-                    newPost = await mainPage.evaluate(() => {
-                        let link = document.querySelector("ul.srp-results li.s-item a").href;
-                        return link.substring(0, link.indexOf("?"));
-                    });
-                    console.log("First Post Check: " + newPost);
-                    console.log(`Response received: ${networkTracking} bytes\n`);
-                }catch(error){
-                    console.log("Error getting new post: " + error);
-                    client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
-                }
-
-                if(listingStorage[0] != newPost && listingStorage[1] != newPost){
-                    listingStorage = [newPost, listingStorage[0]];
-
-                    let postObj;
-                    try{   
-                        postObj = await mainPage.evaluate(() => {
-                            let dom = document.querySelector("ul.srp-results li.s-item");
-                            return {
-                                img: dom.querySelector("img").src,
-                                title: dom.querySelector(".s-item__title").innerText,
-                                condition: dom.querySelector(".s-item__subtitle").innerText,
-                                shipping: dom.querySelector(".s-item__shipping").innerText,
-                                isAuction: dom.querySelector(".s-item__bids") == null ? "Buy it now" : dom.querySelector(".s-item__bids").innerText,
-                                price: dom.querySelector(".s-item__price").innerText
-                            };
-                        })
-                    } catch(error){
-                        console.log("error with item page: " + error);
-                        client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
-                    }
-
-                    try{
-                        client.channels.cache.get(workerData.channel).send({ embeds: [new EmbedBuilder()
-                            .setColor(0x0099FF)
-                            .setTitle(postObj.title + " - " + postObj.price)
-                            .setURL(newPost)
-                            .setAuthor({ name: workerData.name })
-                            .addFields(
-                                { name: postObj.isAuction, value: postObj.shipping },
-                                { name: postObj.condition, value: " " })
-                            .setImage(postObj.img)
-                            .setTimestamp(new Date())
-                        ]});
-                        client.channels.cache.get(workerData.channel).send("New Ebay Post From " + workerData.name + " @everyone");
-                    }catch(error){
-                        console.log("error with new item message: " + error);
-                        client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
-                    }
-                }
-                else if(listingStorage[0] != newPost && listingStorage[1] == newPost){
-                    try{
-                        listingStorage = [newPost, await mainPage.evaluate(() => {
-                            let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
-                            return link2.substring(0, link2.indexOf("?"));
-                        })];
-                    }catch(error){
-                        console.log("Error re-setting listing storage: " + error);
-                        client.channels.cache.get('1091532766522376243').send('Ebay error: ' + error);
-                    }
-                }
-                interval();
+                newPost = await mainPage.evaluate(() => {
+                    let link = document.querySelector("ul.srp-results li.s-item a").href;
+                    return link.substring(0, link.indexOf("?"));
+                });
+                console.log("First Post Check: " + newPost);
+            }catch(error){
+                errorMessage('Error checking for new post', error);
             }
-        }, Math.floor((Math.random() * (2) + 2) * 60000));
+
+            if(listingStorage[0] != newPost && listingStorage[1] != newPost){
+                let postNum = 2;
+                while(listingStorage[0] != newPost && listingStorage[1] != newPost && postNum <= 30){
+                    await sendNotification(postNum);
+
+                    postNum++;
+                    try {
+                        newPost = await mainPage.evaluate((num) => {
+                            let link = document.querySelector(`ul.srp-results > :nth-child(${num}) a`).href;
+                            return link.substring(0, link.indexOf("?"));
+                        }, postNum);
+                    } catch (error) {
+                        errorMessage('Error re-setting new post', error);
+                    }
+                }
+
+                //Check for a post hard cap
+                if(postNum > 30){
+                    client.channels.cache.get(workerData.channel).send("Too many new posts to notify, I honestly have no idea how you did this it should be impossible, make your query more specific");
+                }
+
+                await setListingStorage();
+            }
+            else if(listingStorage[0] != newPost && listingStorage[1] == newPost){
+                try{
+                    listingStorage = [newPost, await mainPage.evaluate(() => {
+                        let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
+                        return link2.substring(0, link2.indexOf("?"));
+                    })];
+                }catch(error){
+                    errorMessage('Error re-setting listing storage on first post deletion', error);
+                }
+            }
+            interval();
+        }, Math.floor((Math.random() * (2) + 3) * 60000));
     } 
+    interval()
 })();

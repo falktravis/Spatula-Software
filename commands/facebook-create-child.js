@@ -16,10 +16,15 @@ module.exports = {
             option.setName('link')
                 .setDescription('link')
                 .setRequired(true))
-        .addBooleanOption(option => 
-            option.setName('auto-message')
-                .setDescription('If true, Spatula will automatically message the seller of every new listing')
-                .setRequired(true))
+        .addNumberOption(option => 
+            option.setName('message-type')
+                .setDescription('Set the type of messaging for the task')
+                .setRequired(true)
+                .addChoices(				
+                    { name: 'Auto Messaging', value: 1 },
+                    { name: 'Manual Messaging', value: 2 },
+                    { name: 'No Messaging', value: 3 },
+                ))
         .addNumberOption(option => 
             option.setName('start')
                 .setDescription('Start time, 24 hour time, no decimals, EST')

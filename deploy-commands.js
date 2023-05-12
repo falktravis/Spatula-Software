@@ -30,8 +30,8 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 
 		// The put method is used to fully refresh all commands in the guild with the current set
 		const data = await rest.put(
-			//Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID), //*For global
-			Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, process.env.DISCORD_GUILD_ID), //*for private control pannel
+			Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID), //*For global
+			//Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, process.env.DISCORD_GUILD_ID), //*for private control pannel
 			{ body: commands },
 		);
 
@@ -54,14 +54,13 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 // ...
 
 // for guild-based commands
-rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID, '1098381898411159633'))
+rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID, '1082456751745540218'))
 	.then(() => console.log('Successfully deleted guild command'))
 	.catch(console.error);
 
 // for global commands
-rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1098381898411159633'))
+rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1082456751745540218'))
 	.then(() => console.log('Successfully deleted application command'))
 	.catch(console.error);
-
 
 */
