@@ -84,7 +84,7 @@ const sendMessage = async (link) => {
         itemBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
@@ -178,7 +178,7 @@ const collectBurnerCookies = async () => {
         mainBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
         });
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
@@ -279,7 +279,7 @@ const collectMessageCookies = async () => {
         itemBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
@@ -410,7 +410,7 @@ let mainPageInitiate = true;
             mainBrowser = await puppeteer.launch({
                 headless: true,
                 defaultViewport: { width: 1366, height: 768 },
-                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
+                args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
             });
             let pages = await mainBrowser.pages();
             mainPage = pages[0];

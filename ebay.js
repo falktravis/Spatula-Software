@@ -113,7 +113,7 @@ let proxy = workerData.proxy;
         try{
             browser = await puppeteer.launch({ 
                 headless: false,
-                args: ['--disable-notifications', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`], 
+                args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`], 
             });
             let pages = await browser.pages();
             mainPage = pages[0];

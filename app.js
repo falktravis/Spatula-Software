@@ -613,23 +613,27 @@ const executeCommand = async (interaction) => {
             }
         }
         else if(interaction.commandName === "list"){
-            let list = ''; 
             let user = users.get(interaction.user.id);
-            //check to see if facebook has workers
-            list += "\n\tFacebook:";
-            user.facebook.forEach((parent, parentKey) => {
-                list += `\n\t\t-${parentKey}`;
-                parent.children.forEach((child, childKey) => {
-                    list += `\n\t\t\t+${childKey}`;
+            if(user != null){
+                let list = ''; 
+                //check to see if facebook has workers
+                list += "\n\tFacebook:";
+                user.facebook.forEach((parent, parentKey) => {
+                    list += `\n\t\t-${parentKey}`;
+                    parent.children.forEach((child, childKey) => {
+                        list += `\n\t\t\t+${childKey}`;
+                    })
                 })
-            })
-    
-            list += "\n\tEbay:";
-            user.ebay.forEach((worker, workerKey) => {
-                list += `\n\t\t${workerKey}`;
-            })
-    
-            discordClient.channels.cache.get(interaction.channelId).send(list);
+        
+                list += "\n\tEbay:";
+                user.ebay.forEach((worker, workerKey) => {
+                    list += `\n\t\t${workerKey}`;
+                })
+        
+                discordClient.channels.cache.get(interaction.channelId).send(list);
+            }else{
+                discordClient.channels.cache.get(interaction.channelId).send("User does not exist");
+            }
         }
         else if(interaction.commandName === 'update-burner-proxies' && interaction.user.id === '456168609639694376'){
             //reset static proxy lists on both account dbs
