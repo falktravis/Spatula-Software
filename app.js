@@ -708,6 +708,28 @@ const executeCommand = async (interaction) => {
     
             burnerAccountDB.deleteMany({LastAccessed: { $lte: cutoffDate }});
             mainAccountDB.deleteMany({LastAccessed: { $lte: cutoffDate }});
+        }        
+        else if(interaction.commandName === 'all-workers' && interaction.user.id === '456168609639694376'){
+            let list = ''; 
+            users.forEach((user) => {
+                //check to see if facebook has workers
+                list += "\n\tFacebook:";
+                user.facebook.forEach((parent, parentKey) => {
+                    list += `\n\t\t-${parentKey}`;
+                    parent.children.forEach((child, childKey) => {
+                        list += `\n\t\t\t+${childKey}`;
+                    })
+                })
+        
+                //add ebay workers
+                list += "\n\tEbay:";
+                user.ebay.forEach((worker, workerKey) => {
+                    list += `\n\t\t${workerKey}`;
+                })
+            })
+
+            //send the completed message string
+            discordClient.channels.cache.get(interaction.channelId).send(list);
         }
     }else{
         interaction.user.send('Commands are not allowed in direct messages.');

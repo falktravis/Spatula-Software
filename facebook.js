@@ -82,7 +82,7 @@ const sendMessage = async (link) => {
     try {
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         itemBrowser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
         });
@@ -176,7 +176,7 @@ const collectBurnerCookies = async () => {
     try{
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         mainBrowser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
         });
@@ -277,7 +277,7 @@ const collectMessageCookies = async () => {
         //Instantiate the page with packetstream proxies for login
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         itemBrowser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
         });
@@ -408,7 +408,7 @@ let mainPageInitiate = true;
         try{
             //initialize the static isp proxy page
             mainBrowser = await puppeteer.launch({
-                headless: true,
+                headless: 'new',
                 defaultViewport: { width: 1366, height: 768 },
                 args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
             });
