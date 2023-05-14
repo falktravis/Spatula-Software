@@ -20,7 +20,7 @@ parentPort.on('message', async (message) => {
             await itemBrowser.close();
         }
 
-        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername, proxy: workerData.searchProxy});
+        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername, proxy: workerData.burnerStaticProxy});
     }else if(message.action === 'newProxies'){
 
         //set new proxies
@@ -84,13 +84,13 @@ const sendMessage = async (link) => {
         itemBrowser = await puppeteer.launch({
             headless: 'new',
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${messageStaticProxy}`]//http://134.202.250.62:50100
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
 
         //authenticate proxy
-        await itemPage.authenticate({ 'username':'falktravis', 'password': messageStaticProxy });
+        //await itemPage.authenticate({ 'username':'falktravis', 'password': messageStaticProxy });
 
         //set cookies/login if the login was a success
         await itemPage.setCookie(...messageCookies);
@@ -401,381 +401,387 @@ let messageQueue = [];
 let networkData = 0;
 let mainPageInitiate = true;
 
-(async () => {
+const start = async () => {
 
-    const start = async () => {
+    try{
+        //initialize the static isp proxy page
+        mainBrowser = await puppeteer.launch({
+            headless: 'new',
+            defaultViewport: { width: 1366, height: 768 },
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${burnerStaticProxy}`]//http://134.202.250.62:50100
+        });
+        let pages = await mainBrowser.pages();
+        mainPage = pages[0];
 
-        try{
-            //initialize the static isp proxy page
-            mainBrowser = await puppeteer.launch({
-                headless: 'new',
-                defaultViewport: { width: 1366, height: 768 },
-                args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`]
-            });
-            let pages = await mainBrowser.pages();
-            mainPage = pages[0];
+        //authenticate proxy
+        //await mainPage.authenticate({ 'username':'falktravis', 'password': burnerStaticProxy });
 
-            //authenticate proxy
-            await mainPage.authenticate({ 'username':'falktravis', 'password': burnerStaticProxy });
-
-            //network shit
-            await mainPage.setRequestInterception(true);
-            mainPage.on('response', async request => {
-                const URL = request.url();
-                const headers = request.headers();
-                const contentLength = headers['content-length'];
-                if(contentLength != undefined){
-                    networkData += parseInt(contentLength);
-                }
-            });
-
-            mainPage.on('request', async request => {
-                const resource = request.resourceType();
-
-                if(mainPageInitiate){
-                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
-                        request.abort();
-                    }else{
-                        //console.log(resource + " " + URL);
-                        request.continue();
-                    }
-                }else{
-                    if(resource != 'document'){
-                        request.abort();
-                    }else{
-                        request.continue();
-                    }
-                }
-            });
-            
-            //Set cookies in browser
-            await mainPage.setCookie(...burnerCookies);
-
-            //go to the search page
-            await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
-            
-            //update burnerCookies
-            burnerCookies = await mainPage.cookies();
-            burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-        }catch(error){
-            errorMessage('Error with static main page initiation', error);
-        }
-
-        //set distance
-        if(workerData.distance != null){
-            try {
-                await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
-                await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
-                await mainPage.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
-                await mainPage.click('[aria-label="Apply"]');
-                //wait for the results to update, we aren't concerned about time
-                await new Promise(r => setTimeout(r, 3000));
-            } catch (error) {
-                errorMessage('Error with setting distance', error);
+        //network shit
+        await mainPage.setRequestInterception(true);
+        mainPage.on('response', async request => {
+            const URL = request.url();
+            const headers = request.headers();
+            const contentLength = headers['content-length'];
+            if(contentLength != undefined){
+                networkData += parseInt(contentLength);
             }
-        }
-        
-        // Set listingStorage, run once in the begging of the day
-        try{
-            mainListingStorage = await mainPage.evaluate(() => {
-                let searchResults = document.querySelector('div.xx6bls6');
-                if(searchResults == null){
-                    let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
-                    return links.map((link) => {
-                        if(link != null){
-                            let href = link.href;
-                            return href.substring(0, href.indexOf("?"));
-                        }else{
-                            return null;
-                        }
-                    })
+        });
+
+        mainPage.on('request', async request => {
+            const resource = request.resourceType();
+
+            if(mainPageInitiate){
+                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
+                    request.abort();
                 }else{
-                    return [null, null];
+                    //console.log(resource + " " + URL);
+                    request.continue();
                 }
-            });
-        }catch (error){
-            errorMessage('Error with setting listings', error);
-        }
-        console.log("Main Storage: " + mainListingStorage);
-        mainPageInitiate = false;
-        console.log("Data: " + networkData);
-    }
-    
-    //time stuff
-    let isRunning;
-    let currentTime = new Date();
-    currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
-
-    //Determine if the script should be running originally
-    if(workerData.start < workerData.end){
-        if(currentTime > workerData.start && currentTime < workerData.end){
-            isRunning = true;
-        }else{
-            isRunning = false;
-        }
-    }else{
-        if(currentTime > workerData.start || currentTime < workerData.end){
-            isRunning = true;
-        }else{
-            isRunning = false;
-        }
-    }
-
-    //sets an interval to turn on/off interval
-    const handleTime = async (intervalFunction) => {
-        currentTime = new Date();
-        currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
-        let interval;
-        if(workerData.start < workerData.end){
-            if(isRunning){
-                interval = workerData.end - currentTime;
             }else{
-                if(currentTime >= workerData.end){
-                    interval = (1440 - currentTime) + workerData.start;
+                if(resource != 'document'){
+                    request.abort();
                 }else{
-                    interval = workerData.start - currentTime;
+                    request.continue();
                 }
             }
+        });
+        
+        //Set cookies in browser
+        await mainPage.setCookie(...burnerCookies);
+
+        //go to the search page
+        await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
+        
+        //update burnerCookies
+        burnerCookies = await mainPage.cookies();
+        burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+    }catch(error){
+        errorMessage('Error with static main page initiation', error);
+    }
+
+    //set distance
+    if(workerData.distance != null){
+        try {
+            await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
+            await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
+            await mainPage.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
+            await mainPage.click('[aria-label="Apply"]');
+            //wait for the results to update, we aren't concerned about time
+            await new Promise(r => setTimeout(r, 3000));
+        } catch (error) {
+            errorMessage('Error with setting distance', error);
+        }
+    }
+
+    mainPageInitiate = false;
+    console.log("Data: " + networkData);
+}
+
+const setListingStorage = async () => {
+    // Set listingStorage, run once in the begging of the day
+    try{
+        mainListingStorage = await mainPage.evaluate(() => {
+            let searchResults = document.querySelector('div.xx6bls6');
+            if(searchResults == null){
+                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
+                return links.map((link) => {
+                    if(link != null){
+                        let href = link.href;
+                        return href.substring(0, href.indexOf("?"));
+                    }else{
+                        return null;
+                    }
+                })
+            }else{
+                return [null, null];
+            }
+        });
+        console.log("Main Storage: " + mainListingStorage);
+    }catch (error){
+        errorMessage('Error with setting listings', error);
+    }
+}
+
+//time stuff
+let isRunning;
+let currentTime = new Date();
+currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
+
+//Determine if the script should be running originally
+if(workerData.start < workerData.end){
+    if(currentTime > workerData.start && currentTime < workerData.end){
+        isRunning = true;
+    }else{
+        isRunning = false;
+    }
+}else{
+    if(currentTime > workerData.start || currentTime < workerData.end){
+        isRunning = true;
+    }else{
+        isRunning = false;
+    }
+}
+
+//sets an interval to turn on/off interval
+const handleTime = async (intervalFunction) => {
+    currentTime = new Date();
+    currentTime = (currentTime.getHours() * 60) + currentTime.getMinutes();
+    let interval;
+    if(workerData.start < workerData.end){
+        if(isRunning){
+            interval = workerData.end - currentTime;
         }else{
-            if(isRunning){
-                if(currentTime >= workerData.start){
-                    interval = (1440 - currentTime) + workerData.end;
-                }else{
-                    interval = workerData.end - currentTime;
-                }
+            if(currentTime >= workerData.end){
+                interval = (1440 - currentTime) + workerData.start;
             }else{
                 interval = workerData.start - currentTime;
             }
         }
-        
+    }else{
         if(isRunning){
-            //collect cookies if its the first time running
-            if(isCreate == true){
-                if(burnerCookies == null){
-                    await collectBurnerCookies();
-                }
-
-                if(messageCookies == null && workerData.messageType != 3){
-                    await collectMessageCookies();
-                }
-                                
-                //close messageLoginListener if it was necessary
-                if((workerData.burnerCookies == null && burnerCookies != null) || (workerData.messageCookies == null && workerData.messageType != 3 && messageCookies != null)){
-                    parentPort.postMessage({action: 'success'});
-                }
+            if(currentTime >= workerData.start){
+                interval = (1440 - currentTime) + workerData.end;
+            }else{
+                interval = workerData.end - currentTime;
+            }
+        }else{
+            interval = workerData.start - currentTime;
+        }
+    }
+    
+    if(isRunning){
+        //collect cookies if its the first time running
+        if(isCreate == true){
+            if(burnerCookies == null){
+                await collectBurnerCookies();
             }
 
-            isCreate = false;
-            await start();
-            intervalFunction(); 
-        }else if(isCreate == false){
-            await mainPage.close();
-            await mainBrowser.close();
-            mainBrowser = null;
-            console.log("page close");
+            if(messageCookies == null && workerData.messageType != 3){
+                await collectMessageCookies();
+            }
+                            
+            //close messageLoginListener if it was necessary
+            if((workerData.burnerCookies == null && burnerCookies != null) || (workerData.messageCookies == null && workerData.messageType != 3 && messageCookies != null)){
+                parentPort.postMessage({action: 'success'});
+            }
         }
 
-        setTimeout(() => {
-            isRunning = !isRunning;
-            console.log(isRunning);
-            handleTime(intervalFunction);
-        }, interval * 60000)
-    }
-    handleTime(interval);
+        isCreate = false;
+        await start();
 
-    //the meat and cheese
-    function interval() {
-        setTimeout(async () => {
-            if(isRunning){
-                await mainPage.reload({ waitUntil: 'domcontentloaded' });
-                try {
-                    newPost = await mainPage.evaluate(() => {
-                        if(document.querySelector('div.xx6bls6') == null){
-                            let link = document.querySelector(".x3ct3a4 a").href;
+        //set the listing storage, only on the initial creation
+        if(isCreate == true){
+            await setListingStorage();
+        }
+
+        intervalFunction(); 
+    }else if(isCreate == false){
+        await mainPage.close();
+        await mainBrowser.close();
+        mainBrowser = null;
+        console.log("page close");
+    }
+
+    setTimeout(() => {
+        isRunning = !isRunning;
+        console.log(isRunning);
+        handleTime(intervalFunction);
+    }, interval * 60000)
+}
+handleTime(interval);
+
+//the meat and cheese
+function interval() {
+    setTimeout(async () => {
+        if(isRunning){
+            await mainPage.reload({ waitUntil: 'domcontentloaded' });
+            try {
+                newPost = await mainPage.evaluate(() => {
+                    if(document.querySelector('div.xx6bls6') == null){
+                        let link = document.querySelector(".x3ct3a4 a").href;
+                        return link.substring(0, link.indexOf("?"));
+                    }else{
+                        return null;
+                    }
+                });
+                console.log("Main listing storage: " + mainListingStorage);
+                console.log("Data: " + networkData);
+            } catch(error) {
+                errorMessage('Error with main page conversion', error);
+            }
+        
+            //newPost is actually new
+            if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && newPost != null){
+        
+                let postNum = 1;
+                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && postNum  <= 10){
+                    console.log("New Post: " + newPost + " post num: " + postNum);
+
+                    let postObj;
+                    if(workerData.messageType == 1){//auto message
+                        await sendMessage(newPost);
+
+                        //get post data
+                        try{
+                            postObj = await itemPage.evaluate(() => {
+                                let dom = document.querySelector('div.x9f619');
+                                return {
+                                    img: dom.querySelector('span.x78zum5 img').src,
+                                    title: dom.querySelector('div.xyamay9 h1').innerText,
+                                    date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
+                                    description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                    shipping: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r span').innerText : dom.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                    price: "$" + dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
+                                };
+                            });
+
+                            await itemBrowser.close();
+                            itemBrowser = null;
+                        } catch(error){
+                            errorMessage('Error with getting item data', error);
+                        }
+                    }else{
+                        //initiate the new page for collecting data
+                        try{
+                            itemPage = await mainBrowser.newPage();
+                            await itemPage.setRequestInterception(true);
+                            itemPage.on('request', async request => {
+                                const resource = request.resourceType();
+                                if(resource != 'document'){
+                                    request.abort();
+                                }else{
+                                    request.continue();
+                                }
+                            });
+                            await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
+                        }catch(error){
+                            errorMessage('Error with product page initiation, no message', error);
+                        }
+
+                        //get post data
+                        try{
+                            postObj = await itemPage.evaluate(() => {
+                                return {
+                                    img: document.querySelector('img').src,
+                                    title: document.querySelector('div.xyamay9 h1').innerText,
+                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
+                                    description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                    shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                    price: "$" + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
+                                };
+                            });
+
+                            await itemPage.close();
+                        } catch(error){
+                            errorMessage('Error with getting item data', error);
+                        }
+                    }
+                    
+                    //Handle Discord messaging
+                    if(workerData.messageType != 2){//if its not manual messaging
+                        try{
+                            await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
+                                .setColor(0x0099FF)
+                                .setTitle(postObj.title + " - " + postObj.price)
+                                .setURL(newPost)
+                                .setAuthor({ name: workerData.name })
+                                .setDescription(postObj.description)
+                                .addFields({ name: postObj.date, value: postObj.shipping })
+                                .setImage(postObj.img)
+                                .setTimestamp(new Date())
+                            ]});
+                        }catch(error){
+                            errorMessage('Error with item notification', error);
+                        }
+                    }else{
+                        let notification;
+                        try{
+                            notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
+                                .setColor(0x0099FF)
+                                .setTitle(postObj.title + " - " + postObj.price)
+                                .setURL(newPost)
+                                .setAuthor({ name: workerData.name })
+                                .setDescription(postObj.description)
+                                .addFields({ name: postObj.date, value: postObj.shipping })
+                                .setImage(postObj.img)
+                                .setTimestamp(new Date())
+                            ], components: [new ActionRowBuilder()
+                                .addComponents(
+                                    new ButtonBuilder()
+                                    .setCustomId('message-' + newPost)
+                                    .setLabel('Message')
+                                    .setStyle(ButtonStyle.Primary),
+                                )
+                            ]});
+                        }catch(error){
+                            errorMessage('Error with new item notification with message button', error);
+                        }
+
+                        try {
+                            const filter = i => i.customId.split("-")[0] == 'message';
+                            const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
+                            collector.on('collect', async i => {
+                                i.reply("Sending...");
+    
+                                //push message into the queue
+                                messageQueue.push(i.customId.split("-")[1]);
+                                //run the queue handler if it is not already going
+                                if(messageQueue.length == 1){
+                                    await handleQueue();
+                                    console.log('message finish');
+                                }
+    
+                                collector.stop();
+                            });
+                            collector.on('end', () => {
+                                notification.edit({ components: [] });
+                            });
+                        } catch (error) {
+                            errorMessage('Error collecting new item notification button', error);
+                        }
+                    }
+
+                    //Update newPost
+                    postNum++;
+                    try {
+                        newPost = await mainPage.evaluate((num) => {
+                            let link = document.querySelector(`div.x139jcc6.x1nhvcw1 > :nth-child(${num}) a`).href;
                             return link.substring(0, link.indexOf("?"));
+                        }, postNum);
+                        console.log(newPost);
+                    } catch (error) {
+                        errorMessage('Error re-setting new post', error);
+                    }
+                }
+
+                //Check for a post hard cap
+                if(postNum > 10){
+                    client.channels.cache.get(workerData.channel).send("Too many new posts to notify, I honestly have no idea how you did this it should be impossible, make your query more specific");
+                }
+
+                //set the main listing storage
+                try {
+                    mainListingStorage = await mainPage.evaluate(() => {
+                        if(document.querySelector('div.xx6bls6') == null){
+                            let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
+                            return links.map((link) => {
+                                if(link != null){
+                                    let href = link.href;
+                                    return href.substring(0, href.indexOf("?"));
+                                }else{
+                                    return null;
+                                }
+                            })
                         }else{
-                            return null;
+                            return [null, null];
                         }
                     });
-                    console.log("Main listing storage: " + mainListingStorage);
-                    console.log("Data: " + networkData);
                 } catch(error) {
-                    errorMessage('Error with main page conversion', error);
+                    errorMessage('Error with re-setting mainListingStorage', error);
                 }
-            
-                //newPost is actually new
-                if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && newPost != null){
-            
-                    let postNum = 1;
-                    while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && postNum  <= 10){
-                        console.log("New Post: " + newPost + " post num: " + postNum);
-
-                        let postObj;
-                        if(workerData.messageType == 1){//auto message
-                            await sendMessage(newPost);
-
-                            //get post data
-                            try{
-                                postObj = await itemPage.evaluate(() => {
-                                    let dom = document.querySelector('div.x9f619');
-                                    return {
-                                        img: dom.querySelector('span.x78zum5 img').src,
-                                        title: dom.querySelector('div.xyamay9 h1').innerText,
-                                        date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
-                                        description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                        shipping: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r span').innerText : dom.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                        price: "$" + dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
-                                    };
-                                });
-
-                                await itemBrowser.close();
-                                itemBrowser = null;
-                            } catch(error){
-                                errorMessage('Error with getting item data', error);
-                            }
-                        }else{
-                            //initiate the new page for collecting data
-                            try{
-                                itemPage = await mainBrowser.newPage();
-                                await itemPage.setRequestInterception(true);
-                                itemPage.on('request', async request => {
-                                    const resource = request.resourceType();
-                                    if(resource != 'document'){
-                                        request.abort();
-                                    }else{
-                                        request.continue();
-                                    }
-                                });
-                                await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
-                            }catch(error){
-                                errorMessage('Error with product page initiation, no message', error);
-                            }
-
-                            //get post data
-                            try{
-                                postObj = await itemPage.evaluate(() => {
-                                    return {
-                                        img: document.querySelector('img').src,
-                                        title: document.querySelector('div.xyamay9 h1').innerText,
-                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
-                                        description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                        shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                        price: "$" + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
-                                    };
-                                });
-
-                                await itemPage.close();
-                            } catch(error){
-                                errorMessage('Error with getting item data', error);
-                            }
-                        }
-                        
-                        //Handle Discord messaging
-                        if(workerData.messageType != 2){//if its not manual messaging
-                            try{
-                                await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
-                                    .setColor(0x0099FF)
-                                    .setTitle(postObj.title + " - " + postObj.price)
-                                    .setURL(newPost)
-                                    .setAuthor({ name: workerData.name })
-                                    .setDescription(postObj.description)
-                                    .addFields({ name: postObj.date, value: postObj.shipping })
-                                    .setImage(postObj.img)
-                                    .setTimestamp(new Date())
-                                ]});
-                            }catch(error){
-                                errorMessage('Error with item notification', error);
-                            }
-                        }else{
-                            let notification;
-                            try{
-                                notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
-                                    .setColor(0x0099FF)
-                                    .setTitle(postObj.title + " - " + postObj.price)
-                                    .setURL(newPost)
-                                    .setAuthor({ name: workerData.name })
-                                    .setDescription(postObj.description)
-                                    .addFields({ name: postObj.date, value: postObj.shipping })
-                                    .setImage(postObj.img)
-                                    .setTimestamp(new Date())
-                                ], components: [new ActionRowBuilder()
-                                    .addComponents(
-                                        new ButtonBuilder()
-                                        .setCustomId('message-' + newPost)
-                                        .setLabel('Message')
-                                        .setStyle(ButtonStyle.Primary),
-                                    )
-                                ]});
-                            }catch(error){
-                                errorMessage('Error with new item notification with message button', error);
-                            }
-    
-                            try {
-                                const filter = i => i.customId.split("-")[0] == 'message';
-                                const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
-                                collector.on('collect', async i => {
-                                    i.reply("Sending...");
-        
-                                    //push message into the queue
-                                    messageQueue.push(i.customId.split("-")[1]);
-                                    //run the queue handler if it is not already going
-                                    if(messageQueue.length == 1){
-                                        await handleQueue();
-                                        console.log('message finish');
-                                    }
-        
-                                    collector.stop();
-                                });
-                                collector.on('end', () => {
-                                    notification.edit({ components: [] });
-                                });
-                            } catch (error) {
-                                errorMessage('Error collecting new item notification button', error);
-                            }
-                        }
-
-                        //Update newPost
-                        postNum++;
-                        try {
-                            newPost = await mainPage.evaluate((num) => {
-                                let link = document.querySelector(`div.x139jcc6.x1nhvcw1 > :nth-child(${num}) a`).href;
-                                return link.substring(0, link.indexOf("?"));
-                            }, postNum);
-                            console.log(newPost);
-                        } catch (error) {
-                            errorMessage('Error re-setting new post', error);
-                        }
-                    }
-
-                    //Check for a post hard cap
-                    if(postNum > 10){
-                        client.channels.cache.get(workerData.channel).send("Too many new posts to notify, I honestly have no idea how you did this it should be impossible, make your query more specific");
-                    }
-    
-                    //set the main listing storage
-                    try {
-                        mainListingStorage = await mainPage.evaluate(() => {
-                            if(document.querySelector('div.xx6bls6') == null){
-                                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
-                                return links.map((link) => {
-                                    if(link != null){
-                                        let href = link.href;
-                                        return href.substring(0, href.indexOf("?"));
-                                    }else{
-                                        return null;
-                                    }
-                                })
-                            }else{
-                                return [null, null];
-                            }
-                        });
-                    } catch(error) {
-                        errorMessage('Error with re-setting mainListingStorage', error);
-                    }
-                }
-                interval();
             }
-        }, Math.floor((Math.random() * (2) + 3) * 60000)); 
-    } 
-})();
+            interval();
+        }
+    }, Math.floor((Math.random() * (2) + 3) * 60000)); 
+} 

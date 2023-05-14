@@ -491,6 +491,9 @@ const executeCommand = async (interaction) => {
             if(users.has(interaction.user.id)){
                 if(users.get(interaction.user.id).facebook.has(interaction.options.getString("name"))){
                     let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("name"));
+
+                    //decrease the worker count for the main account static proxy
+                    await staticProxyDB.updateOne({Proxy: parent.staticProxy}, { $inc: { CurrentFacebookTasks: -1 } });
     
                     let mainInfoIsSet = false;
     
@@ -642,12 +645,14 @@ const executeCommand = async (interaction) => {
     
             //get the list of new proxies
             let proxyList = interaction.options.getString("proxy-list");
-            proxyList = proxyList.split(" ").map((proxy) => ({Proxy: proxy, CurrentFacebookTasks: 0, CurrentEbayTasks: 0})); //!Change split based on the given format
+            proxyList = proxyList.split(" ");
             console.log(proxyList);
             
             //delete all previous proxies and insert the new ones
             await staticProxyDB.deleteMany({});
-            await staticProxyDB.insertMany({proxyList});
+            proxyList.forEach(async (proxy) => {
+                await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookTasks: 0, CurrentEbayTasks: 0})
+            })
     
             //rotate through every current worker and send a message that contains the new proxy, then update the database StaticProxies list
             users.forEach((user) => {
@@ -711,9 +716,9 @@ const executeCommand = async (interaction) => {
         }        
         else if(interaction.commandName === 'all-workers' && interaction.user.id === '456168609639694376'){
             let list = ''; 
-            users.forEach((user) => {
+            users.forEach((user, userID) => {
                 //check to see if facebook has workers
-                list += "\n\tFacebook:";
+                list += '\n' + userID + "\n\tFacebook:";
                 user.facebook.forEach((parent, parentKey) => {
                     list += `\n\t\t-${parentKey}`;
                     parent.children.forEach((child, childKey) => {

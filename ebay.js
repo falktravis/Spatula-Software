@@ -36,11 +36,16 @@ const errorMessage = (message, error) => {
 
 const setListingStorage = async () => {
     try{
-        listingStorage = await mainPage.evaluate(() => {
-            let link = document.querySelector("ul.srp-results li.s-item a").href;
-            let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
+        if(await mainPage.$('ul.srp-results > :nth-child(1) a') == null){
+            postChildStartNum = 3;
+            console.log("Weird child number shift thing");
+        }
+
+        listingStorage = await mainPage.evaluate((num) => {
+            let link = document.querySelector(`ul.srp-results > :nth-child(${num}) a`).href;
+            let link2 = document.querySelector(`ul.srp-results > :nth-child(${num + 1}) a`).href;
             return [link.substring(0, link.indexOf("?")), link2.substring(0, link2.indexOf("?"))];
-        });
+        }, postChildStartNum);
     } catch (error){
         errorMessage('Error setting listing storage', error);
     }
@@ -105,99 +110,97 @@ let mainPage;
 let newPost;
 let listingStorage;
 let proxy = workerData.proxy;
+let postChildStartNum = 2;
 
-(async () => {
+const start = async () => {
+    //init browser
+    try{
+        browser = await puppeteer.launch({ 
+            headless: false,
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${proxy}`], //http://134.202.250.62:50100
+        });
+        let pages = await browser.pages();
+        mainPage = pages[0];
 
-    const start = async () => {
-        //init browser
+        //authenticate proxy
+        //await mainPage.authenticate({ 'username':'falktravis', 'password': proxy });
+
+        //track network consumption and block the bull shit
+        await mainPage.setRequestInterception(true);
+        mainPage.on('request', async request => {
+            const resource = request.resourceType();
+            if(resource != 'document'){
+                request.abort();
+            }else{
+                request.continue();
+            }
+        });
+
+        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
+
+        /*//change language hopefully
+        await mainPage.click('#gh-eb-Geo-a-default');
+        await mainPage.click('[lang="en-US"]');
+        await mainPage.waitForNavigation();*/
+    } catch (error){
+        errorMessage('Error launching browser', error);
+    }
+
+    await setListingStorage();
+    console.log(listingStorage);
+}
+start();
+
+//the meat and cheese
+function interval() {
+    setTimeout(async () => {
+        //checks if the page is within run time
         try{
-            browser = await puppeteer.launch({ 
-                headless: 'new',
-                args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://134.202.250.62:50100`], 
+            await mainPage.reload({ waitUntil: 'networkidle0' });
+
+            newPost = await mainPage.evaluate(() => {
+                let link = document.querySelector("ul.srp-results li.s-item a").href;
+                return link.substring(0, link.indexOf("?"));
             });
-            let pages = await browser.pages();
-            mainPage = pages[0];
-
-            //authenticate proxy
-            await mainPage.authenticate({ 'username':'falktravis', 'password': proxy });
-
-            //track network consumption and block the bull shit
-            await mainPage.setRequestInterception(true);
-            mainPage.on('request', async request => {
-                const resource = request.resourceType();
-                if(resource != 'document'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
-            });
-
-            await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
-
-            /*//change language hopefully
-            await mainPage.click('#gh-eb-Geo-a-default');
-            await mainPage.click('[lang="en-US"]');
-            await mainPage.waitForNavigation();*/
-        } catch (error){
-            errorMessage('Error launching browser', error);
+            console.log("First Post Check: " + newPost);
+        }catch(error){
+            errorMessage('Error checking for new post', error);
         }
 
-        await setListingStorage();
-        console.log(listingStorage);
-    }
-    await start();
+        if(listingStorage[0] != newPost && listingStorage[1] != newPost){
+            let postNum = postChildStartNum;
+            while(listingStorage[0] != newPost && listingStorage[1] != newPost && postNum <= 30){
+                await sendNotification(postNum);
 
-    //the meat and cheese
-    function interval() {
-        setTimeout(async () => {
-            //checks if the page is within run time
+                postNum++;
+                try {
+                    newPost = await mainPage.evaluate((num) => {
+                        let link = document.querySelector(`ul.srp-results > :nth-child(${num}) a`).href;
+                        return link.substring(0, link.indexOf("?"));
+                    }, postNum);
+                } catch (error) {
+                    errorMessage('Error re-setting new post', error);
+                }
+            }
+
+            //Check for a post hard cap
+            if(postNum > 30){
+                client.channels.cache.get(workerData.channel).send("Too many new posts to notify, I honestly have no idea how you did this it should be impossible, make your query more specific");
+            }
+
+            await setListingStorage();
+        }
+        else if(listingStorage[0] != newPost && listingStorage[1] == newPost){
             try{
-                await mainPage.reload({ waitUntil: 'domcontentloaded' });
-
-                newPost = await mainPage.evaluate(() => {
-                    let link = document.querySelector("ul.srp-results li.s-item a").href;
-                    return link.substring(0, link.indexOf("?"));
-                });
-                console.log("First Post Check: " + newPost);
+                listingStorage = [newPost, await mainPage.evaluate(() => {
+                    let link2 = document.querySelector(`ul.srp-results > :nth-child(${postChildStartNum + 1}) a`).href;
+                    return link2.substring(0, link2.indexOf("?"));
+                })];
             }catch(error){
-                errorMessage('Error checking for new post', error);
+                errorMessage('Error re-setting listing storage on first post deletion', error);
             }
-
-            if(listingStorage[0] != newPost && listingStorage[1] != newPost){
-                let postNum = 2;
-                while(listingStorage[0] != newPost && listingStorage[1] != newPost && postNum <= 30){
-                    await sendNotification(postNum);
-
-                    postNum++;
-                    try {
-                        newPost = await mainPage.evaluate((num) => {
-                            let link = document.querySelector(`ul.srp-results > :nth-child(${num}) a`).href;
-                            return link.substring(0, link.indexOf("?"));
-                        }, postNum);
-                    } catch (error) {
-                        errorMessage('Error re-setting new post', error);
-                    }
-                }
-
-                //Check for a post hard cap
-                if(postNum > 30){
-                    client.channels.cache.get(workerData.channel).send("Too many new posts to notify, I honestly have no idea how you did this it should be impossible, make your query more specific");
-                }
-
-                await setListingStorage();
-            }
-            else if(listingStorage[0] != newPost && listingStorage[1] == newPost){
-                try{
-                    listingStorage = [newPost, await mainPage.evaluate(() => {
-                        let link2 = document.querySelector("ul.srp-results > :nth-child(3)").querySelector('a').href;
-                        return link2.substring(0, link2.indexOf("?"));
-                    })];
-                }catch(error){
-                    errorMessage('Error re-setting listing storage on first post deletion', error);
-                }
-            }
-            interval();
-        }, Math.floor((Math.random() * (2) + 3) * 60000));
-    } 
-    interval()
-})();
+        }
+        interval();
+    }, Math.floor((Math.random() * (2) + 3) * 60000));
+} 
+interval();
