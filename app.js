@@ -248,7 +248,8 @@ const executeCommand = async (interaction) => {
                                 if(messageAccountObj.StaticProxies.length < 3){
                                     await mainAccountDB.updateOne({_id: messageAccountObj._id}, {$push: {StaticProxies: {$each: [messageStaticProxy.Proxy], $position: 0 }}});
                                 }else{
-                                    await mainAccountDB.updateOne({_id: messageAccountObj._id}, {$push: {StaticProxies: {$each: [messageStaticProxy.Proxy], $position: 0 }}, $slice: { StaticProxies: 3 }});
+                                    await mainAccountDB.updateOne({_id: messageAccountObj._id}, {$push: {StaticProxies: {$each: [messageStaticProxy.Proxy], $position: 0 }}});
+                                    await mainAccountDB.updateOne({_id: messageAccountObj._id}, {$pop: {StaticProxies: 1}});
                                 }
                             }
                         }
@@ -376,7 +377,8 @@ const executeCommand = async (interaction) => {
                                                 if(burnerAccountObj.StaticProxies.length < 3){
                                                     await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$push: {StaticProxies: {$each: [burnerStaticProxy.Proxy], $position: 0 }}});
                                                 }else{
-                                                    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$push: {StaticProxies: {$each: [burnerStaticProxy.Proxy], $position: 0 }}, $slice: { StaticProxies: 3 }});
+                                                    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$push: {StaticProxies: {$each: [burnerStaticProxy.Proxy], $position: 0 }}});
+                                                    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$pop: {StaticProxies: 1}});
                                                 }
                                             }
                                         }
