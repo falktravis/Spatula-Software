@@ -382,7 +382,7 @@ const userAgents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
-  ];
+];
 let randomUserAgent;
 let isCreate = true;
 let newPost;
@@ -419,7 +419,6 @@ const start = async () => {
         //network shit
         await mainPage.setRequestInterception(true);
         mainPage.on('response', async request => {
-            const URL = request.url();
             const headers = request.headers();
             const contentLength = headers['content-length'];
             if(contentLength != undefined){
@@ -434,7 +433,6 @@ const start = async () => {
                 if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
                     request.abort();
                 }else{
-                    //console.log(resource + " " + URL);
                     request.continue();
                 }
             }else{
@@ -484,7 +482,7 @@ const setListingStorage = async () => {
         mainListingStorage = await mainPage.evaluate(() => {
             let searchResults = document.querySelector('div.xx6bls6');
             if(searchResults == null){
-                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
+                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2) a")];
                 return links.map((link) => {
                     if(link != null){
                         let href = link.href;
@@ -567,12 +565,12 @@ const handleTime = async (intervalFunction) => {
             }
         }
 
-        isCreate = false;
         await start();
 
         //set the listing storage, only on the initial creation
         if(isCreate == true){
             await setListingStorage();
+            isCreate = false;
         }
 
         intervalFunction(); 
