@@ -240,7 +240,7 @@ const collectBurnerCookies = async () => {
             await mainPage.type('#email', workerData.burnerUsername);
             await mainPage.type('#pass', workerData.burnerPassword);
             await mainPage.click('button[name="login"]');
-            await mainPage.waitForNavigation(); //necessary with headless mode
+            //await mainPage.waitForNavigation(); //necessary with headless mode
             console.log(mainPage.url());
             if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
                 await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
@@ -251,7 +251,7 @@ const collectBurnerCookies = async () => {
             }else{
                 if(mainPage.url().includes('mobileprotection')){
                     await mainPage.click('label.uiLinkButton');
-                    await mainPage.waitForNavigation();//necessary with headless mode?
+                    //await mainPage.waitForNavigation();//necessary with headless mode?
                     console.log("mobile protection");
                 }
     
@@ -340,7 +340,7 @@ const collectMessageCookies = async () => {
             await itemPage.type('#email', workerData.messageUsername);
             await itemPage.type('#pass', workerData.messagePassword);
             await itemPage.click('button[name="login"]');
-            await itemPage.waitForNavigation(); //necessary with headless mode
+            //await itemPage.waitForNavigation(); //necessary with headless mode
             console.log(itemPage.url());
             if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
                 client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
@@ -351,7 +351,7 @@ const collectMessageCookies = async () => {
             }else{
                 if(itemPage.url().includes('mobileprotection')){
                     await mainPage.click('label.uiLinkButton');
-                    await mainPage.waitForNavigation();//necessary with headless mode?
+                    //await mainPage.waitForNavigation();//necessary with headless mode?
                     console.log("mobile protection");
                 }
     
@@ -448,7 +448,7 @@ const start = async () => {
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
-        await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
+        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
         
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
@@ -630,7 +630,7 @@ function interval() {
                                     date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
                                     description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                     shipping: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r span').innerText : dom.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                    price: "$" + dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
+                                    price: dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
                                 };
                             });
 

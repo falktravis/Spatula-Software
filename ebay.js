@@ -156,7 +156,7 @@ function interval() {
     setTimeout(async () => {
         //checks if the page is within run time
         try{
-            await mainPage.reload({ waitUntil: 'networkidle0' });
+            await mainPage.reload({ waitUntil: 'domcontentloaded' });
 
             newPost = await mainPage.evaluate(() => {
                 let link = document.querySelector("ul.srp-results li.s-item a").href;
