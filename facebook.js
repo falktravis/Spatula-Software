@@ -460,6 +460,7 @@ const start = async () => {
     //set distance
     if(workerData.distance != null){
         try {
+            mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2')
             await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
             await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
