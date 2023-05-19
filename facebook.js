@@ -82,7 +82,7 @@ const sendMessage = async (link) => {
     try {
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         itemBrowser = await puppeteer.launch({
-            headless: 'new',
+            headless: true,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${messageStaticProxy}`]//http://134.202.250.62:50100
         });
@@ -176,7 +176,7 @@ const collectBurnerCookies = async () => {
     try{
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         mainBrowser = await puppeteer.launch({
-            headless: 'new',
+            headless: true,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
         });
@@ -277,7 +277,7 @@ const collectMessageCookies = async () => {
         //Instantiate the page with packetstream proxies for login
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         itemBrowser = await puppeteer.launch({
-            headless: 'new',
+            headless: true,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
         });
@@ -406,7 +406,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: 'new',
+            headless: true,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${burnerStaticProxy}`]//http://134.202.250.62:50100
         });
@@ -460,7 +460,9 @@ const start = async () => {
     //set distance
     if(workerData.distance != null){
         try {
-            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2')
+            if(await mainPage.$('div.x1y1aw1k.xl56j7k div.x1iyjqo2') == null){
+                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            }
             await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
             await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');

@@ -116,7 +116,7 @@ const start = async () => {
     //init browser
     try{
         browser = await puppeteer.launch({ 
-            headless: 'new',
+            headless: true,
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${proxy}`], //http://134.202.250.62:50100
         });
         let pages = await browser.pages();
