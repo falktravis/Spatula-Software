@@ -31,7 +31,10 @@ parentPort.on('message', async (message) => {
 
         //restart burner account page
         await mainBrowser.close();
-        start();
+        if(itemBrowser != null){
+            await itemBrowser.close();
+        }
+        await start();
 
         //message the main script back
         parentPort.postMessage({action: 'usernames', messageUsername: workerData.messageUsername, burnerUsername: workerData.burnerUsername});
@@ -247,7 +250,7 @@ const collectBurnerCookies = async () => {
     
                 //end the task
                 await mainBrowser.close();
-                parentPort.postMessage({action: 'loginFailure'});
+                parentPort.postMessage({action: 'loginFailure', isMessageLogin: false});
             }else{
                 if(mainPage.url().includes('mobileprotection')){
                     await mainPage.click('label.uiLinkButton');
@@ -343,11 +346,11 @@ const collectMessageCookies = async () => {
             //await itemPage.waitForNavigation(); //necessary with headless mode
             console.log(itemPage.url());
             if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
-                client.channels.cache.get(workerData.channel).send(`Facebook Main Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
+                client.channels.cache.get(workerData.channel).send(`Facebook Message login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
     
                 //end the task
                 await mainBrowser.close();
-                parentPort.postMessage({action: 'loginFailure'});
+                parentPort.postMessage({action: 'loginFailure', isMessageLogin: true});
             }else{
                 if(itemPage.url().includes('mobileprotection')){
                     await mainPage.click('label.uiLinkButton');
@@ -458,11 +461,9 @@ const start = async () => {
     }
 
     //set distance
-    if(workerData.distance != null){
+    if(workerData.distance != null && isCreate == true){
         try {
-            if(await mainPage.$('div.x1y1aw1k.xl56j7k div.x1iyjqo2') == null){
-                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-            }
+            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
             await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
             await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');

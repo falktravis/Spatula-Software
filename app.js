@@ -55,7 +55,7 @@ for (const file of commandFiles) {
 }
 
 //worker login listening function
-const workerLoginListener = (message, child, parent, user, username, proxy) => {
+const workerLoginListener = (message, child, parent, user, username, burnerProxy, messageProxy) => {
         //push command into the queue
         queue.push({
             message: message,
@@ -63,7 +63,8 @@ const workerLoginListener = (message, child, parent, user, username, proxy) => {
             parent: parent,
             user: user,
             username: username,
-            proxy: proxy
+            burnerProxy: burnerProxy,
+            messageProxy, messageProxy
         });
 
         //run the queue handler if it is not already going
@@ -90,7 +91,8 @@ const executeMessage = async (data) => {
         });
 
         //reduce CurrentTasks
-        await staticProxyDB.updateOne({Proxy: data.proxy}, {$inc: {CurrentFacebookTasks: -1}});
+        await staticProxyDB.updateOne({Proxy: data.messageProxy}, {$inc: {CurrentFacebookMessageTasks: -1}});
+        await staticProxyDB.updateOne({Proxy: data.burnerProxy}, {$inc: {CurrentFacebookBurnerTasks: -1}});
 
         users.get(data.user).workerCount--;
     }else if(data.message.action == 'proxyFailure'){
@@ -108,11 +110,20 @@ const executeMessage = async (data) => {
     }
 }
 
-const getStaticFacebookProxy = async () => {
+const getStaticFacebookMessageProxy = async () => {
     //get the proxy
-    let staticProxyObj = await staticProxyDB.findOne({CurrentFacebookTasks: {$lt: 3}}, {sort: { CurrentFacebookTasks: 1}});
+    let staticProxyObj = await staticProxyDB.findOne({CurrentFacebookMessageTasks: {$lt: 2}}, {sort: { CurrentFacebookMessageTasks: 1}});
     if(staticProxyObj == null){
-        staticProxyObj = await staticProxyDB.findOne({}, {sort: { CurrentFacebookTasks: 1}});
+        staticProxyObj = await staticProxyDB.findOne({}, {sort: { CurrentFacebookMessageTasks: 1}});
+    }
+    return staticProxyObj;
+}
+
+const getStaticFacebookBurnerProxy = async () => {
+    //get the proxy
+    let staticProxyObj = await staticProxyDB.findOne({CurrentFacebookBurnerTasks: {$lt: 3}}, {sort: { CurrentFacebookBurnerTasks: 1}});
+    if(staticProxyObj == null){
+        staticProxyObj = await staticProxyDB.findOne({}, {sort: { CurrentFacebookBurnerTasks: 1}});
     }
     return staticProxyObj;
 }
@@ -229,7 +240,7 @@ const executeCommand = async (interaction) => {
                         if(messageAccountObj.StaticProxies.length != 0){
                             //Check each previously used proxy for number of current tasks
                             messageAccountObj.StaticProxies.forEach(async (element) => {
-                                messageStaticProxy = await staticProxyDB.findOne({Proxy: element, CurrentFacebookTasks: {$lt: 3}});
+                                messageStaticProxy = await staticProxyDB.findOne({Proxy: element, CurrentFacebookMessageTasks: {$lt: 2}});
                                 if(messageStaticProxy != null){
                                     return;
                                 }
@@ -237,10 +248,10 @@ const executeCommand = async (interaction) => {
                         }
                         //If there is no previous proxy with a low current useage get the proxy with the lowest useage
                         if(messageStaticProxy == null){
-                            messageStaticProxy = await getStaticFacebookProxy();
+                            messageStaticProxy = await getStaticFacebookMessageProxy();
     
-                            //update CurrentFacebookTasks in proxy db
-                            await staticProxyDB.updateOne({_id: messageStaticProxy._id}, {$inc: { CurrentFacebookTasks: 1 }});
+                            //update CurrentFacebookMessageTasks in proxy db
+                            await staticProxyDB.updateOne({_id: messageStaticProxy._id}, {$inc: { CurrentFacebookMessageTasks: 1 }});
     
                             //add the new proxy to burner account proxy log
                             if(!messageAccountObj.StaticProxies.includes(messageStaticProxy.Proxy)){
@@ -358,7 +369,7 @@ const executeCommand = async (interaction) => {
                                         if(burnerAccountObj.StaticProxies.length != 0){
                                             //Check each previously used proxy for number of current tasks
                                             burnerAccountObj.StaticProxies.forEach(async (element) => {
-                                                burnerStaticProxy = await staticProxyDB.findOne({Proxy: element, CurrentFacebookTasks: {$lt: 3}});
+                                                burnerStaticProxy = await staticProxyDB.findOne({Proxy: element, CurrentFacebookBurnerTasks: {$lt: 3}});
                                                 if(burnerStaticProxy != null){
                                                     return;
                                                 }
@@ -366,10 +377,10 @@ const executeCommand = async (interaction) => {
                                         }
                                         //If there is no previous proxy with a low current useage get the proxy with the lowest useage
                                         if(burnerStaticProxy == null){
-                                            burnerStaticProxy = await getStaticFacebookProxy();
+                                            burnerStaticProxy = await getStaticFacebookBurnerProxy();
     
-                                            //update CurrentFacebookTasks in proxy db
-                                            await staticProxyDB.updateOne({_id: burnerStaticProxy._id}, {$inc: { CurrentFacebookTasks: 1 }});
+                                            //update CurrentFacebookBurnerTasks in proxy db
+                                            await staticProxyDB.updateOne({_id: burnerStaticProxy._id}, {$inc: { CurrentFacebookBurnerTasks: 1 }});
         
                                             //add the new proxy to burner account proxy log
                                             if(!burnerAccountObj.StaticProxies.includes(burnerStaticProxy.Proxy)){
@@ -408,7 +419,7 @@ const executeCommand = async (interaction) => {
                                         //Set message listener for updating cookies and login error handling, only if a login is necessary
                                         if(burnerAccountObj.Cookies == null || (parent.messageCookies == null && interaction.options.getNumber("message-type") != 3)){
                                             console.log("listener created");
-                                            parent.children.get(interaction.options.getString("name")).on('message', message => workerLoginListener(message, interaction.options.getString("name"), interaction.options.getString("parent-name"), interaction.user.id, burnerUsername, burnerStaticProxy.Proxy));
+                                            parent.children.get(interaction.options.getString("name")).on('message', message => workerLoginListener(message, interaction.options.getString("name"), interaction.options.getString("parent-name"), interaction.user.id, burnerUsername, burnerStaticProxy.Proxy, parent.staticProxy));
                                         }
         
                                         discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
@@ -463,7 +474,7 @@ const executeCommand = async (interaction) => {
                             await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastAccessed: new Date()}});
     
                             //reduce active task count by one
-                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookTasks: -1 } });
+                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
     
                             //Make the login open for use in the parent
                             parent.burnerLogins.forEach((e) => {
@@ -495,7 +506,7 @@ const executeCommand = async (interaction) => {
                     let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("name"));
 
                     //decrease the worker count for the main account static proxy
-                    await staticProxyDB.updateOne({Proxy: parent.staticProxy}, { $inc: { CurrentFacebookTasks: -1 } });
+                    await staticProxyDB.updateOne({Proxy: parent.staticProxy}, { $inc: { CurrentFacebookMessageTasks: -1 } });
     
                     let mainInfoIsSet = false;
     
@@ -514,7 +525,7 @@ const executeCommand = async (interaction) => {
                             console.log('terminate');
     
                             //reduce active task count by one
-                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookTasks: -1 } });
+                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
     
                             //set cookies in db
                             if(message.burnerCookies != null){
@@ -653,49 +664,66 @@ const executeCommand = async (interaction) => {
             //delete all previous proxies and insert the new ones
             await staticProxyDB.deleteMany({});
             proxyList.forEach(async (proxy) => {
-                await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookTasks: 0, CurrentEbayTasks: 0})
+                await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, CurrentFacebookBurnerTasks: 0, CurrentEbayTasks: 0})
             })
     
             //rotate through every current worker and send a message that contains the new proxy, then update the database StaticProxies list
-            users.forEach((user) => {
-                user.facebook.forEach((parent) => {
-                    parent.children.forEach(async (child) => {
-                        //get a new proxy from the db
-                        const messageStaticProxyObj = await getStaticFacebookProxy();
-                        const burnerStaticProxyObj = await getStaticFacebookProxy();
-    
-                        //update CurrentFacebookTasks in proxy db
-                        await staticProxyDB.updateOne({_id: burnerStaticProxyObj._id}, {$inc: { CurrentFacebookTasks: 1 }});
-                        
-                        //Message the worker with new proxy
-                        child.postMessage({ action: 'newProxies', messageProxy: messageStaticProxyObj.Proxy, burnerProxy: burnerStaticProxyObj.Proxy });
-    
-                        //wait for the worker to message back with its identifying details
-                        let message = await new Promise(resolve => {
-                            child.on('message', message => {
-                                if(message.action === 'usernames'){
-                                    resolve(message);
-                                } 
-                            });
-                        });
-    
-                        //assign proxys to accounts in dbs
-                        await burnerAccountDB.updateOne({Username: message.burnerUsername}, {$push: {StaticProxies: burnerStaticProxyObj.Proxy}});
-    
-                        //only use the static proxy if messaging is enabled
-                        if(message.messageUsername != null){
-                            await staticProxyDB.updateOne({_id: messageStaticProxyObj._id}, {$inc: { CurrentFacebookTasks: 1 }});
-                            await mainAccountDB.updateOne({Username: message.messageUsername}, {$push: {StaticProxies: messageStaticProxyObj.Proxy}});
+            users.forEach(async (user) => {
+                //for each Facebook parent
+                for(const parent of user.facebook){
+                    const updateFacebookParentTask = async (parent) => {
+                        let isFirst = true;
+                        const messageStaticProxyObj = await getStaticFacebookMessageProxy();
+        
+                        //for each Facebook child in parent
+                        for(const child of parent[1].children){
+                            const updateFacebookChildTask = async (child) => {
+                                //get a new proxy from the db
+                                console.log('start');
+                                const burnerStaticProxyObj = await getStaticFacebookBurnerProxy();
+                
+                                //update CurrentFacebookBurnerTasks in proxy db
+                                await staticProxyDB.updateOne({_id: burnerStaticProxyObj._id}, {$inc: { CurrentFacebookBurnerTasks: 1 }});
+                
+                                //Message the worker with new proxy
+                                child[1].postMessage({ action: 'newProxies', messageProxy: messageStaticProxyObj.Proxy, burnerProxy: burnerStaticProxyObj.Proxy });
+                
+                                //wait for the worker to message back with its identifying details
+                                let message = await new Promise(resolve => {
+                                    child[1].on('message', message => {
+                                        if(message.action === 'usernames'){
+                                            resolve(message);
+                                        } 
+                                    });
+                                });
+                
+                                //assign proxys to accounts in dbsurnerUsername});
+                                await burnerAccountDB.updateOne({Username: message.burnerUsername}, {$push: {StaticProxies: burnerStaticProxyObj.Proxy}});
+                
+                                //only use the static proxy if messaging is enabled
+                                if(message.messageUsername != null && isFirst){
+                                    await staticProxyDB.updateOne({_id: messageStaticProxyObj._id}, {$inc: { CurrentFacebookMessageTasks: 1 }});
+                                    await mainAccountDB.updateOne({Username: message.messageUsername}, {$push: {StaticProxies: messageStaticProxyObj.Proxy}});
+                                    isFirst = false;
+                                }
+                                console.log('end');
+                            }
+                            await updateFacebookChildTask(child);
                         }
-                    })
-                })
-    
-                user.ebay.forEach(async (task) => {
-                    const proxyObj = await getEbayProxy();
-    
-                    //Message the worker with new proxy
-                    task.postMessage({ action: 'newProxy', proxy: proxyObj.Proxy });
-                })
+                    }
+                    await updateFacebookParentTask(parent);
+                }
+
+                //for each ebay task
+                for(const task of user.ebay){
+                    const updateEbayTask = async () => {
+                        const proxyObj = await getEbayProxy();
+            
+                        //Message the worker with new proxy
+                        task.postMessage({ action: 'newProxy', proxy: proxyObj.Proxy });
+                    }
+                    await updateEbayTask();
+                }
             })
     
             discordClient.channels.cache.get(interaction.channelId).send('finish');
