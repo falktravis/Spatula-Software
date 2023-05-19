@@ -720,7 +720,7 @@ const executeCommand = async (interaction) => {
                         const proxyObj = await getEbayProxy();
             
                         //Message the worker with new proxy
-                        task.postMessage({ action: 'newProxy', proxy: proxyObj.Proxy });
+                        task[1].postMessage({ action: 'newProxy', proxy: proxyObj.Proxy });
                     }
                     await updateEbayTask();
                 }
