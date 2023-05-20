@@ -294,10 +294,10 @@ const executeCommand = async (interaction) => {
             }
         }
         else if(interaction.commandName === "facebook-create-child"){
-            //checks if user exists
-            if(users.has(interaction.user.id)){
-                //checks if parent exists
-                if(users.get(interaction.user.id).facebook.has(interaction.options.getString("parent-name"))){
+            //checks if parent exists
+            if(users.get(interaction.user.id).facebook.has(interaction.options.getString("parent-name"))){
+                //checks if user exists
+                if(users.has(interaction.user.id)){
                     if (interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
                         if(users.get(interaction.user.id).workerCount < 5){
                             //get parent
@@ -444,10 +444,10 @@ const executeCommand = async (interaction) => {
                         discordClient.channels.cache.get(interaction.channelId).send("Invalid Link");
                     }
                 }else{
-                    discordClient.channels.cache.get(interaction.channelId).send("Parent does not exist");
+                    discordClient.channels.cache.get(interaction.channelId).send("You do not have an active plan");
                 }
             }else{
-                discordClient.channels.cache.get(interaction.channelId).send("You do not have an active plan");
+                discordClient.channels.cache.get(interaction.channelId).send("Parent does not exist");
             }
         }
         else if(interaction.commandName === "facebook-delete-child"){

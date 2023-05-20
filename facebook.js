@@ -451,7 +451,8 @@ const start = async () => {
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
-        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
+        await mainPage.goto(workerData.link);//, { waitUntil: 'domcontentloaded' }
+        await mainPage.waitForNavigation();
         
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
@@ -463,7 +464,9 @@ const start = async () => {
     //set distance
     if(workerData.distance != null && isCreate == true){
         try {
-            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            if(await mainPage.$('div.x1y1aw1k.xl56j7k div.x1iyjqo2') == null){
+                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            }
             await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
             await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
             await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
