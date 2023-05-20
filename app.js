@@ -55,7 +55,7 @@ for (const file of commandFiles) {
 }
 
 //worker login listening function
-const workerLoginListener = (message, child, parent, user, username, burnerProxy, messageProxy) => {
+const facebookLoginListener = (message, child, parent, user, username, burnerProxy, messageProxy) => {
         //push command into the queue
         queue.push({
             message: message,
@@ -73,9 +73,13 @@ const workerLoginListener = (message, child, parent, user, username, burnerProxy
         }
 }
 
+const ebayProxyListener = (message, ) => {
+
+}
+
 const executeMessage = async (data) => {
-    if(data.message.action == 'success'){
-        users.get(data.user).facebook.get(data.parent).children.get(data.child).removeListener('message', workerLoginListener);
+    if(data.message.action == 'facebookSuccess'){
+        users.get(data.user).facebook.get(data.parent).children.get(data.child).removeListener('message', facebookLoginListener);
         console.log("listener gone");
     }else if(data.message.action == 'loginFailure'){
         let parent = users.get(data.user).facebook.get(data.parent)
@@ -217,6 +221,7 @@ const executeCommand = async (interaction) => {
                             workerNum: 0 //Number of users currently using the login
                         }
                     });
+                    console.log(burnerLogins);
         
                     //main account database stuff
                     let messageAccountObj;
@@ -318,7 +323,7 @@ const executeCommand = async (interaction) => {
                                         //Burner account info
                                         let burnerUsername;
                                         let burnerPassword;
-                                        for(let i = 0; i < parent.burnerLogins.length && burnerUsername == null; i++){
+                                        for(let i = 0; i < parent.burnerLogins.length - 1 && burnerUsername == null; i++){
         
                                             //Checks that the current item is not the last
                                             if(i == 0){
@@ -419,7 +424,7 @@ const executeCommand = async (interaction) => {
                                         //Set message listener for updating cookies and login error handling, only if a login is necessary
                                         if(burnerAccountObj.Cookies == null || (parent.messageCookies == null && interaction.options.getNumber("message-type") != 3)){
                                             console.log("listener created");
-                                            parent.children.get(interaction.options.getString("name")).on('message', message => workerLoginListener(message, interaction.options.getString("name"), interaction.options.getString("parent-name"), interaction.user.id, burnerUsername, burnerStaticProxy.Proxy, parent.staticProxy));
+                                            parent.children.get(interaction.options.getString("name")).on('message', message => facebookLoginListener(message, interaction.options.getString("name"), interaction.options.getString("parent-name"), interaction.user.id, burnerUsername, burnerStaticProxy.Proxy, parent.staticProxy));
                                         }
         
                                         discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));

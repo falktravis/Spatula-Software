@@ -565,7 +565,7 @@ const handleTime = async (intervalFunction) => {
                             
             //close messageLoginListener if it was necessary
             if((workerData.burnerCookies == null && burnerCookies != null) || (workerData.messageCookies == null && workerData.messageType != 3 && messageCookies != null)){
-                parentPort.postMessage({action: 'success'});
+                parentPort.postMessage({action: 'facebookSuccess'});
             }
         }
 

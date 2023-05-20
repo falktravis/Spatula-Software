@@ -116,8 +116,8 @@ const start = async () => {
     //init browser
     try{
         browser = await puppeteer.launch({ 
-            headless: true,
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${proxy}`], //http://134.202.250.62:50100
+            headless: false,
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${proxy}`]
         });
         let pages = await browser.pages();
         mainPage = pages[0];
@@ -135,15 +135,14 @@ const start = async () => {
                 request.continue();
             }
         });
-
-        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
-
-        /*//change language hopefully
-        await mainPage.click('#gh-eb-Geo-a-default');
-        await mainPage.click('[lang="en-US"]');
-        await mainPage.waitForNavigation();*/
     } catch (error){
         errorMessage('Error launching browser', error);
+    }
+
+    try {
+        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
+    } catch (error) {
+        console.log("Proxy error");
     }
 
     await setListingStorage();
