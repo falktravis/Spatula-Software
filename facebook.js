@@ -243,7 +243,7 @@ const collectBurnerCookies = async () => {
             await mainPage.type('#email', workerData.burnerUsername);
             await mainPage.type('#pass', workerData.burnerPassword);
             await mainPage.click('button[name="login"]');
-            //await mainPage.waitForNavigation(); //necessary with headless mode
+            await mainPage.waitForNavigation(); //necessary with headless mode
             console.log(mainPage.url());
             if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
                 await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
@@ -343,7 +343,7 @@ const collectMessageCookies = async () => {
             await itemPage.type('#email', workerData.messageUsername);
             await itemPage.type('#pass', workerData.messagePassword);
             await itemPage.click('button[name="login"]');
-            //await itemPage.waitForNavigation(); //necessary with headless mode
+            await itemPage.waitForNavigation(); //necessary with headless mode
             console.log(itemPage.url());
             if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
                 client.channels.cache.get(workerData.channel).send(`Facebook Message login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
