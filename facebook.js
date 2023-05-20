@@ -451,8 +451,7 @@ const start = async () => {
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
-        await mainPage.goto(workerData.link);//, { waitUntil: 'domcontentloaded' }
-        await mainPage.waitForNavigation();
+        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
         
         //update burnerCookies
         burnerCookies = await mainPage.cookies();

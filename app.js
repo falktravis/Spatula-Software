@@ -221,7 +221,6 @@ const executeCommand = async (interaction) => {
                             workerNum: 0 //Number of users currently using the login
                         }
                     });
-                    console.log(burnerLogins);
         
                     //main account database stuff
                     let messageAccountObj;
