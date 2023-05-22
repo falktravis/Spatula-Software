@@ -633,7 +633,7 @@ function interval() {
                                 return {
                                     img: dom.querySelector('span.x78zum5 img').src,
                                     title: dom.querySelector('div.xyamay9 h1').innerText,
-                                    date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1xmf6yo div.x1yztbdb').innerText,
+                                    date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1yztbdb span.x676frb.x1sibtaa').innerText,
                                     description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                     shipping: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r span').innerText : dom.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                     price: dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
