@@ -599,8 +599,8 @@ handleTime(interval);
 function interval() {
     setTimeout(async () => {
         if(isRunning){
-            await mainPage.reload({ waitUntil: 'domcontentloaded' });
             try {
+                await mainPage.reload({ waitUntil: 'networkidle0' });
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
                         let link = document.querySelector(".x3ct3a4 a").href;
