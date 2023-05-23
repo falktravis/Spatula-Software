@@ -600,7 +600,7 @@ function interval() {
     setTimeout(async () => {
         if(isRunning){
             try {
-                await mainPage.reload({ waitUntil: 'networkidle0' });
+                await mainPage.reload({ waitUntil: 'domcontentloaded' });
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
                         let link = document.querySelector(".x3ct3a4 a").href;
@@ -629,14 +629,13 @@ function interval() {
                         //get post data
                         try{
                             postObj = await itemPage.evaluate(() => {
-                                let dom = document.querySelector('div.x9f619');
                                 return {
-                                    img: dom.querySelector('span.x78zum5 img').src,
-                                    title: dom.querySelector('div.xyamay9 h1').innerText,
-                                    date: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : dom.querySelector('div.x1yztbdb span.x676frb.x1sibtaa').innerText,
-                                    description: dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? dom.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                    shipping: dom.querySelector('[aria-label="Buy now"]') != null ? (dom.querySelector('div.xyamay9 div.x6ikm8r') != null ? dom.querySelector('div.xyamay9 div.x6ikm8r span').innerText : dom.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                    price: dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(dom.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
+                                    img: document.querySelector('img').src,
+                                    title: document.querySelector('div.xyamay9 h1').innerText,
+                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x676frb.x1sibtaa').innerText,
+                                    description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                    shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                    price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
                                 };
                             });
 
@@ -658,7 +657,7 @@ function interval() {
                                     request.continue();
                                 }
                             });
-                            await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
+                            await itemPage.goto(newPost, { waitUntil: 'domcontentloaded' });
                         }catch(error){
                             errorMessage('Error with product page initiation, no message', error);
                         }
@@ -672,13 +671,13 @@ function interval() {
                                     date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x676frb.x1sibtaa').innerText,
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                    price: "$" + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split("$")[1]
+                                    price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
                                 };
                             });
 
                             await itemPage.close();
                         } catch(error){
-                            errorMessage('Error with getting item data', error);
+                            errorMessage(`Error with getting item data at ${newPost}`, error);
                         }
                     }
                     
