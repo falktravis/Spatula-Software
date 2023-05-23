@@ -224,6 +224,7 @@ const collectBurnerCookies = async () => {
         await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
     }catch(error){
         console.log("Burner Resi proxy error");
+        isProxyWorks = false;
         //message the main script we need a new proxy
         parentPort.postMessage({action: 'proxyFailure', username: workerData.burnerUsername, isBurner: true});
         //await the response with a promise
@@ -324,6 +325,7 @@ const collectMessageCookies = async () => {
         await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });//I had networkidle0 b4
     }catch(error){
         console.log("Main Resi proxy error");
+        isProxyWorks = false;
         //message the main script we need a new proxy
         parentPort.postMessage({action: 'proxyFailure', username: workerData.messageUsername, isBurner: false});
         //await the response with a promise
@@ -451,7 +453,7 @@ const start = async () => {
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
-        await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded' });
+        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
         
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
@@ -632,7 +634,7 @@ function interval() {
                                 return {
                                     img: document.querySelector('img').src,
                                     title: document.querySelector('div.xyamay9 h1').innerText,
-                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x676frb.x1sibtaa').innerText,
+                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                     price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
@@ -657,7 +659,7 @@ function interval() {
                                     request.continue();
                                 }
                             });
-                            await itemPage.goto(newPost, { waitUntil: 'domcontentloaded' });
+                            await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
                         }catch(error){
                             errorMessage('Error with product page initiation, no message', error);
                         }
@@ -668,7 +670,7 @@ function interval() {
                                 return {
                                     img: document.querySelector('img').src,
                                     title: document.querySelector('div.xyamay9 h1').innerText,
-                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x676frb.x1sibtaa').innerText,
+                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                     price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
