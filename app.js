@@ -565,6 +565,20 @@ const executeCommand = async (interaction) => {
                 discordClient.channels.cache.get(interaction.channelId).send("Parent does not exist");
             }
         }
+        else if(interaction.commandName === "create-facebook-user"){
+            //get a random resi proxy
+            let loginProxyObj = await residentialProxyDB.findOne({});
+            await residentialProxyDB.deleteOne({_id: loginProxyObj._id});
+
+            //create a new worker
+            const loginWorker = new Worker('./createUser.js', { workerData:{
+                username: interaction.options.getString("email"),
+                proxy: loginProxyObj.Proxy,
+                channel: interaction.channelId,
+            }});
+
+            //add a listner for proxy error that self closes on success
+        }
         else if(interaction.commandName === "ebay-create"){
             await handleUser(interaction);
     
