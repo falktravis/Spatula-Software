@@ -221,7 +221,7 @@ const collectBurnerCookies = async () => {
 
     //Catch proxy errors
     try{
-        await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
+        await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
     }catch(error){
         console.log("Burner Resi proxy error");
         isProxyWorks = false;
@@ -322,7 +322,7 @@ const collectMessageCookies = async () => {
         
     //Catch proxy errors
     try{
-        await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });//I had networkidle0 b4
+        await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
     }catch(error){
         console.log("Main Resi proxy error");
         isProxyWorks = false;

@@ -351,8 +351,6 @@ const executeCommand = async (interaction) => {
                                             }
                                         }
         
-                                        console.log(burnerUsername);
-        
                                         //burner cookies assignment algorithm
                                         let burnerAccountObj = await burnerAccountDB.findOne({Username: burnerUsername});
                                         if(burnerAccountObj == null){
