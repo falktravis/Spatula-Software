@@ -411,7 +411,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${burnerStaticProxy}`]//http://134.202.250.62:50100
         });
@@ -461,7 +461,7 @@ const start = async () => {
     }catch(error){
         errorMessage('Error with static main page initiation', error);
     }
-
+    
     //set distance
     if(workerData.distance != null && isCreate == true){
         try {
@@ -490,7 +490,7 @@ const setListingStorage = async () => {
         mainListingStorage = await mainPage.evaluate(() => {
             let searchResults = document.querySelector('div.xx6bls6');
             if(searchResults == null){
-                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2) a")];
+                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2) a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(3) a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(4) a")];
                 return links.map((link) => {
                     if(link != null){
                         let href = link.href;
@@ -500,12 +500,12 @@ const setListingStorage = async () => {
                     }
                 })
             }else{
-                return [null, null];
+                return [null, null, null, null];
             }
         });
         console.log("Main Storage: " + mainListingStorage);
     }catch (error){
-        errorMessage('Error with setting listings', error);
+        errorMessage('Error with setting listing storage', error);
     }
 }
 
@@ -618,10 +618,10 @@ function interval() {
             }
         
             //newPost is actually new
-            if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && newPost != null){
+            if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
         
                 let postNum = 1;
-                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && postNum  <= 10){
+                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 10){
                     console.log("New Post: " + newPost + " post num: " + postNum);
 
                     let postObj;
@@ -648,15 +648,24 @@ function interval() {
                         }
                     }else{
                         //initiate the new page for collecting data
+                        let itemPageFullLoad = false;
                         try{
                             itemPage = await mainBrowser.newPage();
                             await itemPage.setRequestInterception(true);
                             itemPage.on('request', async request => {
                                 const resource = request.resourceType();
-                                if(resource != 'document'){
-                                    request.abort();
+                                if(itemPageFullLoad){
+                                    if(resource != 'document' && resource != 'script' && resource != 'xhr'){
+                                        request.abort();
+                                    }else{
+                                        request.continue();
+                                    }
                                 }else{
-                                    request.continue();
+                                    if(resource != 'document'){
+                                        request.abort();
+                                    }else{
+                                        request.continue();
+                                    }
                                 }
                             });
                             await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
@@ -666,9 +675,19 @@ function interval() {
 
                         //get post data
                         try{
+                            //check for video
+                            let isVideo = false;
+                            if(await itemPage.$('div.xyamay9 h1') == null){
+                                console.log('video sequence: ' + newPost);
+                                itemPageFullLoad = true;
+                                await itemPage.reload({ waitUntil: 'domcontentloaded' });
+                                isVideo = true;
+                            }
+
+                            //set post data obj
                             postObj = await itemPage.evaluate(() => {
                                 return {
-                                    img: document.querySelector('img').src,
+                                    img: isVideo ? document.querySelector('[aria-label="Thumbnail 0"] img').src : document.querySelector('img').src,
                                     title: document.querySelector('div.xyamay9 h1').innerText,
                                     date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
@@ -766,25 +785,7 @@ function interval() {
                 }
 
                 //set the main listing storage
-                try {
-                    mainListingStorage = await mainPage.evaluate(() => {
-                        if(document.querySelector('div.xx6bls6') == null){
-                            let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2)").querySelector('a')];
-                            return links.map((link) => {
-                                if(link != null){
-                                    let href = link.href;
-                                    return href.substring(0, href.indexOf("?"));
-                                }else{
-                                    return null;
-                                }
-                            })
-                        }else{
-                            return [null, null];
-                        }
-                    });
-                } catch(error) {
-                    errorMessage('Error with re-setting mainListingStorage', error);
-                }
+                await setListingStorage();
             }
             interval();
         }

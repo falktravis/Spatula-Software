@@ -564,18 +564,31 @@ const executeCommand = async (interaction) => {
             }
         }
         else if(interaction.commandName === "create-facebook-user"){
-            //get a random resi proxy
-            let loginProxyObj = await residentialProxyDB.findOne({});
-            await residentialProxyDB.deleteOne({_id: loginProxyObj._id});
+            //!get a random resi proxy
+            /*let loginProxyObj = await residentialProxyDB.findOne({});
+            await residentialProxyDB.deleteOne({_id: loginProxyObj._id});*/
 
             //create a new worker
             const loginWorker = new Worker('./createUser.js', { workerData:{
                 username: interaction.options.getString("email"),
-                proxy: loginProxyObj.Proxy,
+                proxy: null, //!loginProxyObj.Proxy
+                firstName: interaction.options.getString("first-name"),
+                lastName: interaction.options.getString("last-name"),
+                userId: interaction.user.id,
                 channel: interaction.channelId,
             }});
 
             //add a listner for proxy error that self closes on success
+            loginWorker.on('message', async (workerMessage) => {
+                if (workerMessage.type === 'input') {          
+                    console.log('message');
+                    const collector = await interaction.channel.createMessageCollector({ time: 15000 });
+
+                    collector.on('collect', m => {
+                        console.log(`Collected ${m.content}`);
+                    });
+                }
+            });
         }
         else if(interaction.commandName === "ebay-create"){
             await handleUser(interaction);

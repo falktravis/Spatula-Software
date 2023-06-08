@@ -5,15 +5,38 @@ const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
 
 //discord.js
-const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
 //error message send function
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
-    client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
+    //client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
     client.channels.cache.get(workerData.channel).send(message + ': ' + error);
+}
+
+//generates a random password
+const generateRandomString = (length) => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let randomString = '';
+    
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      randomString += characters.charAt(randomIndex);
+    }
+    
+    return randomString;
+}
+
+//gets a random first name
+const getFirstName = () => {
+
+}
+
+//gets a random last name
+const getLastName = () => {
+
 }
 
 //parentport listener to change proxy on failure
@@ -38,60 +61,84 @@ let loginBrowser;
 let loginPage;
 let loginProxy = workerData.proxy;
 
-//initiate a browser with random resi proxy and request interception
-try{
-    loginBrowser = await puppeteer.launch({
-        headless: true,
-        defaultViewport: { width: 1366, height: 768 },
-        args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
-    });
-    let pages = await loginBrowser.pages();
-    loginPage = pages[0];
+const createUser = async () => {
+    //initiate a browser with random resi proxy and request interception
+    try{
+        let randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+        loginBrowser = await puppeteer.launch({
+            headless: false,
+            defaultViewport: { width: 1366, height: 768 },
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
+        });
+        let pages = await loginBrowser.pages();
+        loginPage = pages[0];
 
-    //authenticate proxy
-    //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${loginProxy}` });
+        //authenticate proxy
+        //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${loginProxy}` });
 
-    //network shit
-    await loginPage.setRequestInterception(true);
-    loginPage.on('response', async request => {
-        const headers = request.headers();
-        const contentLength = headers['content-length'];
-        if(contentLength != undefined){
-            networkData += parseInt(contentLength);
+        //network shit
+        await loginPage.setRequestInterception(true);
+        loginPage.on('request', async request => {
+            const resource = request.resourceType();
+
+            if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
+                request.abort();
+            }else{
+                request.continue();
+            }
+        });
+
+        //go to the search page
+        await loginPage.goto('https://www.facebook.com/reg/', { waitUntil: 'networkidle0' });
+    }catch(error){
+        errorMessage('Error with login page initiation', error);
+    }
+
+    //login process
+    try{
+        /*let password = generateRandomString(10);//generate password
+        await loginPage.type('[aria-label="First name"]', (workerData.firstName == null ? getFirstName() : workerData.firstName)); //first name
+        await loginPage.type('[aria-label="Last name"]', (workerData.lastName == null ? getLastName() : workerData.lastName)); //last name
+        await loginPage.type('[aria-label="Mobile number or email"]', workerData.username); //email
+        if(await loginPage.$('[aria-label="Re-enter email"]') != null){
+            await loginPage.type('[aria-label="Re-enter email"]', workerData.username); //re-enter email
         }
-    });
+        await loginPage.type('[aria-label="New password"]', password); //password
+        await loginPage.select('#month', (Math.floor(Math.random() * 12) + 1).toString()); //birth month
+        await loginPage.select('#day', (Math.floor(Math.random() * 29) + 1).toString()); //birth day
+        await loginPage.select('#year', (Math.floor(Math.random() * 50) + 1950).toString()); //birth year
+        await loginPage.click('[data-name="gender_wrapper"] [value="1"]'); //gender = male
+        await loginPage.click('[type="submit"]')//press submit
+        await loginPage.waitForNavigation();*/
 
-    loginPage.on('request', async request => {
-        const resource = request.resourceType();
+        client.channels.cache.get(workerData.channel).send('Confirmation E-mail sent, get the code and send the numbers as a message in this channel.');
+        parentPort.postMessage({ type: 'input' });
 
-        if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
-            request.abort();
-        }else{
-            request.continue();
-        }
-    });
+        /*const channel = await client.channels.fetch(workerData.channel);
 
-    //go to the search page
-    await loginPage.goto('https://facebook.com/login', { waitUntil: 'networkidle0' });
-}catch(error){
-    errorMessage('Error with login page initiation', error);
+        // Prompt the user for a code
+        const messageFilter = (msg) => msg.author.id === workerData.userId;
+
+        const collector = channel.createMessageCollector({ filter: messageFilter, time: 15000 });
+
+        collector.on('collect', m => {
+            console.log(`Collected ${m.content}`);
+        });*/
+    }catch(error){
+        errorMessage('Error with login process', error);
+    }
+
+    //collect email code from the user
+    try{
+
+    }catch(error){
+        errorMessage('Error with confimation process', error);
+    }
+
+    //finsih login and print login info in proper syntax
+
+    //delete worker
+    //self.close();
 }
+createUser();
 
-//login process
-try{
-
-}catch(error){
-    errorMessage('Error with login process', error);
-}
-
-//collect email code from the user
-try{
-
-}catch(error){
-    errorMessage('Error with confimation process', error);
-}
-
-//finsih login and print login info in proper syntax
-
-//delete worker
-//self.close();
