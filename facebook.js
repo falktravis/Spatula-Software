@@ -411,7 +411,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${burnerStaticProxy}`]//http://134.202.250.62:50100
         });
