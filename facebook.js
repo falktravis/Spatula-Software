@@ -685,7 +685,7 @@ function interval() {
                             }
 
                             //set post data obj
-                            postObj = await itemPage.evaluate(() => {
+                            postObj = await itemPage.evaluate((isVideo) => {
                                 return {
                                     img: isVideo ? document.querySelector('[aria-label="Thumbnail 0"] img').src : document.querySelector('img').src,
                                     title: document.querySelector('div.xyamay9 h1').innerText,
@@ -694,7 +694,7 @@ function interval() {
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                     price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
                                 };
-                            });
+                            }, isVideo);
 
                             await itemPage.close();
                         } catch(error){
