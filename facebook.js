@@ -246,7 +246,7 @@ const collectBurnerCookies = async () => {
             await mainPage.click('button[name="login"]');
             await mainPage.waitForNavigation(); //necessary with headless mode
             console.log(mainPage.url());
-            if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !URL.includes('wtsid') && !mainPage.url().includes('mobileprotection')){
+            if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('wtsid') && !mainPage.url().includes('mobileprotection')){
                 await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
     
                 //end the task
@@ -346,7 +346,7 @@ const collectMessageCookies = async () => {
             await itemPage.click('button[name="login"]');
             await itemPage.waitForNavigation(); //necessary with headless mode
             console.log(itemPage.url());
-            if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !URL.includes('wtsid') && !mainPage.url().includes('mobileprotection')){
+            if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !itemPage.url().includes('wtsid') && !mainPage.url().includes('mobileprotection')){
                 client.channels.cache.get(workerData.channel).send(`Facebook Message login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
     
                 //end the task
