@@ -578,16 +578,24 @@ const executeCommand = async (interaction) => {
                 channel: interaction.channelId,
             }});
 
-            //add a listner for proxy error that self closes on success
-            loginWorker.on('message', async (workerMessage) => {
-                if (workerMessage.type === 'input') {          
-                    console.log('message');
-                    const collector = await interaction.channel.createMessageCollector({ time: 15000 });
-
-                    collector.on('collect', m => {
-                        console.log(`Collected ${m.content}`);
-                    });
-                }
+            console.log("yep yep");
+            const filter = (m) => m.user.id === interaction.user.id;
+            const collector = interaction.channel.createMessageCollector({ filter, time: 60000 });
+        
+            collector.on('collect', (collectedMessage) => {
+              const userResponse = collectedMessage.content;
+              console.log(`User input: ${userResponse}`);
+        
+              // Continue with your logic using the user's input
+        
+              collector.stop();
+            });
+        
+            collector.on('end', (collected, reason) => {
+              if (reason === 'time') {
+                console.log('User did not provide input within the specified time.');
+                // Handle the case when the user did not provide input within the specified time
+              }
             });
         }
         else if(interaction.commandName === "ebay-create"){

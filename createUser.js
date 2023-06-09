@@ -112,7 +112,6 @@ const createUser = async () => {
         await loginPage.waitForNavigation();*/
 
         client.channels.cache.get(workerData.channel).send('Confirmation E-mail sent, get the code and send the numbers as a message in this channel.');
-        parentPort.postMessage({ type: 'input' });
 
         /*const channel = await client.channels.fetch(workerData.channel);
 

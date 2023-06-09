@@ -198,7 +198,7 @@ const collectBurnerCookies = async () => {
             if(mainPageLogin){
                 if(resource != 'document' && resource != 'script' && resource != 'stylesheet' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){ // && !URL.includes('SuG-IUx2WwG')
                     request.abort();
-                }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){
+                }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/' || URL.includes('wtsid')){
                     request.continue();
                     mainPageLogin = false;
                     mainPageBlockAll = true;
@@ -246,18 +246,17 @@ const collectBurnerCookies = async () => {
             await mainPage.click('button[name="login"]');
             await mainPage.waitForNavigation(); //necessary with headless mode
             console.log(mainPage.url());
-            if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
+            if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !URL.includes('wtsid') && !mainPage.url().includes('mobileprotection')){
                 await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
     
                 //end the task
                 await mainBrowser.close();
                 parentPort.postMessage({action: 'loginFailure', isMessageLogin: false});
+            }else if(mainPage.url().includes('mobileprotection')){
+                await mainPage.click('label.uiLinkButton');
+                //await mainPage.waitForNavigation();//necessary with headless mode?
+                console.log("mobile protection");
             }else{
-                if(mainPage.url().includes('mobileprotection')){
-                    await mainPage.click('label.uiLinkButton');
-                    //await mainPage.waitForNavigation();//necessary with headless mode?
-                    console.log("mobile protection");
-                }
     
                 //get the cookies for login on isp page
                 burnerCookies = await mainPage.cookies();
@@ -299,7 +298,7 @@ const collectMessageCookies = async () => {
             if(itemPageLogin){
                 if(resource != 'document' && resource != 'script' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
                     request.abort();
-                }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/'){
+                }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/' || URL.includes('wtsid')){
                     request.continue();
                     itemPageLogin = false;
                     itemPageBlockAll = true;
@@ -347,7 +346,7 @@ const collectMessageCookies = async () => {
             await itemPage.click('button[name="login"]');
             await itemPage.waitForNavigation(); //necessary with headless mode
             console.log(itemPage.url());
-            if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('mobileprotection')){
+            if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !URL.includes('wtsid') && !mainPage.url().includes('mobileprotection')){
                 client.channels.cache.get(workerData.channel).send(`Facebook Message login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
     
                 //end the task
@@ -687,7 +686,7 @@ function interval() {
                             //set post data obj
                             postObj = await itemPage.evaluate((isVideo) => {
                                 return {
-                                    img: isVideo ? document.querySelector('[aria-label="Thumbnail 0"] img').src : document.querySelector('img').src,
+                                    img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
                                     title: document.querySelector('div.xyamay9 h1').innerText,
                                     date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
