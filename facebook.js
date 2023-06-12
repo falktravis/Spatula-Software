@@ -458,6 +458,11 @@ const start = async () => {
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
         burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+
+        //make sure the url is correct
+        if(mainPage.url() != workerData.link){
+            console.log(mainPage.url());
+        }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
     }
