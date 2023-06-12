@@ -5,15 +5,15 @@ const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
 
 //discord.js
-const { Client, GatewayIntentBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const { Client, GatewayIntentBits } = require('discord.js');
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
 //error message send function
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
     //client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
-    client.channels.cache.get(workerData.channel).send(message + ': ' + error);
+    //client.channels.cache.get(workerData.channel).send(message + ': ' + error);
 }
 
 //generates a random password
@@ -39,6 +39,13 @@ const getLastName = () => {
 
 }
 
+//move mouse before interacting
+const hoverElement = async (selector) => {
+    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (3000 - 1000 + 1)) + 1000));
+    const element = await loginPage.$(selector);
+    await element.hover();
+}
+
 //parentport listener to change proxy on failure
 
 //general instantiation
@@ -60,6 +67,7 @@ const userAgents = [
 let loginBrowser;
 let loginPage;
 let loginProxy = workerData.proxy;
+let channel;
 
 const createUser = async () => {
     //initiate a browser with random resi proxy and request interception
@@ -68,16 +76,16 @@ const createUser = async () => {
         loginBrowser = await puppeteer.launch({
             headless: false,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, '--proxy-server=http://proxy.packetstream.io:31112']
         });
         let pages = await loginBrowser.pages();
         loginPage = pages[0];
 
         //authenticate proxy
-        //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${loginProxy}` });
+        await loginPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates` });
 
         //network shit
-        await loginPage.setRequestInterception(true);
+        /*await loginPage.setRequestInterception(true);
         loginPage.on('request', async request => {
             const resource = request.resourceType();
 
@@ -86,7 +94,7 @@ const createUser = async () => {
             }else{
                 request.continue();
             }
-        });
+        });*/
 
         //go to the search page
         await loginPage.goto('https://www.facebook.com/reg/', { waitUntil: 'networkidle0' });
@@ -96,7 +104,9 @@ const createUser = async () => {
 
     //login process
     try{
-        /*let password = generateRandomString(10);//generate password
+        let password = generateRandomString(10);//generate password
+        console.log(workerData.username + ":" + password);
+        /*hoverElement('[aria-label="First name"]');
         await loginPage.type('[aria-label="First name"]', (workerData.firstName == null ? getFirstName() : workerData.firstName)); //first name
         await loginPage.type('[aria-label="Last name"]', (workerData.lastName == null ? getLastName() : workerData.lastName)); //last name
         await loginPage.type('[aria-label="Mobile number or email"]', workerData.username); //email
@@ -110,26 +120,18 @@ const createUser = async () => {
         await loginPage.click('[data-name="gender_wrapper"] [value="1"]'); //gender = male
         await loginPage.click('[type="submit"]')//press submit
         await loginPage.waitForNavigation();*/
-
-        client.channels.cache.get(workerData.channel).send('Confirmation E-mail sent, get the code and send the numbers as a message in this channel.');
-
-        /*const channel = await client.channels.fetch(workerData.channel);
-
-        // Prompt the user for a code
-        const messageFilter = (msg) => msg.author.id === workerData.userId;
-
-        const collector = channel.createMessageCollector({ filter: messageFilter, time: 15000 });
-
-        collector.on('collect', m => {
-            console.log(`Collected ${m.content}`);
-        });*/
     }catch(error){
         errorMessage('Error with login process', error);
     }
 
     //collect email code from the user
     try{
+        channel = await client.channels.fetch(workerData.channel);
+        await channel.send('Confirmation E-mail sent, get the code and send the numbers as a message in this channel.');
 
+        const collected = await channel.awaitMessages({ max: 1, time: 30000, errors: ['time'] });
+        const userResponse = collected.first().content;
+        console.log(userResponse);
     }catch(error){
         errorMessage('Error with confimation process', error);
     }

@@ -396,6 +396,7 @@ let itemPage;
 let itemBrowser;
 let mainListingStorage;
 let burnerCookies = cookieCheckpoint(workerData.burnerCookies);
+//let burnerCookies = workerData.burnerCookies;
 let messageCookies = cookieCheckpoint(workerData.messageCookies);
 let messageLoginProxy = workerData.messageLoginProxy;
 let burnerLoginProxy = workerData.burnerLoginProxy;
