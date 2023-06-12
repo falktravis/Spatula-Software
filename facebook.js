@@ -50,7 +50,7 @@ const cookieCheckpoint = (cookies) => {
 
     //compare the datr cookie against the current date
     const datr = cookies.find(cookie => cookie.name === 'datr');
-    if (new Date() <= new Date(datr.expires * 1000) && datr.expires != -1 && datr.expires != null) {
+    if (new Date() <= new Date(datr.expires * 1000) || datr.expires == -1 || datr.expires == null) {
         return cookies;
     } else {
         console.log("EXPIRED COOKIES!!??!!?!?");
