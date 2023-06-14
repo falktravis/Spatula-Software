@@ -183,13 +183,13 @@ const collectBurnerCookies = async () => {
         cookieBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://proxy.packetstream.io:31112`]
         });
         let pages = await cookieBrowser.pages();
         cookiePage = pages[0];
 
         //authenticate proxy
-        //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${burnerLoginProxy}` });
+        await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${burnerLoginProxy}` });
 
         //track network consumption and block the bull shit
         await cookiePage.setRequestInterception(true);
@@ -286,13 +286,13 @@ const collectMessageCookies = async () => {
         cookieBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://proxy.packetstream.io:31112`]
         });
         let pages = await cookieBrowser.pages();
         cookiePage = pages[0];
 
         //authenticate proxy
-        //await cookiePage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${messageLoginProxy}` });
+        await cookiePage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${messageLoginProxy}` });
                 
         //network shit
         await cookiePage.setRequestInterception(true);
@@ -485,7 +485,7 @@ const start = async () => {
 
         //make sure the url is correct
         if(mainPage.url() != workerData.link){
-            console.log(mainPage.url());
+            console.log("URL Is Wrong: " + mainPage.url());
         }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
