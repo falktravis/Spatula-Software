@@ -73,10 +73,6 @@ const facebookLoginListener = (message, child, parent, user, username, burnerPro
         }
 }
 
-const ebayProxyListener = (message, ) => {
-
-}
-
 const executeMessage = async (data) => {
     if(data.message.action == 'facebookSuccess'){
         users.get(data.user).facebook.get(data.parent).children.get(data.child).removeListener('message', facebookLoginListener);
@@ -96,17 +92,19 @@ const executeMessage = async (data) => {
 
         //reduce CurrentTasks
         await staticProxyDB.updateOne({Proxy: data.messageProxy}, {$inc: {CurrentFacebookMessageTasks: -1}});
-        await staticProxyDB.updateOne({Proxy: data.burnerProxy}, {$inc: {CurrentFacebookBurnerTasks: -1}});
+        await staticProxyDB.updateOne({Proxy: data.burnerProxy}, {$inc: {CurrentFacebookBurnerTasks: -1, TotalFacebookBurnerAccounts: -1}});
 
         users.get(data.user).workerCount--;
     }else if(data.message.action == 'proxyFailure'){
-        let proxy = await residentialProxyDB.findOne({}); //get a new proxy from db
-        await residentialProxyDB.deleteOne({_id: proxy._id}); //delete the document
+        //get a new proxy from db
+        let proxy = await residentialProxyDB.findOne({}); 
+        await residentialProxyDB.deleteOne({_id: proxy._id});
         proxy = proxy.Proxy;
+
         if(data.message.isBurner){
-            await burnerAccountDB.updateOne({Username: data.message.username}, {LoginProxy: proxy});
+            await burnerAccountDB.updateOne({Username: data.message.username}, {$set: {LoginProxy: proxy}});
         }else{
-            await mainAccountDB.updateOne({Username: data.message.username}, {LoginProxy: proxy});
+            await mainAccountDB.updateOne({Username: data.message.username}, {$set: {LoginProxy: proxy}});
         }
 
         //send the proxy back to the worker
@@ -120,29 +118,24 @@ const getStaticFacebookMessageProxy = async () => {
     if(staticProxyObj == null){
         staticProxyObj = await staticProxyDB.findOne({}, {sort: { CurrentFacebookMessageTasks: 1}});
     }
+
+    //update CurrentFacebookMessageTasks in proxy db
+    await staticProxyDB.updateOne({_id: staticProxyObj._id}, {$inc: { CurrentFacebookMessageTasks: 1 }});
+
     return staticProxyObj;
 }
 
 const getStaticFacebookBurnerProxy = async () => {
     //get the proxy
-    let staticProxyObj = await staticProxyDB.findOne({CurrentFacebookBurnerTasks: {$lt: 3}}, {sort: { CurrentFacebookBurnerTasks: 1}});
+    let staticProxyObj = await staticProxyDB.findOne({CurrentFacebookBurnerTasks: {$lt: 2}, TotalFacebookBurnerAccounts: {$lt: 3}}, {sort: {CurrentFacebookBurnerTasks: 1, TotalFacebookBurnerAccounts: 1}});
     if(staticProxyObj == null){
         staticProxyObj = await staticProxyDB.findOne({}, {sort: { CurrentFacebookBurnerTasks: 1}});
     }
+
+    //update CurrentFacebookBurnerTasks in proxy db
+    await staticProxyDB.updateOne({_id: staticProxyObj._id}, {$inc: { CurrentFacebookBurnerTasks: 1, TotalFacebookBurnerAccounts: 1 }});
+
     return staticProxyObj;
-}
-
-const getEbayProxy = async () => {
-    //get a proxy
-    let proxyObj = await staticProxyDB.findOne({CurrentEbayTasks: {$lt: 3}}, {sort: { CurrentEbayTasks: 1}});
-    if(proxyObj == null){
-        proxyObj = await staticProxyDB.findOne({}, {sort: { CurrentEbayTasks: 1}});
-    }
-
-    //update CurrentEbayTasks in proxy db
-    await staticProxyDB.updateOne({_id: proxyObj._id}, {$inc: { CurrentEbayTasks: 1 }});
-
-    return proxyObj;
 }
 
 const handleUser = async (interaction) => {
@@ -221,52 +214,25 @@ const executeCommand = async (interaction) => {
                                 workerNum: 0 //Number of users currently using the login
                             }
                         });
-            
+
                         //main account database stuff
                         let messageAccountObj;
-                        let messageStaticProxy;
                         if(interaction.options.getString("username") != null){
                             messageAccountObj = await mainAccountDB.findOne({Username: interaction.options.getString("username")});
                             if(messageAccountObj == null){                    
                                 //get a residential proxy
                                 let loginProxyObj = await residentialProxyDB.findOne({});
                                 await residentialProxyDB.deleteOne({_id: loginProxyObj._id});
+
+                                //get a static proxy
+                                let newStaticProxy = await getStaticFacebookMessageProxy();
         
                                 //create a new main account obj
-                                await mainAccountDB.insertOne({Username: interaction.options.getString("username"), LoginProxy: loginProxyObj.Proxy, StaticProxies: [], Cookies: null, LastAccessed: null});
+                                await mainAccountDB.insertOne({Username: interaction.options.getString("username"), LoginProxy: loginProxyObj.Proxy, StaticProxy: newStaticProxy.Proxy, Cookies: null, LastAccessed: null});
                                 messageAccountObj = await mainAccountDB.findOne({Username: interaction.options.getString("username")});
                             }
                             if(messageAccountObj.LastAccessed != null){
                                 await mainAccountDB.updateOne({_id: messageAccountObj._id}, {$set: {LastAccessed: null}});
-                            }
-        
-                            //static proxy assignment algorithm
-                            if(messageAccountObj.StaticProxies.length != 0){
-                                //Check each previously used proxy for number of current tasks
-                                messageAccountObj.StaticProxies.forEach(async (element) => {
-                                    messageStaticProxy = await staticProxyDB.findOne({Proxy: element, CurrentFacebookMessageTasks: {$lt: 2}});
-                                    if(messageStaticProxy != null){
-                                        return;
-                                    }
-                                });
-                            }
-                            //If there is no previous proxy with a low current useage get the proxy with the lowest useage
-                            if(messageStaticProxy == null){
-                                messageStaticProxy = await getStaticFacebookMessageProxy();
-        
-                                //update CurrentFacebookMessageTasks in proxy db
-                                await staticProxyDB.updateOne({_id: messageStaticProxy._id}, {$inc: { CurrentFacebookMessageTasks: 1 }});
-        
-                                //add the new proxy to burner account proxy log
-                                if(!messageAccountObj.StaticProxies.includes(messageStaticProxy.Proxy)){
-                                    //take off the last element if its already 3 items long
-                                    if(messageAccountObj.StaticProxies.length < 3){
-                                        await mainAccountDB.updateOne({_id: messageAccountObj._id}, {$push: {StaticProxies: {$each: [messageStaticProxy.Proxy], $position: 0 }}});
-                                    }else{
-                                        await mainAccountDB.updateOne({_id: messageAccountObj._id}, {$push: {StaticProxies: {$each: [messageStaticProxy.Proxy], $position: 0 }}});
-                                        await mainAccountDB.updateOne({_id: messageAccountObj._id}, {$pop: {StaticProxies: 1}});
-                                    }
-                                }
                             }
                         }
         
@@ -277,7 +243,7 @@ const executeCommand = async (interaction) => {
                                 burnerLogins: burnerLogins,
                                 message: interaction.options.getString("message"),
                                 loginProxy: (messageAccountObj != null ? messageAccountObj.LoginProxy : null),
-                                staticProxy: (messageStaticProxy != null ? messageStaticProxy.Proxy : null),
+                                staticProxy: (interaction.options.getString("username") != null ? messageAccountObj.StaticProxy : null),
                                 messageCookies: (messageAccountObj != null ? messageAccountObj.Cookies : null),
                                 children: new Map()
                             });
@@ -297,8 +263,8 @@ const executeCommand = async (interaction) => {
                 if(users.get(interaction.user.id).facebook.has(interaction.options.getString("parent-name"))){
                     //checks if user exists
                     if(users.has(interaction.user.id)){
-                        if (interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
-                            if(users.get(interaction.user.id).workerCount < 5){
+                        if(interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
+                            if(users.get(interaction.user.id).workerCount < 5){ //!instead of 5, get ConcurrentTasks form UserDB
                                 //get parent
                                 let parent = users.get(interaction.user.id).facebook.get(interaction.options.getString("parent-name"))
                                 if(!parent.children.has(interaction.options.getString("name"))){
@@ -357,43 +323,20 @@ const executeCommand = async (interaction) => {
                                                 //get a residential proxy
                                                 let loginProxyObj = await residentialProxyDB.findOne({});
                                                 await residentialProxyDB.deleteOne({_id: loginProxyObj._id});
-            
+
+                                                //get a static proxy
+                                                let newStaticProxy = await getStaticFacebookBurnerProxy();
+
                                                 //create a new burner account obj
-                                                await burnerAccountDB.insertOne({Username: burnerUsername, LoginProxy: loginProxyObj.Proxy, StaticProxies: [], Cookies: null, LastAccessed: null});
+                                                await burnerAccountDB.insertOne({Username: burnerUsername, LoginProxy: loginProxyObj.Proxy, StaticProxy: newStaticProxy.Proxy, Cookies: null, LastAccessed: null});
                                                 burnerAccountObj = await burnerAccountDB.findOne({Username: burnerUsername});
                                                 console.log(burnerAccountObj);
-                                            }else if(burnerAccountObj.LastAccessed != null){
+                                            }else{
+                                                await staticProxyDB.updateOne({Proxy: burnerAccountObj.StaticProxy}, {$inc: {CurrentFacebookBurnerTasks: 1}});
+                                            } 
+                                            
+                                            if(burnerAccountObj.LastAccessed != null){
                                                 await burnerAccountDB.updateOne({Username: burnerUsername}, {$set: {LastAccessed: null}});
-                                            }
-            
-                                            //static proxy assignment algorithm
-                                            let burnerStaticProxy;
-                                            if(burnerAccountObj.StaticProxies.length != 0){
-                                                //Check each previously used proxy for number of current tasks
-                                                burnerAccountObj.StaticProxies.forEach(async (element) => {
-                                                    burnerStaticProxy = await staticProxyDB.findOne({Proxy: element, CurrentFacebookBurnerTasks: {$lt: 3}});
-                                                    if(burnerStaticProxy != null){
-                                                        return;
-                                                    }
-                                                });
-                                            }
-                                            //If there is no previous proxy with a low current useage get the proxy with the lowest useage
-                                            if(burnerStaticProxy == null){
-                                                burnerStaticProxy = await getStaticFacebookBurnerProxy();
-        
-                                                //update CurrentFacebookBurnerTasks in proxy db
-                                                await staticProxyDB.updateOne({_id: burnerStaticProxy._id}, {$inc: { CurrentFacebookBurnerTasks: 1 }});
-            
-                                                //add the new proxy to burner account proxy log
-                                                if(!burnerAccountObj.StaticProxies.includes(burnerStaticProxy.Proxy)){
-                                                    //take off the last element if its already 3 items long
-                                                    if(burnerAccountObj.StaticProxies.length < 3){
-                                                        await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$push: {StaticProxies: {$each: [burnerStaticProxy.Proxy], $position: 0 }}});
-                                                    }else{
-                                                        await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$push: {StaticProxies: {$each: [burnerStaticProxy.Proxy], $position: 0 }}});
-                                                        await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$pop: {StaticProxies: 1}});
-                                                    }
-                                                }
                                             }
             
                                             //get parent element from map and set new worker as a child
@@ -407,7 +350,7 @@ const executeCommand = async (interaction) => {
                                                 messageType: interaction.options.getNumber("message-type"),
                                                 message: parent.message,
                                                 burnerLoginProxy: burnerAccountObj.LoginProxy,
-                                                burnerStaticProxy: burnerStaticProxy.Proxy,
+                                                burnerStaticProxy: burnerAccountObj.StaticProxy,
                                                 messageLoginProxy: parent.loginProxy,
                                                 messageStaticProxy: parent.staticProxy,
                                                 burnerCookies: burnerAccountObj.Cookies,
@@ -421,7 +364,7 @@ const executeCommand = async (interaction) => {
                                             //Set message listener for updating cookies and login error handling, only if a login is necessary
                                             if(burnerAccountObj.Cookies == null || (parent.messageCookies == null && interaction.options.getNumber("message-type") != 3)){
                                                 console.log("listener created");
-                                                parent.children.get(interaction.options.getString("name")).on('message', message => facebookLoginListener(message, interaction.options.getString("name"), interaction.options.getString("parent-name"), interaction.user.id, burnerUsername, burnerStaticProxy.Proxy, parent.staticProxy));
+                                                parent.children.get(interaction.options.getString("name")).on('message', message => facebookLoginListener(message, interaction.options.getString("name"), interaction.options.getString("parent-name"), interaction.user.id, burnerUsername, burnerAccountObj.StaticProxy, parent.staticProxy));
                                             }
             
                                             discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
@@ -476,7 +419,7 @@ const executeCommand = async (interaction) => {
                                 await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastAccessed: new Date()}});
         
                                 //reduce active task count by one
-                                await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+                                await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1, TotalFacebookBurnerAccounts: -1 } });
         
                                 //Make the login open for use in the parent
                                 parent.burnerLogins.forEach((e) => {
@@ -527,7 +470,7 @@ const executeCommand = async (interaction) => {
                                 console.log('terminate');
         
                                 //reduce active task count by one
-                                await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+                                await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1, TotalFacebookBurnerAccounts: -1 } });
         
                                 //set cookies in db
                                 if(message.burnerCookies != null){
@@ -577,73 +520,6 @@ const executeCommand = async (interaction) => {
                     channel: interaction.channelId,
                 }});
             }
-            else if(interaction.commandName === "ebay-create"){
-                await handleUser(interaction);
-        
-                if(!users.get(interaction.user.id).ebay.has(interaction.options.getString("name"))){
-                    if(interaction.options.getString("link").includes("https://www.ebay.com")){
-                        if(users.get(interaction.user.id).workerCount < 5){
-                            //get a proxy
-                            const proxyObj = await getEbayProxy();
-                        
-                            //increase the worker count
-                            users.get(interaction.user.id).workerCount++;
-        
-                            //fiddle with the link
-                            let link = interaction.options.getString("link");
-                            link = link.substring(0, link.indexOf("&")) + '&_sop=10' + link.substring(link.indexOf('&'));
-        
-                            users.get(interaction.user.id).ebay.set(interaction.options.getString("name"), new Worker('./ebay.js', { workerData:{
-                                name: interaction.options.getString("name"),
-                                link: link,
-                                proxy: proxyObj.Proxy,
-                                channel: interaction.channelId,
-                            }}));
-                            discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
-        
-                        }else{
-                            discordClient.channels.cache.get(interaction.channelId).send("You have reached the worker limit, delete one to create another.");
-                        }
-                    }else{
-                        discordClient.channels.cache.get(interaction.channelId).send("Invalid Link");
-                    }
-                }else{
-                    discordClient.channels.cache.get(interaction.channelId).send("An interval with this name already exists");
-                }
-            }
-            else if(interaction.commandName === "ebay-delete"){
-                if(users.has(interaction.user.id)){
-                    if(users.get(interaction.user.id).ebay.has(interaction.options.getString("name"))){
-                        let taskWorker = users.get(interaction.user.id).ebay.get(interaction.options.getString("name"));
-        
-                        taskWorker.postMessage({ action: 'closeBrowsers' });
-        
-                        let message = await new Promise(resolve => {
-                            taskWorker.on('message', message => {
-                                resolve(message);
-                            });
-                        });
-        
-                        //On completion worker messages back to terminate
-                        if(message.action == 'terminate'){
-                            console.log('terminate');
-        
-                            //reduce active task count by one
-                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentEbayTasks: -1 } });
-        
-                            //delete the son of a bitch
-                            taskWorker.terminate();
-                            users.get(interaction.user.id).ebay.delete(interaction.options.getString("name"));
-                            users.get(interaction.user.id).workerCount--;
-                            discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("name"));
-                        }
-                    }else{
-                        discordClient.channels.cache.get(interaction.channelId).send("Worker does not exist");
-                    }
-                }else{
-                    discordClient.channels.cache.get(interaction.channelId).send("You do not have any workers");
-                }
-            }
             else if(interaction.commandName === "list"){
                 let user = users.get(interaction.user.id);
                 if(user != null){
@@ -656,11 +532,8 @@ const executeCommand = async (interaction) => {
                             list += `\n\t\t\t+${childKey}`;
                         })
                     })
-            
-                    list += "\n\tEbay:";
-                    user.ebay.forEach((worker, workerKey) => {
-                        list += `\n\t\t${workerKey}`;
-                    })
+
+                    //**Ebay stuff removed
             
                     discordClient.channels.cache.get(interaction.channelId).send(list);
                 }else{
@@ -669,8 +542,8 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === 'update-burner-proxies' && interaction.user.id === '456168609639694376'){
                 //reset static proxy lists on both account dbs
-                await mainAccountDB.updateMany({}, {$set: {StaticProxies: []}});
-                await burnerAccountDB.updateMany({}, {$set: {StaticProxies: []}});
+                await mainAccountDB.updateMany({}, {$set: {StaticProxy: null}});
+                await burnerAccountDB.updateMany({}, {$set: {StaticProxy: null}});
         
                 //get the list of new proxies
                 let proxyList = interaction.options.getString("proxy-list");
@@ -680,7 +553,7 @@ const executeCommand = async (interaction) => {
                 //delete all previous proxies and insert the new ones
                 await staticProxyDB.deleteMany({});
                 proxyList.forEach(async (proxy) => {
-                    await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, CurrentFacebookBurnerTasks: 0, CurrentEbayTasks: 0})
+                    await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, CurrentFacebookBurnerTasks: 0, TotalFacebookBurnerAccounts: 0})
                 })
         
                 //rotate through every current worker and send a message that contains the new proxy, then update the database StaticProxies list
@@ -698,9 +571,6 @@ const executeCommand = async (interaction) => {
                                     console.log('start');
                                     const burnerStaticProxyObj = await getStaticFacebookBurnerProxy();
                     
-                                    //update CurrentFacebookBurnerTasks in proxy db
-                                    await staticProxyDB.updateOne({_id: burnerStaticProxyObj._id}, {$inc: { CurrentFacebookBurnerTasks: 1 }});
-                    
                                     //Message the worker with new proxy
                                     child[1].postMessage({ action: 'newProxies', messageProxy: messageStaticProxyObj.Proxy, burnerProxy: burnerStaticProxyObj.Proxy });
                     
@@ -714,12 +584,12 @@ const executeCommand = async (interaction) => {
                                     });
                     
                                     //assign proxys to accounts in dbsurnerUsername});
-                                    await burnerAccountDB.updateOne({Username: message.burnerUsername}, {$push: {StaticProxies: burnerStaticProxyObj.Proxy}});
+                                    await burnerAccountDB.updateOne({Username: message.burnerUsername}, {$set: {StaticProxy: burnerStaticProxyObj.Proxy}});
                     
                                     //only use the static proxy if messaging is enabled
                                     if(message.messageUsername != null && isFirst){
                                         await staticProxyDB.updateOne({_id: messageStaticProxyObj._id}, {$inc: { CurrentFacebookMessageTasks: 1 }});
-                                        await mainAccountDB.updateOne({Username: message.messageUsername}, {$push: {StaticProxies: messageStaticProxyObj.Proxy}});
+                                        await mainAccountDB.updateOne({Username: message.messageUsername}, {$set: {StaticProxy: messageStaticProxyObj.Proxy}});
                                         isFirst = false;
                                     }
                                     console.log('end');
@@ -729,17 +599,8 @@ const executeCommand = async (interaction) => {
                         }
                         await updateFacebookParentTask(parent);
                     }
-    
-                    //for each ebay task
-                    for(const task of user.ebay){
-                        const updateEbayTask = async () => {
-                            const proxyObj = await getEbayProxy();
-                
-                            //Message the worker with new proxy
-                            task[1].postMessage({ action: 'newProxy', proxy: proxyObj.Proxy });
-                        }
-                        await updateEbayTask();
-                    }
+
+                    //**Ebay stuff removed
                 })
         
                 discordClient.channels.cache.get(interaction.channelId).send('finish');
@@ -772,15 +633,15 @@ const executeCommand = async (interaction) => {
                         })
                     })
             
-                    //add ebay workers
-                    list += "\n\tEbay:";
-                    user.ebay.forEach((worker, workerKey) => {
-                        list += `\n\t\t${workerKey}`;
-                    })
+                    //**Ebay stuff removed
                 })
     
                 //send the completed message string
-                discordClient.channels.cache.get(interaction.channelId).send(list);
+                if(list != ''){
+                    discordClient.channels.cache.get(interaction.channelId).send(list);
+                }else{
+                    discordClient.channels.cache.get(interaction.channelId).send('No Workers');
+                }
             }
         }else{
             interaction.user.send('Commands are not allowed in direct messages.');
@@ -788,6 +649,6 @@ const executeCommand = async (interaction) => {
     } catch (error) {
         console.log("Command Error: \n\t" + error);
         discordClient.channels.cache.get('1091532766522376243').send("Command Error: \n\t" + error);
-        discordClient.channels.cache.get(workerData.channel).send("Command Error: \n\t" + error);
+        discordClient.channels.cache.get(interaction.channelId).send("Command Error: \n\t" + error);
     }
 }

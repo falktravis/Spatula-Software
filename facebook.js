@@ -172,40 +172,42 @@ const sendMessage = async (link) => {
 
 //collect burner account cookies
 const collectBurnerCookies = async () => {
-    let mainPageLogin = true;
-    let mainPageBlockAll = false;
+    let cookiePageLogin = true;
+    let cookiePageBlockAll = false;
     let isProxyWorks = true; //Used to stop the task when proxy fails
+    let cookieBrowser;
+    let cookiePage;
 
     try{
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-        mainBrowser = await puppeteer.launch({
+        cookieBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
         });
-        let pages = await mainBrowser.pages();
-        mainPage = pages[0];
+        let pages = await cookieBrowser.pages();
+        cookiePage = pages[0];
 
         //authenticate proxy
         //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${burnerLoginProxy}` });
 
         //track network consumption and block the bull shit
-        await mainPage.setRequestInterception(true);
-        mainPage.on('request', async request => {
+        await cookiePage.setRequestInterception(true);
+        cookiePage.on('request', async request => {
             const resource = request.resourceType();
             const URL = request.url();
 
-            if(mainPageLogin){
+            if(cookiePageLogin){
                 if(resource != 'document' && resource != 'script' && resource != 'stylesheet' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){ // && !URL.includes('SuG-IUx2WwG')
                     request.abort();
                 }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/' || URL.includes('wtsid')){
                     request.continue();
-                    mainPageLogin = false;
-                    mainPageBlockAll = true;
+                    cookiePageLogin = false;
+                    cookiePageBlockAll = true;
                 }else {
                     request.continue();
                 }
-            }else if(mainPageBlockAll){
+            }else if(cookiePageBlockAll){
                 request.abort();
             }else{
                 if(resource != 'document'){
@@ -221,7 +223,7 @@ const collectBurnerCookies = async () => {
 
     //Catch proxy errors
     try{
-        await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
+        await cookiePage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
     }catch(error){
         console.log("Burner Resi proxy error");
         isProxyWorks = false;
@@ -234,35 +236,35 @@ const collectBurnerCookies = async () => {
             });
         });
 
-        await mainBrowser.close();
+        await cookieBrowser.close();
         collectBurnerCookies();
     }
 
     //login   
     try{
         if(isProxyWorks){
-            await mainPage.type('#email', workerData.burnerUsername);
-            await mainPage.type('#pass', workerData.burnerPassword);
-            await mainPage.click('button[name="login"]');
-            await mainPage.waitForNavigation(); //necessary with headless mode
-            console.log(mainPage.url());
-            if(mainPage.url() != 'https://www.facebook.com/?sk=welcome' && mainPage.url() != 'https://www.facebook.com/' && !mainPage.url().includes('wtsid') && !mainPage.url().includes('mobileprotection')){
-                await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
+            await cookiePage.type('#email', workerData.burnerUsername);
+            await cookiePage.type('#pass', workerData.burnerPassword);
+            await cookiePage.click('button[name="login"]');
+            await cookiePage.waitForNavigation(); //necessary with headless mode
+            console.log(cookiePage.url());
+            if(cookiePage.url() != 'https://www.facebook.com/?sk=welcome' && cookiePage.url() != 'https://www.facebook.com/' && !cookiePage.url().includes('wtsid') && !cookiePage.url().includes('mobileprotection')){
+                await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, Ending Task...\nURL: ${cookiePage.url()}\n@everyone`);
     
                 //end the task
-                await mainBrowser.close();
+                await cookieBrowser.close();
                 parentPort.postMessage({action: 'loginFailure', isMessageLogin: false});
-            }else if(mainPage.url().includes('mobileprotection')){
-                await mainPage.click('label.uiLinkButton');
-                //await mainPage.waitForNavigation();//necessary with headless mode?
+            }else if(cookiePage.url().includes('mobileprotection')){
+                await cookiePage.click('label.uiLinkButton');
+                //await cookiePage.waitForNavigation();//necessary with headless mode?
                 console.log("mobile protection");
             }else{
     
                 //get the cookies for login on isp page
-                burnerCookies = await mainPage.cookies();
+                burnerCookies = await cookiePage.cookies();
                 burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
             }
-            mainBrowser.close();
+            cookieBrowser.close();
         }
     }catch (error){
         errorMessage('Error with logging in on main page - no cookie', error);
@@ -272,40 +274,42 @@ const collectBurnerCookies = async () => {
 
 //Collect message account cookies
 const collectMessageCookies = async () => {
-    let itemPageLogin = true;
-    let itemPageBlockAll = false;
+    let cookiePageLogin = true;
+    let cookiePageBlockAll = false;
     let isProxyWorks = true; //Used to stop the task when proxy fails
+    let cookieBrowser;
+    let cookiePage;
 
     try {
         //Instantiate the page with packetstream proxies for login
         randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-        itemBrowser = await puppeteer.launch({
+        cookieBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`]//, `--proxy-server=http://proxy.packetstream.io:31112`
         });
-        let pages = await itemBrowser.pages();
-        itemPage = pages[0];
+        let pages = await cookieBrowser.pages();
+        cookiePage = pages[0];
 
         //authenticate proxy
-        //await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${messageLoginProxy}` });
+        //await cookiePage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${messageLoginProxy}` });
                 
         //network shit
-        await itemPage.setRequestInterception(true);
-        itemPage.on('request', async request => {
+        await cookiePage.setRequestInterception(true);
+        cookiePage.on('request', async request => {
             const resource = request.resourceType();
             const URL = request.url();
-            if(itemPageLogin){
+            if(cookiePageLogin){
                 if(resource != 'document' && resource != 'script' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
                     request.abort();
                 }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/' || URL.includes('wtsid')){
                     request.continue();
-                    itemPageLogin = false;
-                    itemPageBlockAll = true;
+                    cookiePageLogin = false;
+                    cookiePageBlockAll = true;
                 }else {
                     request.continue();
                 }
-            }else if(itemPageBlockAll){
+            }else if(cookiePageBlockAll){
                 request.abort();
             }else{
                 if(resource != 'document' && resource != 'script'){
@@ -321,7 +325,7 @@ const collectMessageCookies = async () => {
         
     //Catch proxy errors
     try{
-        await mainPage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
+        await cookiePage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
     }catch(error){
         console.log("Main Resi proxy error");
         isProxyWorks = false;
@@ -334,41 +338,61 @@ const collectMessageCookies = async () => {
             });
         });
 
-        await itemBrowser.close();
+        await cookieBrowser.close();
         collectMessageCookies();
     }
 
     //login
     try{
         if(isProxyWorks){
-            await itemPage.type('#email', workerData.messageUsername);
-            await itemPage.type('#pass', workerData.messagePassword);
-            await itemPage.click('button[name="login"]');
-            await itemPage.waitForNavigation(); //necessary with headless mode
-            console.log(itemPage.url());
-            if(itemPage.url() != 'https://www.facebook.com/?sk=welcome' && itemPage.url() != 'https://www.facebook.com/' && !itemPage.url().includes('wtsid') && !mainPage.url().includes('mobileprotection')){
-                client.channels.cache.get(workerData.channel).send(`Facebook Message login Invalid at ${workerData.name}, Ending Task...\nURL: ${mainPage.url()}\n@everyone`);
+            await cookiePage.type('#email', workerData.messageUsername);
+            await cookiePage.type('#pass', workerData.messagePassword);
+            await cookiePage.click('button[name="login"]');
+            await cookiePage.waitForNavigation(); //necessary with headless mode
+            console.log(cookiePage.url());
+            if(cookiePage.url() != 'https://www.facebook.com/?sk=welcome' && cookiePage.url() != 'https://www.facebook.com/' && !cookiePage.url().includes('wtsid') && !cookiePage.url().includes('mobileprotection')){
+                client.channels.cache.get(workerData.channel).send(`Facebook Message login Invalid at ${workerData.name}, Ending Task...\nURL: ${cookiePage.url()}\n@everyone`);
     
                 //end the task
-                await mainBrowser.close();
+                await cookieBrowser.close();
                 parentPort.postMessage({action: 'loginFailure', isMessageLogin: true});
             }else{
-                if(itemPage.url().includes('mobileprotection')){
-                    await mainPage.click('label.uiLinkButton');
-                    //await mainPage.waitForNavigation();//necessary with headless mode?
+                if(cookiePage.url().includes('mobileprotection')){
+                    await cookiePage.click('label.uiLinkButton');
+                    //await cookiePage.waitForNavigation();//necessary with headless mode?
                     console.log("mobile protection");
                 }
     
                 //Set cookies
-                messageCookies = await itemPage.cookies();
+                messageCookies = await cookiePage.cookies();
                 messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
                 console.log(messageCookies);
             }
-            await itemBrowser.close();
+            await cookieBrowser.close();
         }
     } catch (error){
         errorMessage('Error with message login', error);
     }
+}
+
+const getRandomInterval = () => {
+    const minNumber = 720000;
+    const maxNumber = 1500000;
+  
+    // Set the power value to control the distribution shape, lower will return generally higher nums
+    const power = 1.5;
+  
+    // Generate a random number between 0 and 1
+    const random = Math.random();
+  
+    // Calculate the range of numbers
+    const range = maxNumber - minNumber;
+  
+    // Calculate the number based on the power law distribution
+    const number = minNumber + Math.pow(random, power) * range;
+  
+    // Return the randomized number
+    return Math.round(number);
 }
 
 //general instantiation
@@ -407,11 +431,12 @@ let networkData = 0;
 let mainPageInitiate = true;
 
 const start = async () => {
+    console.log(burnerStaticProxy);
 
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${burnerStaticProxy}`]//http://134.202.250.62:50100
         });
@@ -794,5 +819,5 @@ function interval() {
             }
             interval();
         }
-    }, Math.floor((Math.random() * (2) + 3) * 60000)); 
+    }, getRandomInterval()); 
 } 
