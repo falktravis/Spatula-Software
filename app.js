@@ -40,6 +40,23 @@ let residentialProxyDB;
     }
 })();
 
+//UserAgent Array
+const userAgents = [
+    "94.0.4606.81",
+    "93.0.4577.63",
+    "92.0.4515.159",
+    "91.0.4472.124",
+    "90.0.4430.93",
+    "89.0.4389.82",
+    "88.0.4324.150",
+    "87.0.4280.88",
+    "86.0.4240.111",
+    "85.0.4183.102",
+    "84.0.4147.89",
+    "83.0.4103.116",
+    "81.0.4044.138",
+];
+
 //command set up
 discordClient.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
@@ -328,7 +345,8 @@ const executeCommand = async (interaction) => {
                                                 let newStaticProxy = await getStaticFacebookBurnerProxy();
 
                                                 //create a new burner account obj
-                                                await burnerAccountDB.insertOne({Username: burnerUsername, LoginProxy: loginProxyObj.Proxy, StaticProxy: newStaticProxy.Proxy, Cookies: null, LastAccessed: null});
+                                                const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+                                                await burnerAccountDB.insertOne({Username: burnerUsername, LoginProxy: loginProxyObj.Proxy, StaticProxy: newStaticProxy.Proxy, Cookies: null, LastAccessed: null, UserAgent: randomUserAgent});
                                                 burnerAccountObj = await burnerAccountDB.findOne({Username: burnerUsername});
                                                 console.log(burnerAccountObj);
                                             }else{
@@ -355,6 +373,7 @@ const executeCommand = async (interaction) => {
                                                 messageStaticProxy: parent.staticProxy,
                                                 burnerCookies: burnerAccountObj.Cookies,
                                                 messageCookies: parent.messageCookies,
+                                                userAgent: burnerAccountObj.UserAgent,
                                                 start: start * 60,
                                                 end: end * 60,
                                                 distance: interaction.options.getNumber("distance"),
@@ -520,6 +539,18 @@ const executeCommand = async (interaction) => {
                     channel: interaction.channelId,
                 }});
             }
+            else if(interaction.commandName === "facebook-warm-account"){
+                const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
+    
+                //create a new worker
+                const warmAccountWorker = new Worker('./warmAccount.js', { workerData:{
+                    username: interaction.options.getString("email-or-phone"),
+                    proxy: accountObj.StaticProxy,
+                    cookies: accountObj.Cookies,
+                    userAgent: accountObj.UserAgent,
+                    channel: interaction.channelId,
+                }});
+            }
             else if(interaction.commandName === "list"){
                 let user = users.get(interaction.user.id);
                 if(user != null){
@@ -601,6 +632,19 @@ const executeCommand = async (interaction) => {
                     }
 
                     //**Ebay stuff removed
+                })
+        
+                discordClient.channels.cache.get(interaction.channelId).send('finish');
+            }else if(interaction.commandName === 'add-burner-proxies' && interaction.user.id === '456168609639694376'){
+        
+                //get the list of new proxies
+                let proxyList = interaction.options.getString("proxy-list");
+                proxyList = proxyList.split(" ");
+                console.log(proxyList);
+                
+                //insert the new proxies
+                proxyList.forEach(async (proxy) => {
+                    await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, CurrentFacebookBurnerTasks: 0, TotalFacebookBurnerAccounts: 0})
                 })
         
                 discordClient.channels.cache.get(interaction.channelId).send('finish');

@@ -85,7 +85,7 @@ const createUser = async () => {
         await loginPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates` });
 
         //network shit
-        /*await loginPage.setRequestInterception(true);
+        await loginPage.setRequestInterception(true);
         loginPage.on('request', async request => {
             const resource = request.resourceType();
 
@@ -94,7 +94,7 @@ const createUser = async () => {
             }else{
                 request.continue();
             }
-        });*/
+        });
 
         //go to the search page
         await loginPage.goto('https://www.facebook.com/reg/', { waitUntil: 'networkidle0' });
@@ -106,7 +106,7 @@ const createUser = async () => {
     try{
         let password = generateRandomString(10);//generate password
         console.log(workerData.username + ":" + password);
-        /*hoverElement('[aria-label="First name"]');
+        hoverElement('[aria-label="First name"]');
         await loginPage.type('[aria-label="First name"]', (workerData.firstName == null ? getFirstName() : workerData.firstName)); //first name
         await loginPage.type('[aria-label="Last name"]', (workerData.lastName == null ? getLastName() : workerData.lastName)); //last name
         await loginPage.type('[aria-label="Mobile number or email"]', workerData.username); //email
@@ -119,19 +119,23 @@ const createUser = async () => {
         await loginPage.select('#year', (Math.floor(Math.random() * 50) + 1950).toString()); //birth year
         await loginPage.click('[data-name="gender_wrapper"] [value="1"]'); //gender = male
         await loginPage.click('[type="submit"]')//press submit
-        await loginPage.waitForNavigation();*/
+        await loginPage.waitForNavigation();
     }catch(error){
         errorMessage('Error with login process', error);
     }
 
     //collect email code from the user
     try{
-        channel = await client.channels.fetch(workerData.channel);
+        /*channel = await client.channels.fetch(workerData.channel);
         await channel.send('Confirmation E-mail sent, get the code and send the numbers as a message in this channel.');
 
-        const collected = await channel.awaitMessages({ max: 1, time: 30000, errors: ['time'] });
+        const collected = await channel.awaitMessages({ max: 1, time: 90000, errors: ['time'] });
         const userResponse = collected.first().content;
-        console.log(userResponse);
+        console.log(userResponse);*/
+
+        await loginPage.waitForNavigation();
+        console.log("collecting");
+        
     }catch(error){
         errorMessage('Error with confimation process', error);
     }

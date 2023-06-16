@@ -83,11 +83,10 @@ const sendMessage = async (link) => {
 
     //browser with static isp
     try {
-        randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         itemBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${messageStaticProxy}`]//http://134.202.250.62:50100
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${messageStaticProxy}`]//http://134.202.250.62:50100
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
@@ -179,17 +178,16 @@ const collectBurnerCookies = async () => {
     let cookiePage;
 
     try{
-        randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         cookieBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://proxy.packetstream.io:31112`]
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=http://proxy.packetstream.io:31112`]
         });
         let pages = await cookieBrowser.pages();
         cookiePage = pages[0];
 
         //authenticate proxy
-        await itemPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${burnerLoginProxy}` });
+        await cookiePage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${burnerLoginProxy}` });
 
         //track network consumption and block the bull shit
         await cookiePage.setRequestInterception(true);
@@ -282,11 +280,10 @@ const collectMessageCookies = async () => {
 
     try {
         //Instantiate the page with packetstream proxies for login
-        randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         cookieBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=http://proxy.packetstream.io:31112`]
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=http://proxy.packetstream.io:31112`]
         });
         let pages = await cookieBrowser.pages();
         cookiePage = pages[0];
@@ -395,23 +392,6 @@ const getRandomInterval = () => {
     return Math.round(number);
 }
 
-//general instantiation
-const userAgents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36",
-];
-let randomUserAgent;
 let isCreate = true;
 let newPost;
 let mainBrowser;
@@ -420,7 +400,6 @@ let itemPage;
 let itemBrowser;
 let mainListingStorage;
 let burnerCookies = cookieCheckpoint(workerData.burnerCookies);
-//let burnerCookies = workerData.burnerCookies;
 let messageCookies = cookieCheckpoint(workerData.messageCookies);
 let messageLoginProxy = workerData.messageLoginProxy;
 let burnerLoginProxy = workerData.burnerLoginProxy;
@@ -431,13 +410,12 @@ let networkData = 0;
 let mainPageInitiate = true;
 
 const start = async () => {
-
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, `--proxy-server=${burnerStaticProxy}`]//http://134.202.250.62:50100
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${burnerStaticProxy}`]//http://134.202.250.62:50100
         });
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
@@ -485,7 +463,7 @@ const start = async () => {
 
         //make sure the url is correct
         if(mainPage.url() != workerData.link){
-            console.log("URL Is Wrong: " + mainPage.url());
+            console.log("URL Is Wrong: " + mainPage.url() + "end");
         }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
