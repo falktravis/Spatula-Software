@@ -67,7 +67,6 @@ const userAgents = [
 let loginBrowser;
 let loginPage;
 let loginProxy = workerData.proxy;
-let channel;
 
 const createUser = async () => {
     //initiate a browser with random resi proxy and request interception
@@ -76,16 +75,16 @@ const createUser = async () => {
         loginBrowser = await puppeteer.launch({
             headless: false,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, '--proxy-server=http://proxy.packetstream.io:31112']
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=${randomUserAgent}`, '--proxy-server=178.212.35.254:3199']
         });
         let pages = await loginBrowser.pages();
         loginPage = pages[0];
 
         //authenticate proxy
-        await loginPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates` });
+        //await loginPage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates` });
 
         //network shit
-        await loginPage.setRequestInterception(true);
+        /*await loginPage.setRequestInterception(true);
         loginPage.on('request', async request => {
             const resource = request.resourceType();
 
@@ -94,17 +93,17 @@ const createUser = async () => {
             }else{
                 request.continue();
             }
-        });
+        });*/
 
         //go to the search page
-        await loginPage.goto('https://www.facebook.com/reg/', { waitUntil: 'networkidle0' });
+        await loginPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
     }catch(error){
         errorMessage('Error with login page initiation', error);
     }
 
     //login process
     try{
-        let password = generateRandomString(10);//generate password
+        /*let password = generateRandomString(10);//generate password
         console.log(workerData.username + ":" + password);
         hoverElement('[aria-label="First name"]');
         await loginPage.type('[aria-label="First name"]', (workerData.firstName == null ? getFirstName() : workerData.firstName)); //first name
@@ -119,7 +118,7 @@ const createUser = async () => {
         await loginPage.select('#year', (Math.floor(Math.random() * 50) + 1950).toString()); //birth year
         await loginPage.click('[data-name="gender_wrapper"] [value="1"]'); //gender = male
         await loginPage.click('[type="submit"]')//press submit
-        await loginPage.waitForNavigation();
+        await loginPage.waitForNavigation();*/
     }catch(error){
         errorMessage('Error with login process', error);
     }
@@ -133,9 +132,15 @@ const createUser = async () => {
         const userResponse = collected.first().content;
         console.log(userResponse);*/
 
-        await loginPage.waitForNavigation();
-        console.log("collecting");
-        
+        let channel = await client.channels.fetch(workerData.channel);
+        const collected = await channel.awaitMessages({ max: 1, time: 10000000});
+
+        console.log("collecting cookies");
+
+        const cookies = await loginPage.cookies();
+        console.log(cookies);
+        parentPort.postMessage({cookies: cookies});
+
     }catch(error){
         errorMessage('Error with confimation process', error);
     }

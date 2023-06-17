@@ -463,7 +463,7 @@ const start = async () => {
 
         //make sure the url is correct
         if(mainPage.url() != workerData.link){
-            console.log("URL Is Wrong: " + mainPage.url() + "end");
+            console.log("URL Is Wrong: " + mainPage.url());
         }
     }catch(error){
         errorMessage('Error with static main page initiation', error);

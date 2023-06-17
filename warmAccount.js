@@ -29,18 +29,6 @@ const warmAccount = async () => {
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
 
-        //network shit
-        /*await warmingPage.setRequestInterception(true);
-        warmingPage.on('request', async request => {
-            const resource = request.resourceType();
-
-            if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
-                request.abort();
-            }else{
-                request.continue();
-            }
-        });*/
-        
         //Set cookies in browser
         await warmingPage.setCookie(...workerData.cookies);
 

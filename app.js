@@ -538,6 +538,12 @@ const executeCommand = async (interaction) => {
                     lastName: interaction.options.getString("last-name"),
                     channel: interaction.channelId,
                 }});
+
+                loginWorker.on('message', async (message) => {
+                    console.log("update cookies");
+                    //await burnerAccountDB.updateOne({Username: interaction.options.getString("email")}, {$set: {Cookies: message.cookies}});
+                    //await burnerAccountDB.insertOne({Username: interaction.options.getString("email"), LoginProxy: loginProxyObj.Proxy, StaticProxy: , Cookies: message.cookies, LastAccessed: null, UserAgent: randomUserAgent});
+                });
             }
             else if(interaction.commandName === "facebook-warm-account"){
                 const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
