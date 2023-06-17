@@ -49,7 +49,11 @@ module.exports = {
                     { name: '100', value: 9 },
                     { name: '250', value: 10 },
                     { name: '500', value: 11 },
-                )),
+                ))
+        .addStringOption(option => 
+            option.setName('message')
+                .setDescription('Message content sent to seller')
+                .setRequired(false)),
 	async execute(interaction) {
 		await interaction.reply(`Starting ${interaction.options.getString('name')} in ${interaction.options.getString('parent-name')}`);
 	},

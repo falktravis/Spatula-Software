@@ -169,107 +169,6 @@ const sendMessage = async (link) => {
     }
 }
 
-//collect burner account cookies
-const collectBurnerCookies = async () => {
-    let cookiePageLogin = true;
-    let cookiePageBlockAll = false;
-    let isProxyWorks = true; //Used to stop the task when proxy fails
-    let cookieBrowser;
-    let cookiePage;
-
-    try{
-        cookieBrowser = await puppeteer.launch({
-            headless: true,
-            defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=http://proxy.packetstream.io:31112`]
-        });
-        let pages = await cookieBrowser.pages();
-        cookiePage = pages[0];
-
-        //authenticate proxy
-        await cookiePage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${burnerLoginProxy}` });
-
-        //track network consumption and block the bull shit
-        await cookiePage.setRequestInterception(true);
-        cookiePage.on('request', async request => {
-            const resource = request.resourceType();
-            const URL = request.url();
-
-            if(cookiePageLogin){
-                if(resource != 'document' && resource != 'script' && resource != 'stylesheet' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){ // && !URL.includes('SuG-IUx2WwG')
-                    request.abort();
-                }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/' || URL.includes('wtsid')){
-                    request.continue();
-                    cookiePageLogin = false;
-                    cookiePageBlockAll = true;
-                }else {
-                    request.continue();
-                }
-            }else if(cookiePageBlockAll){
-                request.abort();
-            }else{
-                if(resource != 'document'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
-            }
-        });
-    }catch (error){
-        errorMessage('Error with main page initiation for login', error);
-    }
-
-    //Catch proxy errors
-    try{
-        await cookiePage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
-    }catch(error){
-        console.log("Burner Resi proxy error");
-        isProxyWorks = false;
-        //message the main script we need a new proxy
-        parentPort.postMessage({action: 'proxyFailure', username: workerData.burnerUsername, isBurner: true});
-        //await the response with a promise
-        burnerLoginProxy = await new Promise(resolve => {
-            parentPort.on('message', message => {
-              resolve(message);
-            });
-        });
-
-        await cookieBrowser.close();
-        collectBurnerCookies();
-    }
-
-    //login   
-    try{
-        if(isProxyWorks){
-            await cookiePage.type('#email', workerData.burnerUsername);
-            await cookiePage.type('#pass', workerData.burnerPassword);
-            await cookiePage.click('button[name="login"]');
-            await cookiePage.waitForNavigation(); //necessary with headless mode
-            console.log(cookiePage.url());
-            if(cookiePage.url() != 'https://www.facebook.com/?sk=welcome' && cookiePage.url() != 'https://www.facebook.com/' && !cookiePage.url().includes('wtsid') && !cookiePage.url().includes('mobileprotection')){
-                await client.channels.cache.get(workerData.channel).send(`Facebook Burner Login Invalid at ${workerData.name}, Ending Task...\nURL: ${cookiePage.url()}\n@everyone`);
-    
-                //end the task
-                await cookieBrowser.close();
-                parentPort.postMessage({action: 'loginFailure', isMessageLogin: false});
-            }else if(cookiePage.url().includes('mobileprotection')){
-                await cookiePage.click('label.uiLinkButton');
-                //await cookiePage.waitForNavigation();//necessary with headless mode?
-                console.log("mobile protection");
-            }else{
-    
-                //get the cookies for login on isp page
-                burnerCookies = await cookiePage.cookies();
-                burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-            }
-            cookieBrowser.close();
-        }
-    }catch (error){
-        errorMessage('Error with logging in on main page - no cookie', error);
-    }
-}
-
-
 //Collect message account cookies
 const collectMessageCookies = async () => {
     let cookiePageLogin = true;
@@ -566,9 +465,6 @@ const handleTime = async (intervalFunction) => {
     if(isRunning){
         //collect cookies if its the first time running
         if(isCreate == true){
-            if(burnerCookies == null){
-                await collectBurnerCookies();
-            }
 
             if(messageCookies == null && workerData.messageType != 3){
                 await collectMessageCookies();
