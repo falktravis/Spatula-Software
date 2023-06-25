@@ -237,16 +237,10 @@ const executeCommand = async (interaction) => {
                                         user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
                                             name: interaction.options.getString("name"),
                                             link: interaction.options.getString("link") + "&sortBy=creation_time_descend", //&availability=in%20stock
-                                            messageUsername: userObj.messageAccount.username,
-                                            messagePassword: userObj.messageAccount.password,
-                                            burnerUsername: burnerAccountObj.Username,
-                                            burnerPassword: burnerAccountObj.Password,
                                             messageType: interaction.options.getNumber("message-type"),
                                             message: interaction.options.getString("message"),
-                                            burnerLoginProxy: burnerAccountObj.LoginProxy,
-                                            burnerStaticProxy: burnerAccountObj.StaticProxy,
-                                            messageLoginProxy: userObj.messageAccount.loginProxy,
-                                            messageStaticProxy: userObj.messageAccount.staticProxy,
+                                            burnerProxy: burnerAccountObj.StaticProxy,
+                                            messageProxy: userObj.MessageAccount.Proxy,
                                             burnerCookies: burnerAccountObj.Cookies,
                                             messageCookies: userObj.messageAccount.Cookies,
                                             userAgent: burnerAccountObj.UserAgent,
@@ -434,9 +428,33 @@ const executeCommand = async (interaction) => {
         
                 discordClient.channels.cache.get(interaction.channelId).send('finish');
             }else if(interaction.commandName === 'facebook-update-message-account'){
-                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Username' : interaction.options.getString("username"), 'MessageAccount.Password' : interaction.options.getString("password")}});
+                console.log(JSON.parse(interaction.options.getString("cookies")));
+                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies' : JSON.parse(interaction.options.getString("cookies"))}});
+
+                const userObj = await userDB.findOne({UserId: interaction.user.id});
+                if(userObj.MessageAccount.Proxy == null){
+                    const proxy = await getStaticFacebookMessageProxy();
+                    await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Proxy' : proxy.Proxy}});
+                }
         
                 discordClient.channels.cache.get(interaction.channelId).send('Updated!');
+            }else if(interaction.commandName === 'add-facebook-accounts' && interaction.user.id === '456168609639694376'){
+                const fs = require('fs');
+                const fileContents = fs.readFileSync(interaction.options.getString("path"), 'utf-8');
+
+                // Regular expression pattern to match array strings
+                const arrayPattern = /\[(.*?)\]/g;
+                const arrays = fileContents.match(arrayPattern);
+
+                // Parse each array string into an actual array using JSON.parse
+                const parsedArrays = arrays.map((arrayString) => JSON.parse(arrayString));
+                
+                //insert the new proxies
+                parsedArrays.forEach(async (array) => {
+                    await burnerAccountDB.insertOne({Cookies: array, Proxy: , UserAgent: 0})
+                })
+        
+                discordClient.channels.cache.get(interaction.channelId).send('finish');
             }else if(interaction.commandName === 'add-burner-proxies' && interaction.user.id === '456168609639694376'){
         
                 //get the list of new proxies

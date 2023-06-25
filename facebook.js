@@ -20,13 +20,13 @@ parentPort.on('message', async (message) => {
             await itemBrowser.close();
         }
 
-        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername, proxy: workerData.burnerStaticProxy});
+        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername, proxy: workerData.burnerProxy});
     }else if(message.action === 'newProxies'){
 
         //set new proxies
-        burnerStaticProxy = message.burnerProxy;
+        burnerProxy = message.burnerProxy;
         if(workerData.messageType != 3){
-            messageStaticProxy = message.messageProxy;
+            messageProxy = message.messageProxy;
         }
 
         //restart burner account page
@@ -42,7 +42,7 @@ parentPort.on('message', async (message) => {
 });
 
 //checks cookies for expired
-const cookieCheckpoint = (cookies) => {
+/*const cookieCheckpoint = (cookies) => {
     //If the worker data passes null, return null back
     if(cookies == null){
         return null;
@@ -56,7 +56,7 @@ const cookieCheckpoint = (cookies) => {
         console.log("EXPIRED COOKIES!!??!!?!?");
         return null;
     }
-}
+}*/
 
 //error message send function
 const errorMessage = (message, error) => {
@@ -86,13 +86,13 @@ const sendMessage = async (link) => {
         itemBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${messageStaticProxy}`]//http://134.202.250.62:50100
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${messageProxy}`]//http://134.202.250.62:50100
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
 
         //authenticate proxy
-        //await itemPage.authenticate({ 'username':'falktravis', 'password': messageStaticProxy });
+        //await itemPage.authenticate({ 'username':'falktravis', 'password': messageProxy });
 
         //set cookies/login if the login was a success
         await itemPage.setCookie(...messageCookies);
@@ -169,108 +169,6 @@ const sendMessage = async (link) => {
     }
 }
 
-//Collect message account cookies
-const collectMessageCookies = async () => {
-    let cookiePageLogin = true;
-    let cookiePageBlockAll = false;
-    let isProxyWorks = true; //Used to stop the task when proxy fails
-    let cookieBrowser;
-    let cookiePage;
-
-    try {
-        //Instantiate the page with packetstream proxies for login
-        cookieBrowser = await puppeteer.launch({
-            headless: true,
-            defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=http://proxy.packetstream.io:31112`]
-        });
-        let pages = await cookieBrowser.pages();
-        cookiePage = pages[0];
-
-        //authenticate proxy
-        await cookiePage.authenticate({ 'username':'grumpypop1024', 'password': `1pp36Wc7ds9CgPSH_country-UnitedStates_session-${messageLoginProxy}` });
-                
-        //network shit
-        await cookiePage.setRequestInterception(true);
-        cookiePage.on('request', async request => {
-            const resource = request.resourceType();
-            const URL = request.url();
-            if(cookiePageLogin){
-                if(resource != 'document' && resource != 'script' || URL.includes('v3i1vc4') || URL.includes('7kC7a9IZaJ9Kj8z5MOSDbM') || URL.includes('pYL1cbqpX10') || URL.includes('EuCjcb6YvQa') || URL.includes('wsDwCbh1mU6') || URL.includes('v3iqES4') || URL.includes('g4yGS_I143G') || URL.includes('LgvwffuKmeX') || URL.includes('L3XDbmH5_qQ') || URL.includes('kDWUdySDJjX') || URL.includes('rJ94RMpIhR7') || URL.includes('bKi--2Ukb_9') || URL.includes('jmY_tZbcjAk')){
-                    request.abort();
-                }else if(URL == 'https://www.facebook.com/?sk=welcome' || URL == 'https://www.facebook.com/' || URL.includes('wtsid')){
-                    request.continue();
-                    cookiePageLogin = false;
-                    cookiePageBlockAll = true;
-                }else {
-                    request.continue();
-                }
-            }else if(cookiePageBlockAll){
-                request.abort();
-            }else{
-                if(resource != 'document' && resource != 'script'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
-            }
-        });
-    } catch(error) {
-        errorMessage('Error with item page instantiation for login', error);
-    }      
-        
-    //Catch proxy errors
-    try{
-        await cookiePage.goto('https://www.facebook.com/login', { waitUntil: 'networkidle0' });
-    }catch(error){
-        console.log("Main Resi proxy error");
-        isProxyWorks = false;
-        //message the main script we need a new proxy
-        parentPort.postMessage({action: 'proxyFailure', username: workerData.messageUsername, isBurner: false});
-        //await the response with a promise
-        messageLoginProxy = await new Promise(resolve => {
-            parentPort.on('message', message => {
-              resolve(message);
-            });
-        });
-
-        await cookieBrowser.close();
-        collectMessageCookies();
-    }
-
-    //login
-    try{
-        if(isProxyWorks){
-            await cookiePage.type('#email', workerData.messageUsername);
-            await cookiePage.type('#pass', workerData.messagePassword);
-            await cookiePage.click('button[name="login"]');
-            await cookiePage.waitForNavigation(); //necessary with headless mode
-            console.log(cookiePage.url());
-            if(cookiePage.url() != 'https://www.facebook.com/?sk=welcome' && cookiePage.url() != 'https://www.facebook.com/' && !cookiePage.url().includes('wtsid') && !cookiePage.url().includes('mobileprotection')){
-                client.channels.cache.get(workerData.channel).send(`Facebook Message login Invalid at ${workerData.name}, Ending Task...\nURL: ${cookiePage.url()}\n@everyone`);
-    
-                //end the task
-                await cookieBrowser.close();
-                parentPort.postMessage({action: 'loginFailure', isMessageLogin: true});
-            }else{
-                if(cookiePage.url().includes('mobileprotection')){
-                    await cookiePage.click('label.uiLinkButton');
-                    //await cookiePage.waitForNavigation();//necessary with headless mode?
-                    console.log("mobile protection");
-                }
-    
-                //Set cookies
-                messageCookies = await cookiePage.cookies();
-                messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-                console.log(messageCookies);
-            }
-            await cookieBrowser.close();
-        }
-    } catch (error){
-        errorMessage('Error with message login', error);
-    }
-}
-
 const getRandomInterval = () => {
     const minNumber = 720000;
     const maxNumber = 1500000;
@@ -298,12 +196,10 @@ let mainPage;
 let itemPage;
 let itemBrowser;
 let mainListingStorage;
-let burnerCookies = cookieCheckpoint(workerData.burnerCookies);
-let messageCookies = cookieCheckpoint(workerData.messageCookies);
-let messageLoginProxy = workerData.messageLoginProxy;
-let burnerLoginProxy = workerData.burnerLoginProxy;
-let burnerStaticProxy = workerData.burnerStaticProxy;
-let messageStaticProxy = workerData.messageStaticProxy;
+let burnerCookies = workerData.burnerCookies;
+let messageCookies = workerData.messageCookies;
+let burnerProxy = workerData.burnerProxy;
+let messageProxy = workerData.messageProxy;
 let messageQueue = [];
 let networkData = 0;
 let mainPageInitiate = true;
@@ -314,13 +210,13 @@ const start = async () => {
         mainBrowser = await puppeteer.launch({
             headless: true,
             defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${burnerStaticProxy}`]//http://134.202.250.62:50100
+            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${burnerProxy}`]//http://134.202.250.62:50100
         });
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
 
         //authenticate proxy
-        //await mainPage.authenticate({ 'username':'falktravis', 'password': burnerStaticProxy });
+        //await mainPage.authenticate({ 'username':'falktravis', 'password': burnerProxy });
 
         //network shit
         await mainPage.setRequestInterception(true);
@@ -463,19 +359,6 @@ const handleTime = async (intervalFunction) => {
     }
     
     if(isRunning){
-        //collect cookies if its the first time running
-        if(isCreate == true){
-
-            if(messageCookies == null && workerData.messageType != 3){
-                await collectMessageCookies();
-            }
-                            
-            //close messageLoginListener if it was necessary
-            if((workerData.burnerCookies == null && burnerCookies != null) || (workerData.messageCookies == null && workerData.messageType != 3 && messageCookies != null)){
-                parentPort.postMessage({action: 'facebookSuccess'});
-            }
-        }
-
         await start();
 
         //set the listing storage, only on the initial creation
