@@ -2,19 +2,15 @@ const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('facebook-create-child')
-		.setDescription('Create Facebook Child')
+		.setName('facebook-create-task')
+		.setDescription('Create Facebook Task')
         .addStringOption(option => 
             option.setName('name')
-                .setDescription('Name of Child')
-                .setRequired(true))
-        .addStringOption(option => 
-            option.setName('parent-name')
-                .setDescription('Name of Parent')
+                .setDescription('Name of Task')
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('link')
-                .setDescription('link')
+                .setDescription('Facebook Marketplace link to search')
                 .setRequired(true))
         .addNumberOption(option => 
             option.setName('message-type')
@@ -55,6 +51,6 @@ module.exports = {
                 .setDescription('Message content sent to seller')
                 .setRequired(false)),
 	async execute(interaction) {
-		await interaction.reply(`Starting ${interaction.options.getString('name')} in ${interaction.options.getString('parent-name')}`);
+		await interaction.reply(`Starting ${interaction.options.getString('name')}`);
 	},
 };
