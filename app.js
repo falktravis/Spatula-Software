@@ -451,7 +451,8 @@ const executeCommand = async (interaction) => {
                 
                 //insert the new proxies
                 parsedArrays.forEach(async (array) => {
-                    await burnerAccountDB.insertOne({Cookies: array, Proxy: , UserAgent: 0})
+                    const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+                    await burnerAccountDB.insertOne({Cookies: array, Proxy: , UserAgent: randomUserAgent})
                 })
         
                 discordClient.channels.cache.get(interaction.channelId).send('finish');
