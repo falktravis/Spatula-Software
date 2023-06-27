@@ -194,7 +194,7 @@ const executeCommand = async (interaction) => {
                                         if(burnerAccountObj == null){
                                             burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
                                             console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-                                            //!discordClient.channels.cache.get('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+                                            discordClient.channels.cache.get('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
                                         }
 
                                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
@@ -481,7 +481,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        //!discordClient.channels.cache.get('1091532766522376243').send("Command Error: \n\t" + error);
+        discordClient.channels.cache.get('1091532766522376243').send("Command Error: \n\t" + error);
         discordClient.channels.cache.get(interaction.channelId).send("Command Error: \n\t" + error);
     }
 }
