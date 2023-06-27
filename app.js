@@ -304,7 +304,7 @@ const executeCommand = async (interaction) => {
                 //create a new worker
                 const warmAccountWorker = new Worker('./warmAccount.js', { workerData:{
                     username: interaction.options.getString("email-or-phone"),
-                    proxy: accountObj.StaticProxy,
+                    proxy: accountObj.Proxy,
                     cookies: accountObj.Cookies,
                     userAgent: accountObj.UserAgent,
                     channel: interaction.channelId,

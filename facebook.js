@@ -191,7 +191,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             defaultViewport: { width: 1366, height: 768 },
             args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${burnerProxy}`]//http://134.202.250.62:50100
         });
@@ -259,7 +259,7 @@ const start = async () => {
             await mainPage.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
             await mainPage.click('[aria-label="Apply"]');
             //wait for the results to update, we aren't concerned about time
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 8000));
         } catch (error) {
             errorMessage('Error with setting distance', error);
         }
