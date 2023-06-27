@@ -205,6 +205,7 @@ const executeCommand = async (interaction) => {
                                             link: interaction.options.getString("link") + "&sortBy=creation_time_descend", //&availability=in%20stock
                                             messageType: interaction.options.getNumber("message-type"),
                                             message: interaction.options.getString("message"),
+                                            burnerUsername: burnerAccountObj.Username,
                                             burnerProxy: burnerAccountObj.Proxy,
                                             messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
                                             burnerCookies: burnerAccountObj.Cookies,
@@ -258,7 +259,7 @@ const executeCommand = async (interaction) => {
     
                             //set cookies in db
                             if(message.burnerCookies != null){
-                                await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}});
+                                await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
                             }
     
                             //!reduce active task count by one
