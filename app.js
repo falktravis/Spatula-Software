@@ -170,7 +170,7 @@ const executeCommand = async (interaction) => {
                             const user = users.get(interaction.user.id);
 
                             if(!user.facebook.has(interaction.options.getString("name"))){
-                                if(userObj.messageAccount != null || interaction.options.getNumber("message-type") == 3){
+                                if(userObj.MessageAccount != null || interaction.options.getNumber("message-type") == 3){
                                     let start = interaction.options.getNumber("start");
                                     let end = interaction.options.getNumber("end");
                             
@@ -188,13 +188,16 @@ const executeCommand = async (interaction) => {
                                         users.get(interaction.user.id).taskCount++;
         
                                         //burner account assignment
-                                        let burnerAccountObj = await burnerAccountDB.findOne({activeTasks: 0});
+                                        let burnerAccountObj = await burnerAccountDB.findOne({ActiveTasks: 0});
 
                                         //if there is no un-active accounts 
                                         if(burnerAccountObj == null){
-                                            burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {activeTasks: 1}});
-                                            discordClient.channels.cache.get('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+                                            burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
+                                            console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
+                                            //!discordClient.channels.cache.get('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
                                         }
+
+                                        await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
         
                                         //create a new worker and add it to the map
                                         user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
@@ -202,10 +205,10 @@ const executeCommand = async (interaction) => {
                                             link: interaction.options.getString("link") + "&sortBy=creation_time_descend", //&availability=in%20stock
                                             messageType: interaction.options.getNumber("message-type"),
                                             message: interaction.options.getString("message"),
-                                            burnerProxy: burnerAccountObj.StaticProxy,
-                                            messageProxy: userObj.MessageAccount.Proxy,
+                                            burnerProxy: burnerAccountObj.Proxy,
+                                            messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
                                             burnerCookies: burnerAccountObj.Cookies,
-                                            messageCookies: userObj.messageAccount.Cookies,
+                                            messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
                                             userAgent: burnerAccountObj.UserAgent,
                                             start: start * 60,
                                             end: end * 60,
@@ -478,7 +481,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        //discordClient.channels.cache.get('1091532766522376243').send("Command Error: \n\t" + error);
+        //!discordClient.channels.cache.get('1091532766522376243').send("Command Error: \n\t" + error);
         discordClient.channels.cache.get(interaction.channelId).send("Command Error: \n\t" + error);
     }
 }
