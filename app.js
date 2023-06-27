@@ -402,7 +402,29 @@ const executeCommand = async (interaction) => {
             }else if(interaction.commandName === 'add-facebook-accounts' && interaction.user.id === '456168609639694376'){
                 const fs = require('fs');
                 const fileContents = fs.readFileSync(interaction.options.getString("path"), 'utf-8');
-                const accountArray = fileContents.split('\n');
+
+                const arrayRegex = /\[(.*?)\]/g;
+                const cookieArray = fileContents.match(arrayRegex);
+
+                for(let i = 0; i < cookieArray.length; i++){
+                    let username;
+                    cookieArray.forEach((cookie) => {
+                        if(cookie.name = 'o'){
+                            username = cookie.value;
+                            username = username.split(":");
+                            username = username[0];
+                            console.log(username);
+                        }
+                    })
+
+                    const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)]; 
+                    const proxyObj = await getStaticFacebookBurnerProxy();
+                    
+                    await burnerAccountDB.insertOne({Username: email, Cookies: cookieArray, Proxy: proxyObj.Proxy, UserAgent: randomUserAgent, ActiveTasks: 0});
+                }
+                
+
+                /*const accountArray = fileContents.split('\n');
 
                 // Regular expression patterns
                 const arrayRegex = /\[(.*?)\]/g;
@@ -430,9 +452,8 @@ const executeCommand = async (interaction) => {
                     //get a static proxy
                     const proxyObj = await getStaticFacebookBurnerProxy();
 
-                    //const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
                     await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, UserAgent: userAgent, ActiveTasks: 0});
-                }
+                }*/
         
                 discordClient.channels.cache.get(interaction.channelId).send('finish');
             }else if(interaction.commandName === 'add-burner-proxies' && interaction.user.id === '456168609639694376'){
