@@ -68,56 +68,6 @@ for (const file of commandFiles) {
 	}
 }
 
-//worker login listening function
-const facebookLoginListener = (message, child, parent, user, username, burnerProxy, messageProxy) => {
-        //push command into the queue
-        queue.push({
-            message: message,
-            child: child,
-            parent: parent,
-            user: user,
-            username: username,
-            burnerProxy: burnerProxy,
-            messageProxy, messageProxy
-        });
-
-        //run the queue handler if it is not already going
-        if(queue.length == 1){
-            handleQueue();
-        }
-}
-
-const executeMessage = async (data) => {//!Big changes needed here
-    if(data.message.action == 'facebookSuccess'){
-        users.get(data.user).facebook.get(data.parent).children.get(data.child).removeListener('message', facebookLoginListener);
-        console.log("listener gone");
-    }else if(data.message.action == 'loginFailure'){
-        let parent = users.get(data.user).facebook.get(data.parent);
-        parent.children.get(data.child).terminate();
-        parent.children.delete(data.child);
-
-        //reduce CurrentTasks
-        await staticProxyDB.updateOne({Proxy: data.messageProxy}, {$inc: {CurrentFacebookMessageTasks: -1}});
-        await staticProxyDB.updateOne({Proxy: data.burnerProxy}, {$inc: {CurrentFacebookBurnerTasks: -1, TotalFacebookBurnerAccounts: -1}});
-
-        users.get(data.user).taskCount--;
-    }else if(data.message.action == 'proxyFailure'){
-        //get a new proxy from db
-        let proxy = await residentialProxyDB.findOne({}); 
-        await residentialProxyDB.deleteOne({_id: proxy._id});
-        proxy = proxy.Proxy;
-
-        if(data.message.isBurner){
-            await burnerAccountDB.updateOne({Username: data.message.username}, {$set: {LoginProxy: proxy}});
-        }else{
-            await mainAccountDB.updateOne({Username: data.message.username}, {$set: {LoginProxy: proxy}});
-        }
-
-        //send the proxy back to the worker
-        users.get(data.user).facebook.get(data.parent).children.get(data.child).postMessage(proxy);
-    }
-}
-
 const getStaticFacebookMessageProxy = async () => {
     //get the proxy
     let staticProxyObj = await staticProxyDB.findOne({CurrentFacebookMessageTasks: {$lt: 2}}, {sort: { CurrentFacebookMessageTasks: 1}});
@@ -127,6 +77,19 @@ const getStaticFacebookMessageProxy = async () => {
 
     //update CurrentFacebookMessageTasks in proxy db
     await staticProxyDB.updateOne({_id: staticProxyObj._id}, {$inc: { CurrentFacebookMessageTasks: 1 }});
+
+    return staticProxyObj;
+}
+
+const getStaticFacebookBurnerProxy = async () => {
+    //get the proxy
+    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}}, {sort: {TotalFacebookBurnerAccounts: 1}});
+    if(staticProxyObj == null){
+        staticProxyObj = await staticProxyDB.findOne({}, {sort: { TotalFacebookBurnerAccounts: 1}});
+    }
+
+    //update CurrentFacebookBurnerTasks in proxy db
+    await staticProxyDB.updateOne({_id: staticProxyObj._id}, {$inc: { TotalFacebookBurnerAccounts: 1 }});
 
     return staticProxyObj;
 }
@@ -200,7 +163,7 @@ const executeCommand = async (interaction) => {
                 if(users.has(interaction.user.id)){
                     if(interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
                         //compare with db total task count
-                        const userObj = await userDB.findOne({Username: interaction.user.id});
+                        const userObj = await userDB.findOne({UserId: interaction.user.id});
 
                         if(users.get(interaction.user.id).taskCount < userObj.ConcurrentTasks){
                             //get user
@@ -250,12 +213,6 @@ const executeCommand = async (interaction) => {
                                             channel: interaction.channelId,
                                         }}));
         
-                                        //Set message listener for updating cookies and login error handling, only if a login is necessary
-                                        if(burnerAccountObj.Cookies == null || (userObj.messageAccount.Cookies == null && interaction.options.getNumber("message-type") != 3)){
-                                            console.log("listener created");
-                                            user.facebook.get(interaction.options.getString("name")).on('message', message => facebookLoginListener(message, interaction.options.getString("name"), interaction.user.id, burnerAccountObj.Username, burnerAccountObj.StaticProxy, parent.staticProxy));
-                                        }
-        
                                         discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
                                     }else{
                                         discordClient.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
@@ -302,7 +259,7 @@ const executeCommand = async (interaction) => {
                             }
     
                             //!reduce active task count by one
-                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+                            //await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
     
                             //actually delete the thing
                             child.terminate();
@@ -441,19 +398,37 @@ const executeCommand = async (interaction) => {
             }else if(interaction.commandName === 'add-facebook-accounts' && interaction.user.id === '456168609639694376'){
                 const fs = require('fs');
                 const fileContents = fs.readFileSync(interaction.options.getString("path"), 'utf-8');
+                const accountArray = fileContents.split('\n');
 
-                // Regular expression pattern to match array strings
-                const arrayPattern = /\[(.*?)\]/g;
-                const arrays = fileContents.match(arrayPattern);
+                // Regular expression patterns
+                const arrayRegex = /\[(.*?)\]/g;
+                const browserVersionRegex = /Chrome\/([\d.]{9})/;
+                const emailPasswordRegex = /;([^:;]+):([^:;]+);;/;
 
-                // Parse each array string into an actual array using JSON.parse
-                const parsedArrays = arrays.map((arrayString) => JSON.parse(arrayString));
-                
-                //insert the new proxies
-                parsedArrays.forEach(async (array) => {
-                    const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-                    await burnerAccountDB.insertOne({Cookies: array, Proxy: , UserAgent: randomUserAgent})
-                })
+                for(let i = 0; i < accountArray.length; i++){
+
+                    //collect the cookie array
+                    const cookiesMatch = accountArray[i].match(arrayRegex);
+                    console.log(cookiesMatch);
+                    const cookieArray = JSON.parse(cookiesMatch[0]);
+
+                    //collect user agent
+                    const userAgentMatch = accountArray[i].match(browserVersionRegex);
+                    console.log(userAgentMatch);
+                    const userAgent = userAgentMatch[1];
+
+                    //collect account user and password string
+                    const emailPasswordMatch = accountArray[i].match(emailPasswordRegex);
+                    console.log(emailPasswordMatch);
+                    const email = emailPasswordMatch[1];
+                    const password = emailPasswordMatch[2];
+
+                    //get a static proxy
+                    const proxyObj = await getStaticFacebookBurnerProxy();
+
+                    //const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, UserAgent: userAgent, ActiveTasks: 0});
+                }
         
                 discordClient.channels.cache.get(interaction.channelId).send('finish');
             }else if(interaction.commandName === 'add-burner-proxies' && interaction.user.id === '456168609639694376'){
@@ -503,7 +478,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        discordClient.channels.cache.get('1091532766522376243').send("Command Error: \n\t" + error);
+        //discordClient.channels.cache.get('1091532766522376243').send("Command Error: \n\t" + error);
         discordClient.channels.cache.get(interaction.channelId).send("Command Error: \n\t" + error);
     }
 }

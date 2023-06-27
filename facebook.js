@@ -41,23 +41,6 @@ parentPort.on('message', async (message) => {
     }
 });
 
-//checks cookies for expired
-/*const cookieCheckpoint = (cookies) => {
-    //If the worker data passes null, return null back
-    if(cookies == null){
-        return null;
-    }
-
-    //compare the datr cookie against the current date
-    const datr = cookies.find(cookie => cookie.name === 'datr');
-    if (new Date() <= new Date(datr.expires * 1000) || datr.expires == -1 || datr.expires == null) {
-        return cookies;
-    } else {
-        console.log("EXPIRED COOKIES!!??!!?!?");
-        return null;
-    }
-}*/
-
 //error message send function
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
@@ -257,7 +240,7 @@ const start = async () => {
         burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
 
         //make sure the url is correct
-        if(mainPage.url() != workerData.link){
+        if(mainPage.url() != workerData.link + "&sortBy=creation_time_descend"){
             console.log("URL Is Wrong: " + mainPage.url());
         }
     }catch(error){
@@ -463,7 +446,7 @@ function interval() {
                         try{
                             //check for video
                             let isVideo = false;
-                            if(await itemPage.$('div.xyamay9 h1') == null){
+                            if(await itemPage.$('div.x1a0syf3.x1ja2u2z i') != null){
                                 console.log('video sequence: ' + newPost);
                                 itemPageFullLoad = true;
                                 await itemPage.reload({ waitUntil: 'domcontentloaded' });
