@@ -1,3 +1,9 @@
+/**
+ * I need to find why my personal account gets proper results for every distance but the burners don't
+ *   -Test my personal account with the software browser
+ *   -Maybe the burners just need to be more realistic? Try buying higher quality accounts
+ *   -Try waming a burner aggressivly
+ */
 //require
 const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
