@@ -7,7 +7,8 @@
 //require
 const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
-const stealthPlugin = require('puppeteer-extra-plugin-stealth')
+const { createCursor } = require("ghost-cursor");
+const stealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(stealthPlugin());
 
 //discord.js
@@ -54,8 +55,35 @@ const errorMessage = (message, error) => {
     client.channels.cache.get(workerData.channel).send(message + ': ' + error);
 }
 
-//Queue stuff
-const handleQueue = async () => {
+//randomize time till post check
+const getRandomInterval = () => {
+    const minNumber = 720000;
+    const maxNumber = 1500000;
+    const power = 1.5;
+    const random = Math.random();
+    const range = maxNumber - minNumber;
+    const number = minNumber + Math.pow(random, power) * range;
+    return Math.round(number);
+}
+
+//pause for 0.5s-2s to humanize behavior
+const pause = async () => {
+    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (1200 - 500 + 1)) + 500));
+}
+
+//convert platform string for a user agent
+const platformConverter = (platform) => {
+    if(platform === 'Windows'){
+        return 'Windows NT 10.0; Win64; x64';
+    }else if(platform === 'Linux'){
+        return 'X11; Linux x86_64';
+    }else if(platform === 'Macintosh'){
+        return 'Macintosh; Intel Mac OS X 10_15_7';
+    }
+}
+
+//!Queue stuff
+/*const handleQueue = async () => {
     //run the command
     await sendMessage(messageQueue[0]);
 
@@ -66,22 +94,33 @@ const handleQueue = async () => {
     if(messageQueue.length > 0){
         await handleQueue();
     }
-}
+}*/
 
 const sendMessage = async (link) => {
+    let cursor;
 
     //browser with static isp
     try {
         itemBrowser = await puppeteer.launch({
             headless: true,
-            defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${messageProxy}`]//http://134.202.250.62:50100
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.messagePlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${messageProxy}`]
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
 
-        //authenticate proxy
-        //await itemPage.authenticate({ 'username':'falktravis', 'password': messageProxy });
+        //create a cursor
+        cursor = createCursor(itemPage);
+
+        //change http headers
+        itemPage.setExtraHTTPHeaders({
+            'Referer': 'https://www.facebook.com/login',
+            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
+            'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
+            'Sec-Ch-Ua-Platform': workerData.messagePlatform
+        });
+
+        //change the viewport
+        itemPage.setViewport({ width: 1366, height: 768 });
 
         //set cookies/login if the login was a success
         await itemPage.setCookie(...messageCookies);
@@ -111,26 +150,32 @@ const sendMessage = async (link) => {
         //Send the message
         if(!itemPage.url().includes('unavailable_product')){
             if(await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]')){//regular, pickup listing
+
                 console.log("local pickup only message sequence");
                 if(workerData.message != null){
-                    await itemPage.click('div.x1daaz14 [aria-label="Send seller a message"]');
+                    await pause();
+                    await cursor.click('div.x1daaz14 [aria-label="Send seller a message"]');
                     await itemPage.keyboard.press('Backspace');
                     const messageTextArea = await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]');
                     await messageTextArea.type(workerData.message);
                 }
-                await itemPage.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
+                await pause();
+                await cursor.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
                 await itemPage.waitForSelector('[aria-label="Message Again"]');
                 await client.channels.cache.get(workerData.channel).send("Message Sent!");
             }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
                 console.log("shipping message sequence");
-                await itemPage.click('[aria-label="Message"]');
+                await pause();
+                await cursor.click('[aria-label="Message"]');
                 await itemPage.waitForSelector('[aria-label="Please type your message to the seller"]');
                 if(workerData.message != null){
-                    await itemPage.click('[aria-label="Please type your message to the seller"]');
+                    await pause();
+                    await cursor.click('[aria-label="Please type your message to the seller"]');
                     const messageTextArea = await itemPage.$('[aria-label="Please type your message to the seller"]');
                     await messageTextArea.type(workerData.message);
                 }
-                await itemPage.click('[aria-label="Send Message"]');
+                await pause();
+                await cursor.click('[aria-label="Send Message"]');
                 await itemPage.waitForSelector('[aria-label="Message Again"]');
                 await client.channels.cache.get(workerData.channel).send("Message Sent!");
             }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
@@ -158,26 +203,6 @@ const sendMessage = async (link) => {
     }
 }
 
-const getRandomInterval = () => {
-    const minNumber = 720000;
-    const maxNumber = 1500000;
-  
-    // Set the power value to control the distribution shape, lower will return generally higher nums
-    const power = 1.5;
-  
-    // Generate a random number between 0 and 1
-    const random = Math.random();
-  
-    // Calculate the range of numbers
-    const range = maxNumber - minNumber;
-  
-    // Calculate the number based on the power law distribution
-    const number = minNumber + Math.pow(random, power) * range;
-  
-    // Return the randomized number
-    return Math.round(number);
-}
-
 let isCreate = true;
 let newPost;
 let mainBrowser;
@@ -189,23 +214,24 @@ let burnerCookies = workerData.burnerCookies;
 let messageCookies = workerData.messageCookies;
 let burnerProxy = workerData.burnerProxy;
 let messageProxy = workerData.messageProxy;
-let messageQueue = [];
+//!let messageQueue = [];
 let networkData = 0;
 let mainPageInitiate = true;
 
 const start = async () => {
+    let cursor;
+
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: false,
-            defaultViewport: { width: 1366, height: 768 },
-            args: ['--disable-notifications', '--no-sandbox', `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${workerData.userAgent} Safari/537.36`, `--proxy-server=${burnerProxy}`]//http://134.202.250.62:50100
+            headless: true,
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`]
         });
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
 
-        //authenticate proxy
-        //await mainPage.authenticate({ 'username':'falktravis', 'password': burnerProxy });
+        //create a cursor
+        cursor = createCursor(mainPage);
 
         //network shit
         await mainPage.setRequestInterception(true);
@@ -234,6 +260,17 @@ const start = async () => {
                 }
             }
         });
+
+        //change the viewport
+        mainPage.setViewport({ width: 1366, height: 768 });
+
+        //change http headers
+        mainPage.setExtraHTTPHeaders({
+            'Referer': 'https://www.facebook.com/login',
+            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
+            'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
+            'Sec-Ch-Ua-Platform': workerData.burnerPlatform
+        });
         
         //Set cookies in browser
         await mainPage.setCookie(...burnerCookies);
@@ -246,8 +283,9 @@ const start = async () => {
         burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
 
         //make sure the url is correct
-        if(mainPage.url() != workerData.link + "&sortBy=creation_time_descend"){
-            console.log("URL Is Wrong: " + mainPage.url());
+        if(mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
+            console.log(workerData.link);
+            console.log(mainPage.url());
         }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
@@ -259,13 +297,18 @@ const start = async () => {
             if(await mainPage.$('div.x1y1aw1k.xl56j7k div.x1iyjqo2') == null){
                 await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
             }
-            await mainPage.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            await pause();
+            await cursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
             await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
-            await mainPage.click('div.x9f619.x14vqqas.xh8yej3');
-            await mainPage.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
-            await mainPage.click('[aria-label="Apply"]');
+            await pause();
+            await cursor.click('div.x9f619.x14vqqas.xh8yej3');
+            await pause();
+            await cursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
+            await pause();
+            await cursor.click('[aria-label="Apply"]');
             //wait for the results to update, we aren't concerned about time
-            await new Promise(r => setTimeout(r, 8000));
+            await new Promise(r => setTimeout(r, 6000));
+            await mainPage.reload({ waitUntil: 'networkidle0' });
         } catch (error) {
             errorMessage('Error with setting distance', error);
         }
@@ -523,13 +566,15 @@ function interval() {
                             collector.on('collect', async i => {
                                 i.reply("Sending...");
     
-                                //push message into the queue
-                                messageQueue.push(i.customId.split("-")[1]);
+                                //!push message into the queue
+                                /*messageQueue.push(i.customId.split("-")[1]);
                                 //run the queue handler if it is not already going
                                 if(messageQueue.length == 1){
                                     await handleQueue();
                                     console.log('message finish');
-                                }
+                                }*/
+
+                                sendMessage(i.customId.split("-")[1]);
     
                                 collector.stop();
                             });

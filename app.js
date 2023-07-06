@@ -10,6 +10,7 @@ discordClient.login(process.env.DISCORD_BOT_TOKEN);
 
 //Database connection
 const { MongoClient, ServerApiVersion } = require('mongodb');
+//!const { constants } = require('buffer');  Do I really need this?
 const uri = "mongodb+srv://SpatulaSoftware:jpTANtS4n59oqlam@spatula-software.tyas5mn.mongodb.net/?retryWrites=true&w=majority";
 const mongoClient = new MongoClient(uri, {
   serverApi: {
@@ -31,27 +32,27 @@ let residentialProxyDB;
         residentialProxyDB = mongoClient.db('Spatula-Software').collection('residentialProxies');
         burnerAccountDB = mongoClient.db('Spatula-Software').collection('burnerAccounts');
         userDB = mongoClient.db('Spatula-Software').collection('Users');
+
+        /*const accountList = await burnerAccountDB.find({}).toArray();
+        for(const account of accountList){
+            const platform = platforms[Math.floor(Math.random() * platforms.length)];
+            console.log(platform);
+            await burnerAccountDB.updateOne({_id: account._id}, {$set: {Platform: platform}});
+        }*/
+
+        //start database scan
+        scanDatabase();
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
     }
 })();
 
-//UserAgent Array
-const userAgents = [
-    "94.0.4606.81",
-    "93.0.4577.63",
-    "92.0.4515.159",
-    "91.0.4472.124",
-    "90.0.4430.93",
-    "89.0.4389.82",
-    "88.0.4324.150",
-    "87.0.4280.88",
-    "86.0.4240.111",
-    "85.0.4183.102",
-    "84.0.4147.89",
-    "83.0.4103.116",
-    "81.0.4044.138",
+//Platform Array
+const platforms = [
+    "Windows",
+    "Macintosh",
+    "Linux"
 ];
 
 //command set up
@@ -108,11 +109,33 @@ const handleUser = async (userId) => {
     }
 }
 
+const scanDatabase = async () => {
+
+    setTimeout(async () => {
+        usersToDelete = [];
+
+        //check map against db
+        for (const [key, value] of users) {
+            const userObj = await userDB.findOne({ UserId: key });
+            if (!userObj) {
+                usersToDelete.push(key);
+            }
+        }
+        
+        //actually delete the users from map
+        usersToDelete.forEach((userId) => {
+            users.delete(userId);
+        })
+
+        scanDatabase();
+    }, 86400000) //24 hours
+}
+
 //pre populate this with data from supabase 
 const users = new Map();
 
 //Queue stuff so that commands won't fuck each other
-let queue = [];
+//let queue = [];
 
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
@@ -127,16 +150,18 @@ discordClient.on(Events.InteractionCreate, async interaction => {
 		await interaction.reply('There was an error while executing this command!');
 	}
 
-    //push command into the queue
+    executeCommand(interaction);
+
+    /*//push command into the queue
     queue.push(interaction);
 
     //run the queue handler if it is not already going
     if(queue.length == 1){
         handleQueue();
-    }
+    }*/
 });
 
-const handleQueue = async () => {
+/*const handleQueue = async () => {
     //run the command
     if(queue[0].message != null){
         await executeMessage(queue[0]);
@@ -151,7 +176,7 @@ const handleQueue = async () => {
     if(queue.length > 0){
         handleQueue();
     }
-}
+}*/
 
 const executeCommand = async (interaction) => {
     try {
@@ -202,7 +227,7 @@ const executeCommand = async (interaction) => {
                                         //create a new worker and add it to the map
                                         user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
                                             name: interaction.options.getString("name"),
-                                            link: interaction.options.getString("link") + "&sortBy=creation_time_descend", //&availability=in%20stock
+                                            link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
                                             messageType: interaction.options.getNumber("message-type"),
                                             message: interaction.options.getString("message"),
                                             burnerUsername: burnerAccountObj.Username,
@@ -210,7 +235,8 @@ const executeCommand = async (interaction) => {
                                             messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
                                             burnerCookies: burnerAccountObj.Cookies,
                                             messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
-                                            userAgent: burnerAccountObj.UserAgent,
+                                            burnerPlatform: burnerAccountObj.Platform,
+                                            messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
                                             start: start * 60,
                                             end: end * 60,
                                             distance: interaction.options.getNumber("distance"),
@@ -306,7 +332,7 @@ const executeCommand = async (interaction) => {
                     username: interaction.options.getString("email-or-phone"),
                     proxy: accountObj.Proxy,
                     cookies: accountObj.Cookies,
-                    userAgent: accountObj.UserAgent,
+                    platform: accountObj.Platform,
                     channel: interaction.channelId,
                 }});
             }
@@ -326,71 +352,10 @@ const executeCommand = async (interaction) => {
                 }else{
                     discordClient.channels.cache.get(interaction.channelId).send("User does not exist");
                 }
-            }
-            else if(interaction.commandName === 'update-burner-proxies' && interaction.user.id === '456168609639694376'){//! not gonna fuck with this yet...
-                //reset static proxy lists on both account dbs
-                await mainAccountDB.updateMany({}, {$set: {StaticProxy: null}});
-                await burnerAccountDB.updateMany({}, {$set: {StaticProxy: null}});
-        
-                //get the list of new proxies
-                let proxyList = interaction.options.getString("proxy-list");
-                proxyList = proxyList.split(" ");
-                console.log(proxyList);
-                
-                //delete all previous proxies and insert the new ones
-                await staticProxyDB.deleteMany({});
-                proxyList.forEach(async (proxy) => {
-                    await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, CurrentFacebookBurnerTasks: 0, TotalFacebookBurnerAccounts: 0})
-                });
-
-                //rotate through every current task and send a message that contains the new proxy, then update the database StaticProxies list
-                for(const task of users.get(interaction.user.id).facebook){
-                    const updateFacebookParentTask = async (parent) => {
-                        let isFirst = true;
-                        const messageStaticProxyObj = await getStaticFacebookMessageProxy();
-        
-                        //for each Facebook child in parent
-                        for(const child of parent[1].children){
-                            const updateFacebookChildTask = async (child) => {
-                                //get a new proxy from the db
-                                console.log('start');
-                                const burnerStaticProxyObj = await getStaticFacebookBurnerProxy();
-                
-                                //Message the worker with new proxy
-                                child[1].postMessage({ action: 'newProxies', messageProxy: messageStaticProxyObj.Proxy, burnerProxy: burnerStaticProxyObj.Proxy });
-                
-                                //wait for the worker to message back with its identifying details
-                                let message = await new Promise(resolve => {
-                                    child[1].on('message', message => {
-                                        if(message.action === 'usernames'){
-                                            resolve(message);
-                                        } 
-                                    });
-                                });
-                
-                                //assign proxys to accounts in dbsurnerUsername});
-                                await burnerAccountDB.updateOne({Username: message.burnerUsername}, {$set: {StaticProxy: burnerStaticProxyObj.Proxy}});
-                
-                                //only use the static proxy if messaging is enabled
-                                if(message.messageUsername != null && isFirst){
-                                    await staticProxyDB.updateOne({_id: messageStaticProxyObj._id}, {$inc: { CurrentFacebookMessageTasks: 1 }});
-                                    await mainAccountDB.updateOne({Username: message.messageUsername}, {$set: {StaticProxy: messageStaticProxyObj.Proxy}});
-                                    isFirst = false;
-                                }
-                                console.log('end');
-                            }
-                            await updateFacebookChildTask(child);
-                        }
-                    }
-                    await updateFacebookParentTask(parent);
-                }
-
-                //**Ebay stuff removed
-        
-                discordClient.channels.cache.get(interaction.channelId).send('finish');
             }else if(interaction.commandName === 'facebook-update-message-account'){
-                console.log(JSON.parse(interaction.options.getString("cookies")));
-                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies' : JSON.parse(interaction.options.getString("cookies"))}});
+                const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
+
+                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies' : JSON.parse(interaction.options.getString("cookies"))}, $set: {'MessageAccount.Platform' : randomPlatform}});
 
                 const userObj = await userDB.findOne({UserId: interaction.user.id});
                 if(userObj.MessageAccount.Proxy == null){
@@ -406,21 +371,21 @@ const executeCommand = async (interaction) => {
                 const arrayRegex = /\[(.*?)\]/g;
                 const cookieArray = fileContents.match(arrayRegex);
 
-                for(let i = 0; i < cookieArray.length; i++){
-                    let username;
-                    cookieArray.forEach((cookie) => {
-                        if(cookie.name = 'o'){
-                            username = cookie.value;
-                            username = username.split(":");
-                            username = username[0];
-                            console.log(username);
-                        }
-                    })
 
-                    const randomUserAgent = userAgents[Math.floor(Math.random() * userAgents.length)]; 
+                for(let i = 0; i < cookieArray.length; i++){
+
+                    const cookie = JSON.parse(cookieArray[i]);
+
+                    const targetCookie = cookie.find(cookie => cookie.name === 'o');
+                    let username = targetCookie.value;
+                    username = username.split(":");
+                    username = username[0];
+                    console.log(username);
+
+                    const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
                     const proxyObj = await getStaticFacebookBurnerProxy();
                     
-                    await burnerAccountDB.insertOne({Username: email, Cookies: cookieArray, Proxy: proxyObj.Proxy, UserAgent: randomUserAgent, ActiveTasks: 0});
+                    await burnerAccountDB.insertOne({Username: username, Cookies: cookie, Proxy: proxyObj.Proxy, Platform: randomPlatform, ActiveTasks: 0});
                 }
                 
 
