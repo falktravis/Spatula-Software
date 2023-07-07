@@ -204,6 +204,7 @@ const sendMessage = async (link) => {
 }
 
 let isCreate = true;
+let startError = false;
 let newPost;
 let mainBrowser;
 let mainPage;
@@ -224,7 +225,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`]
         });
         let pages = await mainBrowser.pages();
@@ -284,15 +285,26 @@ const start = async () => {
 
         //make sure the url is correct
         if(mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
-            console.log(workerData.link);
-            console.log(mainPage.url());
+            console.log("Link is wrong: " + mainPage.url());
+
+            startError = true;
+            await mainBrowser.close();
+
+            //message the parent to terminate the task
+
+            if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
+                //end the task and message myself containing the account name
+
+            }
+        }else{
+            //message to delete listener
         }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
     }
     
     //set distance
-    if(workerData.distance != null && isCreate == true){
+    if(workerData.distance != null && isCreate == true && startError == false){
         try {
             if(await mainPage.$('div.x1y1aw1k.xl56j7k div.x1iyjqo2') == null){
                 await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
@@ -393,13 +405,15 @@ const handleTime = async (intervalFunction) => {
     if(isRunning){
         await start();
 
-        //set the listing storage, only on the initial creation
-        if(isCreate == true){
-            await setListingStorage();
-            isCreate = false;
-        }
+        if(startError == false){
+            //set the listing storage, only on the initial creation
+            if(isCreate == true){
+                await setListingStorage();
+                isCreate = false;
+            }
 
-        intervalFunction(); 
+            intervalFunction(); 
+        }
     }else if(isCreate == false){
         await mainPage.close();
         await mainBrowser.close();
