@@ -51,7 +51,7 @@ let residentialProxyDB;
 //Platform Array
 const platforms = [
     "Windows",
-    "Macintosh",
+    "macOS",
     "Linux"
 ];
 

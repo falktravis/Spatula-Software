@@ -20,7 +20,7 @@ const platformConverter = (platform) => {
         return 'Windows NT 10.0; Win64; x64';
     }else if(platform === 'Linux'){
         return 'X11; Linux x86_64';
-    }else if(platform === 'Macintosh'){
+    }else if(platform === 'macOS'){
         return 'Macintosh; Intel Mac OS X 10_15_7';
     }
 }

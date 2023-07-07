@@ -77,7 +77,7 @@ const platformConverter = (platform) => {
         return 'Windows NT 10.0; Win64; x64';
     }else if(platform === 'Linux'){
         return 'X11; Linux x86_64';
-    }else if(platform === 'Macintosh'){
+    }else if(platform === 'macOS'){
         return 'Macintosh; Intel Mac OS X 10_15_7';
     }
 }
@@ -224,7 +224,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`]
         });
         let pages = await mainBrowser.pages();
