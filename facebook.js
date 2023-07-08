@@ -289,10 +289,7 @@ const start = async () => {
 
             startError = true;
             await mainBrowser.close();
-
-            //message the parent to terminate the task
-            parentPort.postMessage({action: 'failure'});
-
+            
             //alert the user to the error
             client.channels.cache.get(workerData.channel).send('Task terminated, error at URL: ' + mainPage.url());
 
@@ -300,6 +297,9 @@ const start = async () => {
                 //end the task and message myself containing the account name
                 client.channels.cache.get('1091532766522376243').send('Account lgpd migrated: ' + workerData.burnerUsername);
             }
+
+            //message the parent to terminate the task
+            parentPort.postMessage({action: 'failure'});
         }else{
             //message to delete listener
             parentPort.postMessage({action: 'success'});
