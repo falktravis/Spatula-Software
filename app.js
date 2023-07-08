@@ -69,6 +69,23 @@ for (const file of commandFiles) {
 	}
 }
 
+//worker login listening function
+const facebookListener = async (message, task, user, username) => {
+    if(message.action == 'success'){
+        users.get(user).facebook.get(task).removeListener('message', facebookListener);
+        console.log("listener gone");
+    }else if(message.action == 'failure'){
+        users.get(user).facebook.get(task).terminate();
+        users.get(user).facebook.delete(task);
+
+        //Free the burner account for use
+        await burnerAccountDB.updateOne({Username: username}, {$inc: {ActiveTasks: -1}});
+
+        //decrease worker count
+        users.get(user).workerCount--;
+    }
+}
+
 const getStaticFacebookMessageProxy = async () => {
     //get the proxy
     let staticProxyObj = await staticProxyDB.findOne({CurrentFacebookMessageTasks: {$lt: 2}}, {sort: { CurrentFacebookMessageTasks: 1}});
@@ -242,6 +259,8 @@ const executeCommand = async (interaction) => {
                                             distance: interaction.options.getNumber("distance"),
                                             channel: interaction.channelId,
                                         }}));
+
+                                        parent.children.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id, burnerAccountObj.Username)); 
         
                                         discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
                                     }else{

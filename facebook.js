@@ -294,7 +294,7 @@ const start = async () => {
 
             if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
                 //end the task and message myself containing the account name
-
+                
             }
         }else{
             //message to delete listener
