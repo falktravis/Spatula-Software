@@ -311,12 +311,14 @@ const start = async () => {
     //set distance
     if(workerData.distance != null && isCreate == true && startError == false){
         try {
-            if(await mainPage.$('div.x1y1aw1k.xl56j7k div.x1iyjqo2') == null){
+            try{
                 await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-            }
+            }catch{console.log("div.x1y1aw1k.xl56j7k div.x1iyjqo2")}
             await pause();
             await cursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
+            try{
+                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
+            }catch{console.log("div.x9f619.x14vqqas.xh8yej3")}
             await pause();
             await cursor.click('div.x9f619.x14vqqas.xh8yej3');
             await pause();
