@@ -260,7 +260,7 @@ const executeCommand = async (interaction) => {
                                             channel: interaction.channelId,
                                         }}));
 
-                                        parent.children.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id, burnerAccountObj.Username)); 
+                                        user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id, burnerAccountObj.Username)); 
         
                                         discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
                                     }else{

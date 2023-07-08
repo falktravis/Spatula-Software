@@ -225,7 +225,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`]
         });
         let pages = await mainBrowser.pages();
@@ -291,13 +291,18 @@ const start = async () => {
             await mainBrowser.close();
 
             //message the parent to terminate the task
+            parentPort.postMessage({action: 'failure'});
+
+            //alert the user to the error
+            client.channels.cache.get(workerData.channel).send('Task terminated, error at URL: ' + mainPage.url());
 
             if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
                 //end the task and message myself containing the account name
-                
+                client.channels.cache.get('1091532766522376243').send('Account lgpd migrated: ' + workerData.burnerUsername);
             }
         }else{
             //message to delete listener
+            parentPort.postMessage({action: 'success'});
         }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
