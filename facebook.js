@@ -349,7 +349,7 @@ const setListingStorage = async () => {
         mainListingStorage = await mainPage.evaluate(() => {
             let searchResults = document.querySelector('div.xx6bls6');
             if(searchResults == null){
-                let links = [document.querySelector(".x3ct3a4 a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(2) a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(3) a"), document.querySelector("div.x139jcc6.x1nhvcw1 > :nth-child(4) a")];
+                let links = [document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(2) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(3) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(4) a")];
                 return links.map((link) => {
                     if(link != null){
                         let href = link.href;
@@ -465,7 +465,7 @@ function interval() {
             //newPost is actually new
             if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
         
-                let postNum = 1;
+                let postNum = 0;
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 10){
                     console.log("New Post: " + newPost + " post num: " + postNum);
 
@@ -617,7 +617,7 @@ function interval() {
                     postNum++;
                     try {
                         newPost = await mainPage.evaluate((num) => {
-                            let link = document.querySelector(`div.x139jcc6.x1nhvcw1 > :nth-child(${num}) a`).href;
+                            let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`).href;
                             return link.substring(0, link.indexOf("?"));
                         }, postNum);
                         console.log(newPost);
