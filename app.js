@@ -374,7 +374,7 @@ const executeCommand = async (interaction) => {
             }else if(interaction.commandName === 'facebook-update-message-account'){
                 const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
 
-                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies' : JSON.parse(interaction.options.getString("cookies")), 'MessageAccount.Platform' : randomPlatform}});
+                await userDB.updateOne({UserId: interaction.user.id}, {$set: {MessageAccount: {Cookies : JSON.parse(interaction.options.getString("cookies")), Platform : randomPlatform}}});
 
                 const userObj = await userDB.findOne({UserId: interaction.user.id});
                 if(userObj.MessageAccount.Proxy == null){
