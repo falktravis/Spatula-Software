@@ -1,10 +1,3 @@
-/**
- * I need to find why my personal account gets proper results for every distance but the burners don't
- *   -Test my personal account with the software browser
- *   -Maybe the burners just need to be more realistic? Try buying higher quality accounts
- *   -Try waming a burner aggressivly
- */
-//require
 const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
@@ -465,7 +458,7 @@ function interval() {
             //newPost is actually new
             if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
         
-                let postNum = 0;
+                let postNum = 1;
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 10){
                     console.log("New Post: " + newPost + " post num: " + postNum);
 
@@ -627,8 +620,8 @@ function interval() {
                 }
 
                 //Check for a post hard cap
-                if(postNum > 10){
-                    client.channels.cache.get(workerData.channel).send("Too many new posts to notify, I honestly have no idea how you did this it should be impossible, make your query more specific");
+                if(postNum > 12){
+                    client.channels.cache.get(workerData.channel).send("Too many new posts to notify. Make your query more specific");
                 }
 
                 //set the main listing storage
