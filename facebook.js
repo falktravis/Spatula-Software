@@ -466,7 +466,7 @@ function interval() {
                     if(workerData.messageType == 1){//auto message
                         await sendMessage(newPost);
 
-                        //get post data
+                        //get post data //!Update this to match the other one 
                         try{
                             postObj = await itemPage.evaluate(() => {
                                 return {
@@ -515,10 +515,10 @@ function interval() {
                         try{
                             //check for video
                             let isVideo = false;
-                            if(await itemPage.$('div.x1a0syf3.x1ja2u2z i') != null){
+                            if(await itemPage.$('div.x1a0syf3.x1ja2u2z i') != null){//!Change this
                                 console.log('video sequence: ' + newPost);
-                                itemPageFullLoad = true;
-                                await itemPage.reload({ waitUntil: 'domcontentloaded' });
+                                //itemPageFullLoad = true;
+                                //await itemPage.reload({ waitUntil: 'domcontentloaded' });
                                 isVideo = true;
                             }
 
