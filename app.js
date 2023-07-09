@@ -79,7 +79,7 @@ const facebookListener = async (message, task, user, username) => {
         users.get(user).facebook.delete(task);
 
         //Free the burner account for use
-        await burnerAccountDB.updateOne({Username: username}, {$inc: {ActiveTasks: -1}});
+        await burnerAccountDB.updateOne({Username: username}, {$inc: {ActiveTasks: 1}});
 
         //decrease worker count
         users.get(user).workerCount--;

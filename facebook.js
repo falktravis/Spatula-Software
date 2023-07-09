@@ -291,7 +291,7 @@ const start = async () => {
             await mainBrowser.close();
             
             //alert the user to the error
-            client.channels.cache.get(workerData.channel).send('Task terminated, error at URL: ' + mainPage.url());
+            await client.channels.cache.get(workerData.channel).send('Task terminated, error at URL: ' + mainPage.url());
 
             if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
                 //end the task and message myself containing the account name
@@ -310,37 +310,32 @@ const start = async () => {
     
     //set distance
     if(workerData.distance != null && isCreate == true && startError == false){
-        try{
-            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-        }catch{
-            console.log("div.x1y1aw1k.xl56j7k div.x1iyjqo2")
-        }
+        let count = 0;
 
-        try {
-            await pause();
-            await cursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-        } catch (error) {
-            errorMessage('Error with setting distance', error);
-        }
-
-        try{
-            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3');
-        }catch{
-            console.log("div.x9f619.x14vqqas.xh8yej3")
-        }
-
-        try {
-            await pause();
-            await cursor.click('div.x9f619.x14vqqas.xh8yej3');
-            await pause();
-            await cursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
-            await pause();
-            await cursor.click('[aria-label="Apply"]');
-            //wait for the results to update, we aren't concerned about time
-            await new Promise(r => setTimeout(r, 6000));
-            await mainPage.reload({ waitUntil: 'networkidle0' });
-        } catch (error) {
-            errorMessage('Error with setting distance', error);
+        const setDistance = async() => {
+            try {
+                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
+                await pause();
+                await cursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+                await pause();
+                await cursor.click('div.x9f619.x14vqqas.xh8yej3');
+                await pause();
+                await cursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
+                await pause();
+                await cursor.click('[aria-label="Apply"]');
+                //wait for the results to update, we aren't concerned about time
+                await new Promise(r => setTimeout(r, 6000));
+                await mainPage.reload({ waitUntil: 'networkidle0' });
+            } catch (error) {
+                count++;
+                console.log(count + " : " + error);
+                if(count < 4){
+                    setDistance();
+                }else{
+                    errorMessage('Error with setting distance', error);
+                }
+            }
         }
     }
 
