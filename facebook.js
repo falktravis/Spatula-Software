@@ -50,8 +50,8 @@ const errorMessage = (message, error) => {
 
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 720000;
-    const maxNumber = 1500000;
+    const minNumber = 600000;
+    const maxNumber = 1200000;
     const power = 1.5;
     const random = Math.random();
     const range = maxNumber - minNumber;
@@ -459,25 +459,32 @@ function interval() {
             if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
         
                 let postNum = 1;
-                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 10){
+                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 12){
                     console.log("New Post: " + newPost + " post num: " + postNum);
 
                     let postObj;
                     if(workerData.messageType == 1){//auto message
                         await sendMessage(newPost);
 
-                        //get post data //!Update this to match the other one 
+                        //check for video //!No idea if this works lol
+                        let isVideo = false;
+                        if(await itemPage.$('div.x11v4dcs') != null){
+                            console.log('video sequence: ' + newPost);
+                            isVideo = true;
+                        }
+
+                        //get post data
                         try{
-                            postObj = await itemPage.evaluate(() => {
+                            postObj = await itemPage.evaluate((isVideo) => {
                                 return {
-                                    img: document.querySelector('img').src,
+                                    img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
                                     title: document.querySelector('div.xyamay9 h1').innerText,
                                     date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                     price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
                                 };
-                            });
+                            }, isVideo);
 
                             await itemBrowser.close();
                             itemBrowser = null;
@@ -493,7 +500,7 @@ function interval() {
                             itemPage.on('request', async request => {
                                 const resource = request.resourceType();
                                 if(itemPageFullLoad){
-                                    if(resource != 'document' && resource != 'script' && resource != 'xhr'){
+                                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'media'){
                                         request.abort();
                                     }else{
                                         request.continue();
@@ -515,10 +522,10 @@ function interval() {
                         try{
                             //check for video
                             let isVideo = false;
-                            if(await itemPage.$('div.x1a0syf3.x1ja2u2z i') != null){//!Change this
+                            if(await itemPage.$('[aria-label="Loading..."]') != null){
                                 console.log('video sequence: ' + newPost);
-                                //itemPageFullLoad = true;
-                                //await itemPage.reload({ waitUntil: 'domcontentloaded' });
+                                itemPageFullLoad = true;
+                                await itemPage.reload({ waitUntil: 'networkidle0' });
                                 isVideo = true;
                             }
 
