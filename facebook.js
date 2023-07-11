@@ -218,7 +218,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`]
         });
         let pages = await mainBrowser.pages();
@@ -284,15 +284,22 @@ const start = async () => {
             await mainBrowser.close();
             
             //alert the user to the error
-            await client.channels.cache.get(workerData.channel).send('Task terminated, error at URL: ' + mainPage.url());
+            await client.channels.cache.get(workerData.channel).send('Task terminated, please restart. Error at URL: ' + mainPage.url());
 
             if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
                 //end the task and message myself containing the account name
                 client.channels.cache.get('1091532766522376243').send('Account lgpd migrated: ' + workerData.burnerUsername);
             }
+            
+            if(mainPage.url().includes('checkpoint/828281030927956')){
+                client.channels.cache.get('1091532766522376243').send('Account banned: ' + workerData.burnerUsername);
 
-            //message the parent to terminate the task
-            parentPort.postMessage({action: 'failure'});
+                //message the main script to delete the burner account
+                parentPort.postMessage({action: 'ban'});
+            }else{
+                //message the main script to terminate the task
+                parentPort.postMessage({action: 'failure'});
+            }
         }else{
             //message to delete listener
             parentPort.postMessage({action: 'success'});
@@ -318,18 +325,20 @@ const start = async () => {
                 await pause();
                 await cursor.click('[aria-label="Apply"]');
                 //wait for the results to update, we aren't concerned about time
-                await new Promise(r => setTimeout(r, 6000));
+                await new Promise(r => setTimeout(r, 3000));
                 await mainPage.reload({ waitUntil: 'networkidle0' });
             } catch (error) {
                 count++;
                 console.log(count + " : " + error);
                 if(count < 4){
+                    await mainPage.reload({ waitUntil: 'networkidle0' });
                     setDistance();
                 }else{
                     errorMessage('Error with setting distance', error);
                 }
             }
         }
+        await setDistance();
     }
 
     mainPageInitiate = false;
@@ -440,7 +449,7 @@ function interval() {
     setTimeout(async () => {
         if(isRunning){
             try {
-                await mainPage.reload({ waitUntil: 'domcontentloaded' });
+                await mainPage.reload({ waitUntil: 'networkidle0' });
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
                         let link = document.querySelector(".x3ct3a4 a").href;

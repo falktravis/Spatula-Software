@@ -83,6 +83,15 @@ const facebookListener = async (message, task, user, username) => {
 
         //decrease worker count
         users.get(user).workerCount--;
+    }else if(message.action == 'ban'){
+        users.get(user).facebook.get(task).terminate();
+        users.get(user).facebook.delete(task);
+
+        //Free the burner account for use
+        await burnerAccountDB.deleteOne({Username: username});
+
+        //decrease worker count
+        users.get(user).workerCount--;
     }
 }
 
@@ -374,7 +383,14 @@ const executeCommand = async (interaction) => {
             }else if(interaction.commandName === 'facebook-update-message-account'){
                 const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
 
-                await userDB.updateOne({UserId: interaction.user.id}, {$set: {MessageAccount: {Cookies : JSON.parse(interaction.options.getString("cookies")), Platform : randomPlatform}}});
+                let cookies = JSON.parse(interaction.options.getString("cookies"));
+                for(let i = 0; i < cookies.length; i++){
+                    if(cookies[i].sameSite == null){
+                        cookies[i].sameSite = 'no_restriction';
+                    }
+                }
+
+                await userDB.updateOne({UserId: interaction.user.id}, {$set: {MessageAccount: {Cookies : cookies, Platform : randomPlatform}}});
 
                 const userObj = await userDB.findOne({UserId: interaction.user.id});
                 if(userObj.MessageAccount.Proxy == null){
