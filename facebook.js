@@ -50,12 +50,13 @@ const errorMessage = (message, error) => {
 
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 600000;
-    const maxNumber = 1200000;
+    const minNumber = 1500000; //25 mins
+    const maxNumber = 2100000; //35 mins
     const power = 1.5;
     const random = Math.random();
     const range = maxNumber - minNumber;
     const number = minNumber + Math.pow(random, power) * range;
+    console.log(Math.round(number) / 60000); //!Log the minutes for testing
     return Math.round(number);
 }
 
@@ -218,7 +219,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`]
         });
         let pages = await mainBrowser.pages();
@@ -325,14 +326,14 @@ const start = async () => {
                 await pause();
                 await cursor.click('[aria-label="Apply"]');
                 //wait for the results to update, we aren't concerned about time
-                await new Promise(r => setTimeout(r, 3000));
-                await mainPage.reload({ waitUntil: 'networkidle0' });
+                await new Promise(r => setTimeout(r, 9000));
+                //!await mainPage.reload({ waitUntil: 'networkidle0' });
             } catch (error) {
                 count++;
                 console.log(count + " : " + error);
                 if(count < 4){
                     await mainPage.reload({ waitUntil: 'networkidle0' });
-                    setDistance();
+                    await setDistance();
                 }else{
                     errorMessage('Error with setting distance', error);
                 }
@@ -449,7 +450,7 @@ function interval() {
     setTimeout(async () => {
         if(isRunning){
             try {
-                await mainPage.reload({ waitUntil: 'networkidle0' });
+                await mainPage.reload({ waitUntil: 'domcontentloaded' });
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
                         let link = document.querySelector(".x3ct3a4 a").href;
@@ -468,17 +469,19 @@ function interval() {
             if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
         
                 let postNum = 1;
-                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 12){
+                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20){
                     console.log("New Post: " + newPost + " post num: " + postNum);
 
                     let postObj;
                     if(workerData.messageType == 1){//auto message
                         await sendMessage(newPost);
 
-                        //check for video //!No idea if this works lol
+                        //check for video
                         let isVideo = false;
-                        if(await itemPage.$('div.x11v4dcs') != null){
+                        if(await itemPage.$('[aria-label="Loading..."]') != null){
                             console.log('video sequence: ' + newPost);
+                            itemPageFullLoad = true;
+                            await itemPage.reload({ waitUntil: 'domcontentloaded' });
                             isVideo = true;
                         }
 
@@ -522,7 +525,7 @@ function interval() {
                                     }
                                 }
                             });
-                            await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
+                            await itemPage.goto(newPost, { waitUntil: 'domcontentloaded' });
                         }catch(error){
                             errorMessage('Error with product page initiation, no message', error);
                         }
@@ -534,7 +537,7 @@ function interval() {
                             if(await itemPage.$('[aria-label="Loading..."]') != null){
                                 console.log('video sequence: ' + newPost);
                                 itemPageFullLoad = true;
-                                await itemPage.reload({ waitUntil: 'networkidle0' });
+                                await itemPage.reload({ waitUntil: 'domcontentloaded' });
                                 isVideo = true;
                             }
 
@@ -636,7 +639,7 @@ function interval() {
                 }
 
                 //Check for a post hard cap
-                if(postNum > 12){
+                if(postNum > 20){
                     client.channels.cache.get(workerData.channel).send("Too many new posts to notify. Make your query more specific");
                 }
 
