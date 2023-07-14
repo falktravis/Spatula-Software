@@ -232,10 +232,10 @@ const start = async () => {
 
         //network shit
         await mainPage.setRequestInterception(true);
-        mainPage.on('response', async request => {
+        mainPage.on('response', async response => {
 
             //detect network stuff
-            const headers = request.headers();
+            const headers = response.headers();
             const contentLength = headers['content-length'];
             if(contentLength != undefined){
                 networkData += parseInt(contentLength);
