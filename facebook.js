@@ -50,8 +50,8 @@ const errorMessage = (message, error) => {
 
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 1500000; //25 mins
-    const maxNumber = 2100000; //35 mins
+    const minNumber = 1620000; //27 mins
+    const maxNumber = 1980000; //33 mins
     const power = 1.5;
     const random = Math.random();
     const range = maxNumber - minNumber;
@@ -124,7 +124,7 @@ const sendMessage = async (link) => {
         await itemPage.setRequestInterception(true);
         itemPage.on('request', async request => {
             const resource = request.resourceType();
-            if(resource == 'image' || resource == 'media'){//resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'
+            if(resource == 'image'){//resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'
                 request.abort();
             }else{
                 request.continue();
@@ -522,7 +522,7 @@ function interval() {
                             itemPage.on('request', async request => {
                                 const resource = request.resourceType();
                                 if(itemPageFullLoad){
-                                    if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media'){
+                                    if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
                                         request.abort();
                                     }else{
                                         request.continue();
