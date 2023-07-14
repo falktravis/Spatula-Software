@@ -96,7 +96,7 @@ const sendMessage = async (link) => {
     //browser with static isp
     try {
         itemBrowser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.messagePlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${messageProxy}`],
             timeout: 60000
         });
@@ -220,7 +220,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`],
             timeout: 60000
         });
