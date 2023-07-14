@@ -97,7 +97,8 @@ const sendMessage = async (link) => {
     try {
         itemBrowser = await puppeteer.launch({
             headless: true,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.messagePlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${messageProxy}`]
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.messagePlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${messageProxy}`],
+            timeout: 60000
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
@@ -220,7 +221,8 @@ const start = async () => {
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
             headless: true,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`]
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`],
+            timeout: 60000
         });
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
@@ -231,10 +233,18 @@ const start = async () => {
         //network shit
         await mainPage.setRequestInterception(true);
         mainPage.on('response', async request => {
+
+            //detect network stuff
             const headers = request.headers();
             const contentLength = headers['content-length'];
             if(contentLength != undefined){
                 networkData += parseInt(contentLength);
+            }
+
+            //detect redirection
+            if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
+                const redirectURL = response.headers()['location'];
+                console.log(`Redirected to: ${redirectURL}`);
             }
         });
 
@@ -450,7 +460,7 @@ function interval() {
     setTimeout(async () => {
         if(isRunning){
             try {
-                await mainPage.reload({ waitUntil: 'domcontentloaded' });
+                await mainPage.reload({ waitUntil: 'networkidle0' });
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
                         let link = document.querySelector(".x3ct3a4 a").href;
@@ -478,7 +488,7 @@ function interval() {
 
                         //check for video
                         let isVideo = false;
-                        if(await itemPage.$('[aria-label="Loading..."]') != null){
+                        if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
                             console.log('video sequence: ' + newPost);
                             itemPageFullLoad = true;
                             await itemPage.reload({ waitUntil: 'domcontentloaded' });
@@ -512,7 +522,7 @@ function interval() {
                             itemPage.on('request', async request => {
                                 const resource = request.resourceType();
                                 if(itemPageFullLoad){
-                                    if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'media'){
+                                    if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media'){
                                         request.abort();
                                     }else{
                                         request.continue();
@@ -525,6 +535,18 @@ function interval() {
                                     }
                                 }
                             });
+
+                            //change http headers
+                            itemPage.setExtraHTTPHeaders({
+                                'Referer': 'https://www.facebook.com/login',
+                                'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
+                                'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
+                                'Sec-Ch-Ua-Platform': workerData.burnerPlatform
+                            });
+
+                            //change the viewport
+                            itemPage.setViewport({ width: 1366, height: 768 });
+
                             await itemPage.goto(newPost, { waitUntil: 'domcontentloaded' });
                         }catch(error){
                             errorMessage('Error with product page initiation, no message', error);
@@ -534,7 +556,7 @@ function interval() {
                         try{
                             //check for video
                             let isVideo = false;
-                            if(await itemPage.$('[aria-label="Loading..."]') != null){
+                            if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
                                 console.log('video sequence: ' + newPost);
                                 itemPageFullLoad = true;
                                 await itemPage.reload({ waitUntil: 'domcontentloaded' });
@@ -562,7 +584,7 @@ function interval() {
                     //Handle Discord messaging
                     if(workerData.messageType != 2){//if its not manual messaging
                         try{
-                            await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
+                            await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
                                 .setColor(0x0099FF)
                                 .setTitle(postObj.title + " - " + postObj.price)
                                 .setURL(newPost)
@@ -578,7 +600,7 @@ function interval() {
                     }else{
                         let notification;
                         try{
-                            notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name + " @everyone", embeds: [new EmbedBuilder()
+                            notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
                                 .setColor(0x0099FF)
                                 .setTitle(postObj.title + " - " + postObj.price)
                                 .setURL(newPost)
@@ -643,8 +665,13 @@ function interval() {
                     client.channels.cache.get(workerData.channel).send("Too many new posts to notify. Make your query more specific");
                 }
 
+                //ping the user
+                client.channels.cache.get(workerData.channel).send("New Notifications @everyone");
+
                 //set the main listing storage
                 await setListingStorage();
+            }else{
+                console.log(`\n No New Post @${workerData.link} with distance: ${workerData.distance} \n`);
             }
             interval();
         }
