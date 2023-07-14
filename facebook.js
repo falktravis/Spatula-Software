@@ -213,6 +213,7 @@ let messageProxy = workerData.messageProxy;
 //!let messageQueue = [];
 let networkData = 0;
 let mainPageInitiate = true;
+let startCount = 0;
 
 const start = async () => {
     let cursor;
@@ -321,35 +322,31 @@ const start = async () => {
     
     //set distance
     if(workerData.distance != null && isCreate == true && startError == false){
-        let count = 0;
 
-        const setDistance = async() => {
-            try {
-                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
-                await pause();
-                await cursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
-                await pause();
-                await cursor.click('div.x9f619.x14vqqas.xh8yej3');
-                await pause();
-                await cursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
-                await pause();
-                await cursor.click('[aria-label="Apply"]');
-                //wait for the results to update, we aren't concerned about time
-                await new Promise(r => setTimeout(r, 9000));
-                //!await mainPage.reload({ waitUntil: 'networkidle0' });
-            } catch (error) {
-                count++;
-                console.log(count + " : " + error);
-                if(count < 4){
-                    await mainPage.reload({ waitUntil: 'networkidle0' });
-                    await setDistance();
-                }else{
-                    errorMessage('Error with setting distance', error);
-                }
+        try {
+            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
+            await pause();
+            await cursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+            await pause();
+            await cursor.click('div.x9f619.x14vqqas.xh8yej3');
+            await pause();
+            await cursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
+            await pause();
+            await cursor.click('[aria-label="Apply"]');
+            //wait for the results to update, we aren't concerned about time
+            await new Promise(r => setTimeout(r, 9000));
+            //!await mainPage.reload({ waitUntil: 'networkidle0' });
+        } catch (error) {
+            startCount++;
+            console.log(startCount + " : " + error);
+            if(startCount < 3){
+                await mainBrowser.close();
+                await start();
+            }else{
+                errorMessage('Error with setting distance', error);
             }
         }
-        await setDistance();
     }
 
     mainPageInitiate = false;
@@ -441,7 +438,6 @@ const handleTime = async (intervalFunction) => {
             intervalFunction(); 
         }
     }else if(isCreate == false){
-        await mainPage.close();
         await mainBrowser.close();
         mainBrowser = null;
         console.log("page close");
