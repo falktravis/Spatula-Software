@@ -27,7 +27,7 @@ parentPort.on('message', async (message) => {
 //error message send function
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
-    //client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
+    client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
     client.channels.cache.get(workerData.channel).send(message + ': ' + error);
 }
 
@@ -210,7 +210,7 @@ const start = async () => {
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: false,
+            headless: 'new',
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.burnerProxy}`],
             timeout: 60000
         });
