@@ -33,8 +33,8 @@ const errorMessage = (message, error) => {
 
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 480000; //8 mins
-    const maxNumber = 720000; //12 mins
+    const minNumber = 1680000; //28 mins
+    const maxNumber = 1920000; //32 mins
     const power = 1.5;
     const random = Math.random();
     const range = maxNumber - minNumber;
@@ -203,8 +203,7 @@ let networkData = 0;
 let startCount = 0; //number of times tried to set distance
 let isDormant = false; //true if task can be deleted
 let mainCursor;
-let isPriceIncrease = true; //bool to increase or decrease nextPriceNum
-let defaultPrice; //actual max price
+let mainPageInitiate = true;
 
 const start = async () => {
 
@@ -241,10 +240,18 @@ const start = async () => {
 
         mainPage.on('request', async request => {
             const resource = request.resourceType();
-            if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'websocket' && resource != 'other' && resource != 'fetch' && resource != 'manifest'){
-                request.abort();
+            if(mainPageInitiate){
+                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
             }else{
-                request.continue();
+                if(resource != 'document'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
             }
         });
 
@@ -297,14 +304,6 @@ const start = async () => {
             //message to delete listener
             parentPort.postMessage({action: 'success'});
         }
-
-        //set default price
-        if(mainPage.url().includes('maxPrice')){
-            let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
-            defaultPrice = parseInt(value.replace(/[$,]/g, ''));
-        }else{
-            defaultPrice = 999999;
-        }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
     }
@@ -338,6 +337,7 @@ const start = async () => {
         }
     }
 
+    mainPageInitiate = false;
     console.log("Data: " + networkData);
 }
 
@@ -452,45 +452,7 @@ function interval() {
     setTimeout(async () => {
         if(isRunning){
             try {
-                //Use price to refresh results
-                await mainCursor.click('[aria-label="Maximum Range"]');
-                if(mainPage.url().includes('maxPrice')){
-                    //get the current value
-                    let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
-                    value = parseInt(value.replace(/[$,]/g, ''));
-
-                    //delete the current value
-                    await mainPage.keyboard.down('Control');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
-                    await mainPage.keyboard.press('a');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
-                    await mainPage.keyboard.up('Control');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
-                    await mainPage.keyboard.press('Backspace');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
-
-                    //increase or decrease the value
-                    if(isPriceIncrease){
-                        value++;
-                    }else{
-                        value--;
-                    }
-                    isPriceIncrease = !isPriceIncrease;
-
-                    //type the new value and press enter
-                    await typeWithRandomSpeed(mainPage, '[aria-label="Maximum Range"]', value.toString());
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
-                    await mainPage.keyboard.press('Enter');
-                }else{
-                    await typeWithRandomSpeed(mainPage, '[aria-label="Maximum Range"]', '999999');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
-                    await mainPage.keyboard.press('Enter');
-                    isPriceIncrease = false;
-                }
-
-                //wait for results to update
-                await new Promise(r => setTimeout(r, 5000));
-
+                await mainPage.reload({ waitUntil: 'domcontentloaded' });
                 //check for new posts
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
