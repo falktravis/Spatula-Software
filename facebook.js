@@ -20,38 +20,21 @@ parentPort.on('message', async (message) => {
             await itemBrowser.close();
         }
 
-        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername, proxy: workerData.burnerProxy});
-    }else if(message.action === 'newProxies'){
-
-        //set new proxies
-        burnerProxy = message.burnerProxy;
-        if(workerData.messageType != 3){
-            messageProxy = message.messageProxy;
-        }
-
-        //restart burner account page
-        await mainBrowser.close();
-        if(itemBrowser != null){
-            await itemBrowser.close();
-        }
-        await start();
-
-        //message the main script back
-        parentPort.postMessage({action: 'usernames', messageUsername: workerData.messageUsername, burnerUsername: workerData.burnerUsername});
+        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername});
     }
 });
 
 //error message send function
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
-    client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
+    //client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
     client.channels.cache.get(workerData.channel).send(message + ': ' + error);
 }
 
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 1620000; //27 mins
-    const maxNumber = 1980000; //33 mins
+    const minNumber = 480000; //8 mins
+    const maxNumber = 720000; //12 mins
     const power = 1.5;
     const random = Math.random();
     const range = maxNumber - minNumber;
@@ -76,6 +59,15 @@ const platformConverter = (platform) => {
     }
 }
 
+// Function to simulate typing with randomized speed
+async function typeWithRandomSpeed(page, elementSelector, text) {
+    const element = await page.$(elementSelector);
+    for (const char of text) {
+        // Type a character
+        await element.type(char, { delay: Math.floor(Math.random() * (100 - 50 + 1)) + 50 });
+    }
+}
+
 //!Queue stuff
 /*const handleQueue = async () => {
     //run the command
@@ -91,20 +83,20 @@ const platformConverter = (platform) => {
 }*/
 
 const sendMessage = async (link) => {
-    let cursor;
+    let messageCursor;
 
     //browser with static isp
     try {
         itemBrowser = await puppeteer.launch({
             headless: 'new',
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.messagePlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${messageProxy}`],
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.messagePlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.messageProxy}`],
             timeout: 60000
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
 
         //create a cursor
-        cursor = createCursor(itemPage);
+        messageCursor = createCursor(itemPage);
 
         //change http headers
         itemPage.setExtraHTTPHeaders({
@@ -149,28 +141,26 @@ const sendMessage = async (link) => {
                 console.log("local pickup only message sequence");
                 if(workerData.message != null){
                     await pause();
-                    await cursor.click('div.x1daaz14 [aria-label="Send seller a message"]');
+                    await messageCursor.click('div.x1daaz14 [aria-label="Send seller a message"]');
                     await itemPage.keyboard.press('Backspace');
-                    const messageTextArea = await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]');
-                    await messageTextArea.type(workerData.message);
+                    await typeWithRandomSpeed(itemPage, 'div.x1daaz14 [aria-label="Send seller a message"]', workerData.message);
                 }
                 await pause();
-                await cursor.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
+                await messageCursor.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
                 await itemPage.waitForSelector('[aria-label="Message Again"]');
                 await client.channels.cache.get(workerData.channel).send("Message Sent!");
             }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
                 console.log("shipping message sequence");
                 await pause();
-                await cursor.click('[aria-label="Message"]');
+                await messageCursor.click('[aria-label="Message"]');
                 await itemPage.waitForSelector('[aria-label="Please type your message to the seller"]');
                 if(workerData.message != null){
                     await pause();
-                    await cursor.click('[aria-label="Please type your message to the seller"]');
-                    const messageTextArea = await itemPage.$('[aria-label="Please type your message to the seller"]');
-                    await messageTextArea.type(workerData.message);
+                    await messageCursor.click('[aria-label="Please type your message to the seller"]');
+                    await typeWithRandomSpeed(itemPage, '[aria-label="Please type your message to the seller"]', workerData.message);
                 }
                 await pause();
-                await cursor.click('[aria-label="Send Message"]');
+                await messageCursor.click('[aria-label="Send Message"]');
                 await itemPage.waitForSelector('[aria-label="Message Again"]');
                 await client.channels.cache.get(workerData.channel).send("Message Sent!");
             }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
@@ -198,8 +188,8 @@ const sendMessage = async (link) => {
     }
 }
 
-let isCreate = true;
-let startError = false;
+let isCreate = true; //distinguishes first run from browser restart
+let startError = false; //stops script on error
 let newPost;
 let mainBrowser;
 let mainPage;
@@ -208,28 +198,28 @@ let itemBrowser;
 let mainListingStorage;
 let burnerCookies = workerData.burnerCookies;
 let messageCookies = workerData.messageCookies;
-let burnerProxy = workerData.burnerProxy;
-let messageProxy = workerData.messageProxy;
 //!let messageQueue = [];
 let networkData = 0;
-let mainPageInitiate = true;
-let startCount = 0;
+let startCount = 0; //number of times tried to set distance
+let isDormant = false; //true if task can be deleted
+let mainCursor;
+let isPriceIncrease = true; //bool to increase or decrease nextPriceNum
+let defaultPrice; //actual max price
 
 const start = async () => {
-    let cursor;
 
     try{
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`],
+            headless: false,
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.burnerProxy}`],
             timeout: 60000
         });
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
 
         //create a cursor
-        cursor = createCursor(mainPage);
+        mainCursor = createCursor(mainPage);
 
         //network shit
         await mainPage.setRequestInterception(true);
@@ -251,19 +241,10 @@ const start = async () => {
 
         mainPage.on('request', async request => {
             const resource = request.resourceType();
-
-            if(mainPageInitiate){
-                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
+            if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'websocket' && resource != 'other' && resource != 'fetch' && resource != 'manifest'){
+                request.abort();
             }else{
-                if(resource != 'document'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
+                request.continue();
             }
         });
 
@@ -282,7 +263,7 @@ const start = async () => {
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
-        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+        await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
         
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
@@ -316,6 +297,14 @@ const start = async () => {
             //message to delete listener
             parentPort.postMessage({action: 'success'});
         }
+
+        //set default price
+        if(mainPage.url().includes('maxPrice')){
+            let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
+            defaultPrice = parseInt(value.replace(/[$,]/g, ''));
+        }else{
+            defaultPrice = 999999;
+        }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
     }
@@ -326,17 +315,17 @@ const start = async () => {
         try {
             await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
             await pause();
-            await cursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
             await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
             await pause();
-            await cursor.click('div.x9f619.x14vqqas.xh8yej3');
+            await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
             await pause();
-            await cursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
+            await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
             await pause();
-            await cursor.click('[aria-label="Apply"]');
+            await mainCursor.click('[aria-label="Apply"]');
             //wait for the results to update, we aren't concerned about time
             await new Promise(r => setTimeout(r, 9000));
-            //!await mainPage.reload({ waitUntil: 'networkidle0' });
+            //!await mainPage.reload({ waitUntil: 'networkidle2' });
         } catch (error) {
             startCount++;
             console.log(startCount + " : " + error);
@@ -349,7 +338,6 @@ const start = async () => {
         }
     }
 
-    mainPageInitiate = false;
     console.log("Data: " + networkData);
 }
 
@@ -426,21 +414,29 @@ const handleTime = async (intervalFunction) => {
     }
     
     if(isRunning){
-        await start();
+        try {
+            await start();
 
-        if(startError == false){
-            //set the listing storage, only on the initial creation
-            if(isCreate == true){
-                await setListingStorage();
-                isCreate = false;
+            if(startError == false){
+                //set the listing storage, only on the initial creation
+                if(isCreate == true){
+                    await setListingStorage();
+                    isCreate = false;
+                }
+    
+                intervalFunction(); 
             }
-
-            intervalFunction(); 
+        } catch (error) {
+            errorMessage('Error starting task', error);
         }
     }else if(isCreate == false){
-        await mainBrowser.close();
-        mainBrowser = null;
-        console.log("page close");
+        try {
+            await mainBrowser.close();
+            mainBrowser = null;
+            console.log("page close");
+        } catch (error) {
+            errorMessage('Error with stopping task for the day', error);
+        }
     }
 
     setTimeout(() => {
@@ -456,7 +452,46 @@ function interval() {
     setTimeout(async () => {
         if(isRunning){
             try {
-                await mainPage.reload({ waitUntil: 'networkidle0' });
+                //Use price to refresh results
+                await mainCursor.click('[aria-label="Maximum Range"]');
+                if(mainPage.url().includes('maxPrice')){
+                    //get the current value
+                    let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
+                    value = parseInt(value.replace(/[$,]/g, ''));
+
+                    //delete the current value
+                    await mainPage.keyboard.down('Control');
+                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
+                    await mainPage.keyboard.press('a');
+                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
+                    await mainPage.keyboard.up('Control');
+                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
+                    await mainPage.keyboard.press('Backspace');
+                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
+
+                    //increase or decrease the value
+                    if(isPriceIncrease){
+                        value++;
+                    }else{
+                        value--;
+                    }
+                    isPriceIncrease = !isPriceIncrease;
+
+                    //type the new value and press enter
+                    await typeWithRandomSpeed(mainPage, '[aria-label="Maximum Range"]', value.toString());
+                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
+                    await mainPage.keyboard.press('Enter');
+                }else{
+                    await typeWithRandomSpeed(mainPage, '[aria-label="Maximum Range"]', '999999');
+                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
+                    await mainPage.keyboard.press('Enter');
+                    isPriceIncrease = false;
+                }
+
+                //wait for results to update
+                await new Promise(r => setTimeout(r, 5000));
+
+                //check for new posts
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
                         let link = document.querySelector(".x3ct3a4 a").href;

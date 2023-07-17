@@ -312,8 +312,9 @@ const executeCommand = async (interaction) => {
                             console.log('terminate');
     
                             //set cookies in db
-                            if(message.burnerCookies != null){
-                                await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
+                            await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
+                            if(message.messageCookies != null){
+                                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
                             }
     
                             //!reduce active task count by one
