@@ -476,6 +476,7 @@ function interval() {
         if(isRunning){
             try {
                 //Get new price or refresh
+                console.log("Trying to log");
                 console.log("Remaining price changes: " + (possiblePrices.length - availablePrices.length));
                 if((possiblePrices.length - availablePrices.length) < 4){
                     //get a value to use and remove it from possible values
