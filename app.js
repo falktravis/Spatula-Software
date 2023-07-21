@@ -164,21 +164,8 @@ const users = new Map();
 
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
-    if (!interaction.isCommand() && !interaction.isButton()) {
-        console.log('Received an unknown interaction type:', interaction.type);
-        return;
-    }
-
-    // Handle slash commands
-    if (interaction.isCommand()) {
-        console.log('Received a slash command:', interaction.commandName);
-        // Your slash command handling code goes here
-    }
-
-    // Handle button clicks
     if (interaction.isButton()) {
         console.log('Received a button click:', interaction.customId);
-        // Your button click handling code goes here
     }
 
 	if (!interaction.isChatInputCommand()) return;

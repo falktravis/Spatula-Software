@@ -229,6 +229,9 @@ const start = async () => {
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.burnerProxy}`],
             timeout: 60000
         });
+        const context = mainBrowser.defaultBrowserContext();
+        context.overridePermissions("https://www.facebook.com", ["notifications"]);
+
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
 
