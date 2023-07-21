@@ -213,76 +213,88 @@ const executeCommand = async (interaction) => {
                 //checks if user exists
                 if(users.has(interaction.user.id)){
                     if(interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
-                        //compare with db total task count
-                        const userObj = await userDB.findOne({UserId: interaction.user.id});
+                        if(interaction.options.getString("link").includes("maxPrice")){
+                            let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
+                            maxPrice = parseInt(maxPrice[1]);
+                            console.log(maxPrice.toString()); //!testing
+                            if(maxPrice.toString() <= 100000){
+                                //compare with db total task count
+                                const userObj = await userDB.findOne({UserId: interaction.user.id});
 
-                        if(users.get(interaction.user.id).taskCount < userObj.ConcurrentTasks){
-                            //get user
-                            const user = users.get(interaction.user.id);
+                                if(users.get(interaction.user.id).taskCount < userObj.ConcurrentTasks){
+                                    //get user
+                                    const user = users.get(interaction.user.id);
 
-                            if(!user.facebook.has(interaction.options.getString("name"))){
-                                if(userObj.MessageAccount != null || interaction.options.getNumber("message-type") == 3){
-                                    let start = interaction.options.getNumber("start");
-                                    let end = interaction.options.getNumber("end");
-                            
-                                    //time difference
-                                    let timeDiff;
-                                    if(start < end){
-                                        timeDiff = end - start;
-                                    }else{
-                                        timeDiff = (24 - start) + end;
-                                    }
-                                
-                                    //both times are between 1 and 25, the difference is less than or equal to 14
-                                    if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
-                                        //increase the worker count
-                                        users.get(interaction.user.id).taskCount++;
-        
-                                        //burner account assignment
-                                        let burnerAccountObj = await burnerAccountDB.findOne({ActiveTasks: 0});
+                                    if(!user.facebook.has(interaction.options.getString("name"))){
+                                        if(userObj.MessageAccount != null || interaction.options.getNumber("message-type") == 3){
+                                            let start = interaction.options.getNumber("start");
+                                            let end = interaction.options.getNumber("end");
+                                    
+                                            //time difference
+                                            let timeDiff;
+                                            if(start < end){
+                                                timeDiff = end - start;
+                                            }else{
+                                                timeDiff = (24 - start) + end;
+                                            }
+                                        
+                                            //both times are between 1 and 25, the difference is less than or equal to 14
+                                            if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
+                                                //increase the worker count
+                                                users.get(interaction.user.id).taskCount++;
 
-                                        //if there is no un-active accounts 
-                                        if(burnerAccountObj == null){
-                                            burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
-                                            console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-                                            discordClient.channels.cache.get('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+                                                //burner account assignment
+                                                let burnerAccountObj = await burnerAccountDB.findOne({ActiveTasks: 0});
+
+                                                //if there is no un-active accounts 
+                                                if(burnerAccountObj == null){
+                                                    burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
+                                                    console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
+                                                    discordClient.channels.cache.get('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+                                                }
+
+                                                await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
+
+                                                //create a new worker and add it to the map
+                                                user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
+                                                    name: interaction.options.getString("name"),
+                                                    link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
+                                                    messageType: interaction.options.getNumber("message-type"),
+                                                    message: interaction.options.getString("message"),
+                                                    burnerUsername: burnerAccountObj.Username,
+                                                    burnerProxy: burnerAccountObj.Proxy,
+                                                    messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
+                                                    burnerCookies: burnerAccountObj.Cookies,
+                                                    messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
+                                                    burnerPlatform: burnerAccountObj.Platform,
+                                                    messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
+                                                    maxPrice: maxPrice,
+                                                    start: start * 60,
+                                                    end: end * 60,
+                                                    distance: interaction.options.getNumber("distance"),
+                                                    channel: interaction.channelId,
+                                                }}));
+
+                                                user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id, burnerAccountObj.Username)); 
+
+                                                discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
+                                            }else{
+                                                discordClient.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
+                                            }
+                                        } else{
+                                            discordClient.channels.cache.get(interaction.channelId).send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
                                         }
-
-                                        await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
-        
-                                        //create a new worker and add it to the map
-                                        user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
-                                            name: interaction.options.getString("name"),
-                                            link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
-                                            messageType: interaction.options.getNumber("message-type"),
-                                            message: interaction.options.getString("message"),
-                                            burnerUsername: burnerAccountObj.Username,
-                                            burnerProxy: burnerAccountObj.Proxy,
-                                            messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
-                                            burnerCookies: burnerAccountObj.Cookies,
-                                            messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
-                                            burnerPlatform: burnerAccountObj.Platform,
-                                            messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
-                                            start: start * 60,
-                                            end: end * 60,
-                                            distance: interaction.options.getNumber("distance"),
-                                            channel: interaction.channelId,
-                                        }}));
-
-                                        user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id, burnerAccountObj.Username)); 
-        
-                                        discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
                                     }else{
-                                        discordClient.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
+                                        discordClient.channels.cache.get(interaction.channelId).send("A task with this name already exists, restart the task with a new name.");
                                     }
-                                } else{
-                                    discordClient.channels.cache.get(interaction.channelId).send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
+                                }else{
+                                    discordClient.channels.cache.get(interaction.channelId).send("You have reached your task limit for your plan, upgrade to make more.");
                                 }
                             }else{
-                                discordClient.channels.cache.get(interaction.channelId).send("A task with this name already exists, restart the task with a new name.");
+                                discordClient.channels.cache.get(interaction.channelId).send("Max price is to high, make your max price more realistic.");
                             }
                         }else{
-                            discordClient.channels.cache.get(interaction.channelId).send("You have reached your task limit for your plan, upgrade to make more.");
+                            discordClient.channels.cache.get(interaction.channelId).send("Your link must include a max price");
                         }
                     }else{
                         discordClient.channels.cache.get(interaction.channelId).send("Invalid Link");

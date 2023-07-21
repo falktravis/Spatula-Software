@@ -68,19 +68,34 @@ async function typeWithRandomSpeed(page, elementSelector, text) {
     }
 }
 
-//!Queue stuff
-/*const handleQueue = async () => {
-    //run the command
-    await sendMessage(messageQueue[0]);
+//generates an array of possible prices based on the max price
+const getPossiblePrices = () => {
+    let array = [];
+    let arrayValue = workerData.maxPrice;
 
-    //delete the executed command from queue
-    messageQueue.shift();
-    console.log(messageQueue);
-    //check the queue for more commands and run it back if necessary
-    if(messageQueue.length > 0){
-        await handleQueue();
+    const generateArray = async (range, inc) => {
+        while(arrayValue <= workerData.maxPrice + range){
+            array.push(arrayValue);
+            arrayValue = arrayValue + inc;
+        }
     }
-}*/
+
+    if(workerData.maxPrice < 50){
+        generateArray(10, 2);
+    }else if(workerData.maxPrice < 100){
+        generateArray(25, 5);
+    }else if(workerData.maxPrice < 500){
+        generateArray(50, 10);
+    }else if(workerData.maxPrice < 1000){
+        generateArray(100, 20);
+    }else if(workerData.maxPrice < 10000){
+        generateArray(500, 50);
+    }else{
+        generateArray(1000, 100);
+    }
+
+    return array;
+}
 
 const sendMessage = async (link) => {
     let messageCursor;
@@ -198,13 +213,13 @@ let itemBrowser;
 let mainListingStorage;
 let burnerCookies = workerData.burnerCookies;
 let messageCookies = workerData.messageCookies;
-//!let messageQueue = [];
 let networkData = 0;
 let startCount = 0; //number of times tried to set distance
 let isDormant = false; //true if task can be deleted
 let mainCursor;
-let isPriceIncrease = true; //bool to increase or decrease nextPriceNum
-let defaultPrice; //actual max price
+let possiblePrices = getPossiblePrices(); //array of all possible prices for max price
+let availablePrices = possiblePrices; //prices that are available to switch to
+console.log(availablePrices);
 
 const start = async () => {
 
@@ -452,12 +467,14 @@ function interval() {
     setTimeout(async () => {
         if(isRunning){
             try {
-                //Use price to refresh results
-                await mainCursor.click('[aria-label="Maximum Range"]');
-                if(mainPage.url().includes('maxPrice')){
-                    //get the current value
-                    let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
-                    value = parseInt(value.replace(/[$,]/g, ''));
+                //Get new price or refresh
+                if(possiblePrices.length - availablePrices.length < 4){
+                    //get a value to use and remove it from possible values
+                    let value = availablePrices.splice((Math.floor(Math.random() * availablePrices.length)), 1);
+                    console.log(availablePrices);
+                    
+                    //Use price to refresh results
+                    await mainCursor.click('[aria-label="Maximum Range"]');
 
                     //delete the current value
                     await mainPage.keyboard.down('Control');
@@ -469,27 +486,26 @@ function interval() {
                     await mainPage.keyboard.press('Backspace');
                     await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
 
-                    //increase or decrease the value
-                    if(isPriceIncrease){
-                        value++;
-                    }else{
-                        value--;
-                    }
-                    isPriceIncrease = !isPriceIncrease;
-
                     //type the new value and press enter
                     await typeWithRandomSpeed(mainPage, '[aria-label="Maximum Range"]', value.toString());
                     await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
                     await mainPage.keyboard.press('Enter');
-                }else{
-                    await typeWithRandomSpeed(mainPage, '[aria-label="Maximum Range"]', '999999');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
-                    await mainPage.keyboard.press('Enter');
-                    isPriceIncrease = false;
-                }
 
-                //wait for results to update
-                await new Promise(r => setTimeout(r, 5000));
+                    //wait for results to update
+                    await new Promise(r => setTimeout(r, 5000));
+                }else{
+                    //refresh the page
+                    console.log("Refresh: " + availablePrices);
+                    await mainPage.reload({waitUntil: 'networkidle2'});
+                    availablePrices = possiblePrices;
+
+                    //get the current value
+                    let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
+                    value = parseInt(value.replace(/[$,]/g, ''));
+
+                    //remove the current value from the available ones
+                    availablePrices.splice(availablePrices.indexOf(value), 1);
+                }
 
                 //check for new posts
                 newPost = await mainPage.evaluate(() => {
@@ -657,14 +673,6 @@ function interval() {
                             const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
                             collector.on('collect', async i => {
                                 i.reply("Sending...");
-    
-                                //!push message into the queue
-                                /*messageQueue.push(i.customId.split("-")[1]);
-                                //run the queue handler if it is not already going
-                                if(messageQueue.length == 1){
-                                    await handleQueue();
-                                    console.log('message finish');
-                                }*/
 
                                 sendMessage(i.customId.split("-")[1]);
     
