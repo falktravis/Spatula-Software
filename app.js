@@ -10,7 +10,6 @@ discordClient.login(process.env.DISCORD_BOT_TOKEN);
 
 //Database connection
 const { MongoClient, ServerApiVersion } = require('mongodb');
-//!const { constants } = require('buffer');  Do I really need this?
 const uri = "mongodb+srv://SpatulaSoftware:jpTANtS4n59oqlam@spatula-software.tyas5mn.mongodb.net/?retryWrites=true&w=majority";
 const mongoClient = new MongoClient(uri, {
   serverApi: {
@@ -165,6 +164,23 @@ const users = new Map();
 
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isCommand() && !interaction.isButton()) {
+        console.log('Received an unknown interaction type:', interaction.type);
+        return;
+    }
+
+    // Handle slash commands
+    if (interaction.isCommand()) {
+        console.log('Received a slash command:', interaction.commandName);
+        // Your slash command handling code goes here
+    }
+
+    // Handle button clicks
+    if (interaction.isButton()) {
+        console.log('Received a button click:', interaction.customId);
+        // Your button click handling code goes here
+    }
+
 	if (!interaction.isChatInputCommand()) return;
 
     const command = interaction.client.commands.get(interaction.commandName);
@@ -216,7 +232,6 @@ const executeCommand = async (interaction) => {
                         if(interaction.options.getString("link").includes("maxPrice")){
                             let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
                             maxPrice = parseInt(maxPrice[1]);
-                            console.log(maxPrice.toString()); //!testing
                             if(maxPrice.toString() <= 100000){
                                 //compare with db total task count
                                 const userObj = await userDB.findOne({UserId: interaction.user.id});

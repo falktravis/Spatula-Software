@@ -219,7 +219,6 @@ let isDormant = false; //true if task can be deleted
 let mainCursor;
 let possiblePrices = getPossiblePrices(); //array of all possible prices for max price
 let availablePrices = possiblePrices; //prices that are available to switch to
-console.log(availablePrices);
 
 const start = async () => {
 
@@ -235,6 +234,12 @@ const start = async () => {
 
         //create a cursor
         mainCursor = createCursor(mainPage);
+
+        //close notification popup
+        mainPage.on('dialog', async dialog => {
+            console.log("Dialog? " + dialog.message());
+            await dialog.dismiss();
+        })
 
         //network shit
         await mainPage.setRequestInterception(true);
