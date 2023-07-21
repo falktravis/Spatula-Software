@@ -476,8 +476,8 @@ function interval() {
         if(isRunning){
             try {
                 //Get new price or refresh
-                console.log(possiblePrices.length - availablePrices.length);
-                if(possiblePrices.length - availablePrices.length < 4){
+                console.log("Remaining price changes: " + (possiblePrices.length - availablePrices.length));
+                if((possiblePrices.length - availablePrices.length) < 4){
                     //get a value to use and remove it from possible values
                     let value = availablePrices.splice((Math.floor(Math.random() * availablePrices.length)), 1);
                     console.log(availablePrices);
