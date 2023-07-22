@@ -84,9 +84,9 @@ const getPossiblePrices = () => {
         generateArray(10, 2);
     }else if(workerData.maxPrice < 100){
         generateArray(25, 5);
-    }else if(workerData.maxPrice < 500){
-        generateArray(50, 10);
     }else if(workerData.maxPrice < 1000){
+        generateArray(50, 10);
+    }else if(workerData.maxPrice < 2500){
         generateArray(100, 20);
     }else if(workerData.maxPrice < 10000){
         generateArray(500, 50);
@@ -217,7 +217,7 @@ let networkData = 0;
 let startCount = 0; //number of times tried to set distance
 let isDormant = false; //true if task can be deleted
 let mainCursor;
-let possiblePrices = getPossiblePrices(); //array of all possible prices for max price
+const possiblePrices = getPossiblePrices(); //array of all possible prices for max price
 let availablePrices = possiblePrices; //prices that are available to switch to
 
 const start = async () => {
@@ -480,6 +480,7 @@ function interval() {
                     //get a value to use and remove it from possible values
                     let value = availablePrices.splice((Math.floor(Math.random() * availablePrices.length)), 1);
                     console.log(availablePrices);
+                    console.log(possiblePrices);
                     
                     //Use price to refresh results
                     await mainCursor.click('[aria-label="Maximum Range"]');
