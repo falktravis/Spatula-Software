@@ -218,7 +218,7 @@ let startCount = 0; //number of times tried to set distance
 let isDormant = false; //true if task can be deleted
 let mainCursor;
 const possiblePrices = getPossiblePrices(); //array of all possible prices for max price
-let availablePrices = possiblePrices; //prices that are available to switch to
+let availablePrices = [...possiblePrices]; //prices that are available to switch to
 
 const start = async () => {
 
