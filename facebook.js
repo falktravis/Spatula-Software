@@ -320,14 +320,6 @@ const start = async () => {
             //message to delete listener
             parentPort.postMessage({action: 'success'});
         }
-
-        //set default price
-        if(mainPage.url().includes('maxPrice')){
-            let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
-            defaultPrice = parseInt(value.replace(/[$,]/g, ''));
-        }else{
-            defaultPrice = 999999;
-        }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
     }
@@ -504,9 +496,9 @@ function interval() {
                     await new Promise(r => setTimeout(r, 5000));
                 }else{
                     //refresh the page
-                    console.log("Refresh: " + availablePrices);
+                    console.log("Refresh");
                     await mainPage.reload({waitUntil: 'networkidle2'});
-                    availablePrices = possiblePrices;
+                    availablePrices = [...possiblePrices];
 
                     //get the current value
                     let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
