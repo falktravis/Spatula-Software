@@ -27,7 +27,7 @@ parentPort.on('message', async (message) => {
 //error message send function
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
-    client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
+    //client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
     client.channels.cache.get(workerData.channel).send(message + ': ' + error);
 }
 
@@ -39,7 +39,6 @@ const getRandomInterval = () => {
     const random = Math.random();
     const range = maxNumber - minNumber;
     const number = minNumber + Math.pow(random, power) * range;
-    console.log(Math.round(number) / 60000); //!Log the minutes for testing
     return Math.round(number);
 }
 
@@ -229,20 +228,17 @@ const start = async () => {
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.burnerProxy}`],
             timeout: 60000
         });
+
+        //close the notif popup
         const context = mainBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
+        //create the page
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
 
         //create a cursor
         mainCursor = createCursor(mainPage);
-
-        //close notification popup
-        mainPage.on('dialog', async dialog => {
-            console.log("Dialog? " + dialog.message());
-            await dialog.dismiss();
-        })
 
         //network shit
         await mainPage.setRequestInterception(true);
@@ -353,7 +349,6 @@ const start = async () => {
         }
     }
 
-    console.log("Data: " + networkData);
 }
 
 const setListingStorage = async () => {
@@ -471,8 +466,6 @@ function interval() {
                 if((possiblePrices.length - availablePrices.length) < 4){
                     //get a value to use and remove it from possible values
                     let value = availablePrices.splice((Math.floor(Math.random() * availablePrices.length)), 1);
-                    console.log(availablePrices);
-                    console.log(possiblePrices);
                     
                     //Use price to refresh results
                     await mainCursor.click('[aria-label="Maximum Range"]');
@@ -508,6 +501,10 @@ function interval() {
                     availablePrices.splice(availablePrices.indexOf(value), 1);
                 }
 
+                let logPrice = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
+                logPrice = parseInt(logPrice.replace(/[$,]/g, ''));
+                console.log(logPrice);
+
                 //check for new posts
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
@@ -517,8 +514,6 @@ function interval() {
                         return null;
                     }
                 });
-                console.log("Main listing storage: " + mainListingStorage);
-                console.log("Data: " + networkData);
             } catch(error) {
                 errorMessage('Error with main page conversion', error);
             }
@@ -527,81 +522,21 @@ function interval() {
             if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
         
                 let postNum = 1;
+                //get the price of the post
+                let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
+                price = parseInt(price.replace(/[$,]/g, ''));
+
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20){
-                    console.log("New Post: " + newPost + " post num: " + postNum);
 
-                    let postObj;
-                    if(workerData.messageType == 1){//auto message
-                        await sendMessage(newPost);
+                    //check if "The price is right"
+                    console.log(price);
+                    if(price <= workerData.maxPrice){
+                        console.log("New Post: " + newPost + " post num: " + postNum);
 
-                        //check for video
-                        let isVideo = false;
-                        if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
-                            console.log('video sequence: ' + newPost);
-                            itemPageFullLoad = true;
-                            await itemPage.reload({ waitUntil: 'domcontentloaded' });
-                            isVideo = true;
-                        }
-
-                        //get post data
-                        try{
-                            postObj = await itemPage.evaluate((isVideo) => {
-                                return {
-                                    img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
-                                    title: document.querySelector('div.xyamay9 h1').innerText,
-                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
-                                    description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                    shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                    price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
-                                };
-                            }, isVideo);
-
-                            await itemBrowser.close();
-                            itemBrowser = null;
-                        } catch(error){
-                            errorMessage('Error with getting item data', error);
-                        }
-                    }else{
-                        //initiate the new page for collecting data
-                        let itemPageFullLoad = false;
-                        try{
-                            itemPage = await mainBrowser.newPage();
-                            await itemPage.setRequestInterception(true);
-                            itemPage.on('request', async request => {
-                                const resource = request.resourceType();
-                                if(itemPageFullLoad){
-                                    if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
-                                        request.abort();
-                                    }else{
-                                        request.continue();
-                                    }
-                                }else{
-                                    if(resource != 'document'){
-                                        request.abort();
-                                    }else{
-                                        request.continue();
-                                    }
-                                }
-                            });
-
-                            //change http headers
-                            itemPage.setExtraHTTPHeaders({
-                                'Referer': 'https://www.facebook.com/login',
-                                'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-                                'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-                                'Sec-Ch-Ua-Platform': workerData.burnerPlatform
-                            });
-
-                            //change the viewport
-                            itemPage.setViewport({ width: 1366, height: 768 });
-
-                            await itemPage.goto(newPost, { waitUntil: 'domcontentloaded' });
-                        }catch(error){
-                            errorMessage('Error with product page initiation, no message', error);
-                        }
-
-                        //get post data
-                        try{
+                        let postObj;
+                        if(workerData.messageType == 1){//auto message
+                            await sendMessage(newPost);
+    
                             //check for video
                             let isVideo = false;
                             if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
@@ -610,81 +545,152 @@ function interval() {
                                 await itemPage.reload({ waitUntil: 'domcontentloaded' });
                                 isVideo = true;
                             }
-
-                            //set post data obj
-                            postObj = await itemPage.evaluate((isVideo) => {
-                                return {
-                                    img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
-                                    title: document.querySelector('div.xyamay9 h1').innerText,
-                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
-                                    description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                    shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                    price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
-                                };
-                            }, isVideo);
-
-                            await itemPage.close();
-                        } catch(error){
-                            errorMessage(`Error with getting item data at ${newPost}`, error);
+    
+                            //get post data
+                            try{
+                                postObj = await itemPage.evaluate((isVideo) => {
+                                    return {
+                                        img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
+                                        title: document.querySelector('div.xyamay9 h1').innerText,
+                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
+                                        description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                        shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                        price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
+                                    };
+                                }, isVideo);
+    
+                                await itemBrowser.close();
+                                itemBrowser = null;
+                            } catch(error){
+                                errorMessage('Error with getting item data', error);
+                            }
+                        }else{
+                            //initiate the new page for collecting data
+                            let itemPageFullLoad = false;
+                            try{
+                                itemPage = await mainBrowser.newPage();
+                                await itemPage.setRequestInterception(true);
+                                itemPage.on('request', async request => {
+                                    const resource = request.resourceType();
+                                    if(itemPageFullLoad){
+                                        if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
+                                            request.abort();
+                                        }else{
+                                            request.continue();
+                                        }
+                                    }else{
+                                        if(resource != 'document'){
+                                            request.abort();
+                                        }else{
+                                            request.continue();
+                                        }
+                                    }
+                                });
+    
+                                //change http headers
+                                itemPage.setExtraHTTPHeaders({
+                                    'Referer': 'https://www.facebook.com/login',
+                                    'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
+                                    'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
+                                    'Sec-Ch-Ua-Platform': workerData.burnerPlatform
+                                });
+    
+                                //change the viewport
+                                itemPage.setViewport({ width: 1366, height: 768 });
+    
+                                await itemPage.goto(newPost, { waitUntil: 'domcontentloaded' });
+                            }catch(error){
+                                errorMessage('Error with product page initiation, no message', error);
+                            }
+    
+                            //get post data
+                            try{
+                                //check for video
+                                let isVideo = false;
+                                if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
+                                    console.log('video sequence: ' + newPost);
+                                    itemPageFullLoad = true;
+                                    await itemPage.reload({ waitUntil: 'domcontentloaded' });
+                                    isVideo = true;
+                                }
+    
+                                //set post data obj
+                                postObj = await itemPage.evaluate((isVideo) => {
+                                    return {
+                                        img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
+                                        title: document.querySelector('div.xyamay9 h1').innerText,
+                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
+                                        description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                        shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                        price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
+                                    };
+                                }, isVideo);
+    
+                                await itemPage.close();
+                            } catch(error){
+                                errorMessage(`Error with getting item data at ${newPost}`, error);
+                            }
                         }
-                    }
-                    
-                    //Handle Discord messaging
-                    if(workerData.messageType != 2){//if its not manual messaging
-                        try{
-                            await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
-                                .setColor(0x0099FF)
-                                .setTitle(postObj.title + " - " + postObj.price)
-                                .setURL(newPost)
-                                .setAuthor({ name: workerData.name })
-                                .setDescription(postObj.description)
-                                .addFields({ name: postObj.date, value: postObj.shipping })
-                                .setImage(postObj.img)
-                                .setTimestamp(new Date())
-                            ]});
-                        }catch(error){
-                            errorMessage('Error with item notification', error);
+                        
+                        //Handle Discord messaging
+                        if(workerData.messageType != 2){//if its not manual messaging
+                            try{
+                                await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                    .setColor(0x0099FF)
+                                    .setTitle(postObj.title + " - " + postObj.price)
+                                    .setURL(newPost)
+                                    .setAuthor({ name: workerData.name })
+                                    .setDescription(postObj.description)
+                                    .addFields({ name: postObj.date, value: postObj.shipping })
+                                    .setImage(postObj.img)
+                                    .setTimestamp(new Date())
+                                ]});
+                            }catch(error){
+                                errorMessage('Error with item notification', error);
+                            }
+                        }else{
+                            let notification;
+                            try{
+                                notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                    .setColor(0x0099FF)
+                                    .setTitle(postObj.title + " - " + postObj.price)
+                                    .setURL(newPost)
+                                    .setAuthor({ name: workerData.name })
+                                    .setDescription(postObj.description)
+                                    .addFields({ name: postObj.date, value: postObj.shipping })
+                                    .setImage(postObj.img)
+                                    .setTimestamp(new Date())
+                                ], components: [new ActionRowBuilder()
+                                    .addComponents(
+                                        new ButtonBuilder()
+                                        .setCustomId('message-' + newPost)
+                                        .setLabel('Message')
+                                        .setStyle(ButtonStyle.Primary),
+                                    )
+                                ]});
+                            }catch(error){
+                                errorMessage('Error with new item notification with message button', error);
+                            }
+    
+                            try {
+                                const filter = i => i.customId.split("-")[0] == 'message';
+                                const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
+                                collector.on('collect', async i => {
+                                    i.reply("Sending...");
+    
+                                    sendMessage(i.customId.split("-")[1]);
+        
+                                    collector.stop();
+                                });
+                                collector.on('end', () => {
+                                    notification.edit({ components: [] });
+                                });
+                            } catch (error) {
+                                errorMessage('Error collecting new item notification button', error);
+                            }
                         }
                     }else{
-                        let notification;
-                        try{
-                            notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
-                                .setColor(0x0099FF)
-                                .setTitle(postObj.title + " - " + postObj.price)
-                                .setURL(newPost)
-                                .setAuthor({ name: workerData.name })
-                                .setDescription(postObj.description)
-                                .addFields({ name: postObj.date, value: postObj.shipping })
-                                .setImage(postObj.img)
-                                .setTimestamp(new Date())
-                            ], components: [new ActionRowBuilder()
-                                .addComponents(
-                                    new ButtonBuilder()
-                                    .setCustomId('message-' + newPost)
-                                    .setLabel('Message')
-                                    .setStyle(ButtonStyle.Primary),
-                                )
-                            ]});
-                        }catch(error){
-                            errorMessage('Error with new item notification with message button', error);
-                        }
-
-                        try {
-                            const filter = i => i.customId.split("-")[0] == 'message';
-                            const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
-                            collector.on('collect', async i => {
-                                i.reply("Sending...");
-
-                                sendMessage(i.customId.split("-")[1]);
-    
-                                collector.stop();
-                            });
-                            collector.on('end', () => {
-                                notification.edit({ components: [] });
-                            });
-                        } catch (error) {
-                            errorMessage('Error collecting new item notification button', error);
-                        }
+                        console.log("\n\nThe Price is Wrong, price: " + price + " max: " + workerData.maxPrice + "\n\n");
                     }
 
                     //Update newPost
@@ -694,7 +700,9 @@ function interval() {
                             let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`).href;
                             return link.substring(0, link.indexOf("?"));
                         }, postNum);
-                        console.log(newPost);
+
+                        price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
+                        price = parseInt(price.replace(/[$,]/g, ''));
                     } catch (error) {
                         errorMessage('Error re-setting new post', error);
                     }
