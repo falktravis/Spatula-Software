@@ -24,7 +24,7 @@ parentPort.on('message', async (message) => {
     }
 });
 
-//error message send function
+//error message send function 
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
     client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
