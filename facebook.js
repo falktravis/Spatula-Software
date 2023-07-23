@@ -492,6 +492,7 @@ function interval() {
                     console.log("Refresh");
                     await mainPage.reload({waitUntil: 'networkidle2'});
                     availablePrices = [...possiblePrices];
+                    console.log(mainPage.url());
 
                     //get the current value
                     let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
@@ -524,7 +525,11 @@ function interval() {
                 let postNum = 1;
                 //get the price of the post
                 let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
-                price = parseInt(price.replace(/[$,]/g, ''));
+                if(price == 'FREE'){
+                    price = 0;
+                }else{
+                    price = parseInt(price.replace(/[$,]/g, ''));
+                }
 
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20){
 
@@ -702,7 +707,11 @@ function interval() {
                         }, postNum);
 
                         price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
-                        price = parseInt(price.replace(/[$,]/g, ''));
+                        if(price == 'FREE'){
+                            price = 0;
+                        }else{
+                            price = parseInt(price.replace(/[$,]/g, ''));
+                        }
                     } catch (error) {
                         errorMessage('Error re-setting new post', error);
                     }
