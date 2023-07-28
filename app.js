@@ -502,8 +502,6 @@ const executeCommand = async (interaction) => {
                     user.facebook.forEach((task, taskKey) => {
                         list += `\n\t\t-${taskKey}`;
                     })
-            
-                    //**Ebay stuff removed
                 })
     
                 //send the completed message string
@@ -512,6 +510,41 @@ const executeCommand = async (interaction) => {
                 }else{
                     discordClient.channels.cache.get(interaction.channelId).send('No Workers');
                 }
+            }
+            else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
+                users.forEach((user) => {
+                    user.facebook.forEach(async (task) => {
+                        //Message the worker to close browsers
+                        await task.postMessage({ action: 'closeBrowsers' });
+    
+                        let message = await new Promise(resolve => {
+                            task.on('message', message => {
+                                resolve(message);
+                            });
+                        });
+    
+                        //On completion worker messages back to terminate
+                        if(message.action == 'terminate'){
+                            console.log('terminate');
+    
+                            //set cookies in db
+                            await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
+                            if(message.messageCookies != null){
+                                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                            }
+    
+                            //!reduce active task count by one
+                            //await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+    
+                            //actually delete the thing
+                            task.terminate();
+                        }
+                    })
+
+                    user.facebook = new Map();
+                })
+
+                discordClient.channels.cache.get(interaction.channelId).send('Finished');
             }
         }else{
             interaction.user.send('Commands are not allowed in direct messages.');

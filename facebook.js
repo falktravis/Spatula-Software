@@ -73,6 +73,7 @@ const getPossiblePrices = () => {
     let arrayValue = workerData.maxPrice;
 
     const generateArray = async (range, inc) => {
+        arrayValue = arrayValue + inc;
         while(arrayValue <= workerData.maxPrice + range){
             array.push(arrayValue);
             arrayValue = arrayValue + inc;
@@ -496,7 +497,7 @@ function interval() {
 
                     //get the current value
                     let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
-                    value = parseInt(value.replace(/[$,]/g, ''));
+                    value = parseInt(value.replace(/[$,A]/g, ''));
 
                     //remove the current value from the available ones
                     availablePrices.splice(availablePrices.indexOf(value), 1);
@@ -505,7 +506,20 @@ function interval() {
                 let logPrice = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
                 logPrice = parseInt(logPrice.replace(/[$,]/g, ''));
                 console.log(logPrice);
+            } catch(error) {
+                errorMessage('Error with results refresh', error);
+            }
 
+            try {
+                //!fix null (.href) error?
+                if(await mainPage.$(".x3ct3a4 a") == null){
+                    await mainPage.waitForSelector(".x3ct3a4 a");
+                }
+            } catch (error) {
+                console.log('Waiting for results: ' + error);
+            }
+
+            try {
                 //check for new posts
                 newPost = await mainPage.evaluate(() => {
                     if(document.querySelector('div.xx6bls6') == null){
@@ -515,8 +529,8 @@ function interval() {
                         return null;
                     }
                 });
-            } catch(error) {
-                errorMessage('Error with main page conversion', error);
+            } catch (error) {
+                errorMessage('Error with getting results', error);
             }
         
             //newPost is actually new
