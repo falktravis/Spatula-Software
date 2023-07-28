@@ -535,11 +535,12 @@ function interval() {
         
             //newPost is actually new
             if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
-        
+
+                let isNotification = false;
                 let postNum = 1;
                 //get the price of the post
                 let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
-                if(price == 'FREE'){
+                if(price == 'FREE' || price == 'Free'){
                     price = 0;
                 }else{
                     price = parseInt(price.replace(/[$,]/g, ''));
@@ -551,6 +552,7 @@ function interval() {
                     console.log(price);
                     if(price <= workerData.maxPrice){
                         console.log("New Post: " + newPost + " post num: " + postNum);
+                        isNotification = true;
 
                         let postObj;
                         if(workerData.messageType == 1){//auto message
@@ -737,7 +739,9 @@ function interval() {
                 }
 
                 //ping the user
-                client.channels.cache.get(workerData.channel).send("New Notifications @everyone");
+                if(isNotification){
+                    client.channels.cache.get(workerData.channel).send("New Notifications @everyone");
+                }
 
                 //set the main listing storage
                 await setListingStorage();
