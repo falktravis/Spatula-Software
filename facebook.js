@@ -219,6 +219,7 @@ let isDormant = false; //true if task can be deleted
 let mainCursor;
 const possiblePrices = getPossiblePrices(); //array of all possible prices for max price
 let availablePrices = [...possiblePrices]; //prices that are available to switch to
+let mainPageInitiate = true;
 
 const start = async () => {
 
@@ -261,10 +262,18 @@ const start = async () => {
 
         mainPage.on('request', async request => {
             const resource = request.resourceType();
-            if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'websocket' && resource != 'other' && resource != 'fetch' && resource != 'manifest'){
-                request.abort();
+            if(mainPageInitiate){
+                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
             }else{
-                request.continue();
+                if(resource != 'document'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
             }
         });
 
@@ -350,6 +359,7 @@ const start = async () => {
         }
     }
 
+    mainPageInitiate = false;
 }
 
 const setListingStorage = async () => {
@@ -462,7 +472,7 @@ handleTime(interval);
 function interval() {
     setTimeout(async () => {
         if(isRunning){
-            try {
+            /*try {
                 //Get new price or refresh
                 if((possiblePrices.length - availablePrices.length) < 4){
                     //get a value to use and remove it from possible values
@@ -506,6 +516,28 @@ function interval() {
                 let logPrice = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
                 logPrice = parseInt(logPrice.replace(/[$,]/g, ''));
                 console.log(logPrice);
+            } catch(error) {
+                errorMessage('Error with results refresh', error);
+            }*/
+
+            try {
+                //get a value to use and remove it from possible values
+                let value = availablePrices.splice((Math.floor(Math.random() * availablePrices.length)), 1);
+
+                //change link for results change
+                await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
+                console.log(mainPage.url());
+
+                //reset available prices
+                if((possiblePrices.length - availablePrices.length) > 4){
+                    console.log("Reset");
+                    availablePrices = [...possiblePrices];
+
+                    //remove the current value from the available ones
+                    availablePrices.splice(availablePrices.indexOf(value), 1);
+                }
+
+                console.log(availablePrices);
             } catch(error) {
                 errorMessage('Error with results refresh', error);
             }
@@ -717,16 +749,20 @@ function interval() {
                     //Update newPost
                     postNum++;
                     try {
-                        newPost = await mainPage.evaluate((num) => {
-                            let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`).href;
-                            return link.substring(0, link.indexOf("?"));
-                        }, postNum);
+                        if(await mainPage.$(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${postNum}) a`) != null){
+                            newPost = await mainPage.evaluate((num) => {
+                                let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`).href;
+                                return link.substring(0, link.indexOf("?"));
+                            }, postNum);
 
-                        price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
-                        if(price == 'FREE'){
-                            price = 0;
+                            price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
+                            if(price == 'FREE'){
+                                price = 0;
+                            }else{
+                                price = parseInt(price.replace(/[$,]/g, ''));
+                            }
                         }else{
-                            price = parseInt(price.replace(/[$,]/g, ''));
+                            postNum = 21;
                         }
                     } catch (error) {
                         errorMessage('Error re-setting new post', error);
