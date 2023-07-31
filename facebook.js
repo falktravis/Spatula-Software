@@ -746,6 +746,15 @@ function interval() {
                         console.log("\n\nThe Price is Wrong, price: " + price + " max: " + workerData.maxPrice + "\n\n");
                     }
 
+                    try {
+                        //!fix null (.href) error?
+                        if(await mainPage.$(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${postNum}) a`) == null){
+                            await mainPage.waitForSelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${postNum}) a`);
+                        }
+                    } catch (error) {
+                        console.log('Waiting for results: ' + error);
+                    }
+
                     //Update newPost
                     postNum++;
                     try {
