@@ -12,6 +12,12 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 //Closes browsers before terminating the task with facebook-delete command
 parentPort.on('message', async (message) => {
     if(message.action === 'closeBrowsers') {
+
+        while(isDormant == false){
+            console.log('task non dormant');
+            await new Promise(r => setTimeout(r, 10000));
+        }
+
         console.log('close browsers');
         if(mainBrowser != null){
             await mainBrowser.close();
@@ -436,6 +442,7 @@ const handleTime = async (intervalFunction) => {
     
     if(isRunning){
         try {
+            isDormant = false;
             await start();
 
             if(startError == false){
@@ -444,6 +451,8 @@ const handleTime = async (intervalFunction) => {
                     await setListingStorage();
                     isCreate = false;
                 }
+
+                isDormant = true;
     
                 intervalFunction(); 
             }
@@ -472,6 +481,8 @@ handleTime(interval);
 function interval() {
     setTimeout(async () => {
         if(isRunning){
+            isDormant = false;
+
             /*try {
                 //Get new price or refresh
                 if((possiblePrices.length - availablePrices.length) < 4){
@@ -670,7 +681,7 @@ function interval() {
                                 //set post data obj
                                 postObj = await itemPage.evaluate((isVideo) => {
                                     return {
-                                        img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
+                                        img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
                                         title: document.querySelector('div.xyamay9 h1').innerText,
                                         date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
                                         description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
@@ -794,6 +805,8 @@ function interval() {
                 console.log(`\n No New Post @${workerData.link} with distance: ${workerData.distance} \n`);
             }
             interval();
+
+            isDormant = true;
         }
     }, getRandomInterval()); 
 } 
