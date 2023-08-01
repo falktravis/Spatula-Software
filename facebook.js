@@ -74,7 +74,7 @@ async function typeWithRandomSpeed(page, elementSelector, text) {
 }
 
 //generates an array of possible prices based on the max price
-const getPossiblePrices = () => {
+const getPrices = () => {
     let array = [];
     let arrayValue = workerData.maxPrice;
 
@@ -223,8 +223,7 @@ let networkData = 0;
 let startCount = 0; //number of times tried to set distance
 let isDormant = false; //true if task can be deleted
 let mainCursor;
-const possiblePrices = getPossiblePrices(); //array of all possible prices for max price
-let availablePrices = [...possiblePrices]; //prices that are available to switch to
+let prices = getPrices(); //array of all possible prices for max price
 let mainPageInitiate = true;
 
 const start = async () => {
@@ -532,23 +531,15 @@ function interval() {
             }*/
 
             try {
-                //get a value to use and remove it from possible values
-                let value = availablePrices.splice((Math.floor(Math.random() * availablePrices.length)), 1);
+                //get a value from the start of the array
+                let value = prices.splice((Math.floor(Math.random() * (prices.length - 4))), 1);
+                prices.push(value);
 
                 //change link for results change
                 await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
                 console.log(mainPage.url());
 
-                //reset available prices
-                if((possiblePrices.length - availablePrices.length) > 4){
-                    console.log("Reset");
-                    availablePrices = [...possiblePrices];
-
-                    //remove the current value from the available ones
-                    availablePrices.splice(availablePrices.indexOf(value), 1);
-                }
-
-                console.log(availablePrices);
+                console.log(prices);
             } catch(error) {
                 errorMessage('Error with results refresh', error);
             }
