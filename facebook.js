@@ -533,9 +533,7 @@ function interval() {
             try {
                 //get a value from the start of the array
                 let value = prices.splice((Math.floor(Math.random() * (prices.length - 4))), 1);
-                console.log(value);
-                
-                prices.push(value);
+                prices.push(value[0]);
 
                 //change link for results change
                 await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
