@@ -594,11 +594,13 @@ function interval() {
     
                             //check for video
                             let isVideo = false;
-                            if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
+                            if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){ //This is changed
                                 console.log('video sequence: ' + newPost);
                                 itemPageFullLoad = true;
                                 await itemPage.reload({ waitUntil: 'domcontentloaded' });
                                 isVideo = true;
+                            }else if(await ){
+
                             }
     
                             //get post data
