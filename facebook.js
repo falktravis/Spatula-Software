@@ -594,13 +594,14 @@ function interval() {
     
                             //check for video
                             let isVideo = false;
-                            if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){ //This is changed
-                                console.log('video sequence: ' + newPost);
+                            if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
+                                console.log('video sequence one: ' + newPost);
                                 itemPageFullLoad = true;
                                 await itemPage.reload({ waitUntil: 'domcontentloaded' });
                                 isVideo = true;
-                            }else if(await ){
-
+                            }else if(await itemPage.$('[aria-label="Thumbnail 0"] i') != null){
+                                console.log('video sequence two: ' + newPost);
+                                isVideo = true;
                             }
     
                             //get post data
