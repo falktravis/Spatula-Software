@@ -164,21 +164,26 @@ const users = new Map();
 
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
-    await interaction.deferReply({ ephemeral: true });
-    console.log('defer');
-
-	if (!interaction.isChatInputCommand()) return;
-
-    const command = interaction.client.commands.get(interaction.commandName);
-
     try {
-		await command.execute(interaction);
-	} catch (error) {
-		console.error(error);
-		await interaction.reply('There was an error while executing this command!');
-	}
-
-    await executeCommand(interaction);
+        await interaction.deferReply({ ephemeral: true });
+        console.log('defer');
+    
+        if (!interaction.isChatInputCommand()) return;
+    
+        const command = interaction.client.commands.get(interaction.commandName);
+    
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            console.error(error);
+            await interaction.reply('There was an error while executing this command!');
+        }
+    
+        await executeCommand(interaction);
+    } catch (error) {
+        await interaction.reply('There was an error while executing this command!');
+        console.log('Error handling command: ' + error);
+    }
 
     /*//push command into the queue
     queue.push(interaction);
