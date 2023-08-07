@@ -164,9 +164,8 @@ const users = new Map();
 
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
-    if (interaction.isButton()) {
-        console.log('Received a button click:', interaction.customId);
-    }
+    await interaction.deferReply({ ephemeral: true });
+    console.log('defer');
 
 	if (!interaction.isChatInputCommand()) return;
 
@@ -179,7 +178,7 @@ discordClient.on(Events.InteractionCreate, async interaction => {
 		await interaction.reply('There was an error while executing this command!');
 	}
 
-    executeCommand(interaction);
+    await executeCommand(interaction);
 
     /*//push command into the queue
     queue.push(interaction);
@@ -346,26 +345,6 @@ const executeCommand = async (interaction) => {
                 }else{
                     discordClient.channels.cache.get(interaction.channelId).send("Task does not exist");
                 }
-            }
-            else if(interaction.commandName === "create-facebook-user" && interaction.user.id === '456168609639694376'){
-                //!get a random resi proxy
-                /*let loginProxyObj = await residentialProxyDB.findOne({});
-                await residentialProxyDB.deleteOne({_id: loginProxyObj._id});*/
-    
-                //create a new worker
-                const loginWorker = new Worker('./createUser.js', { workerData:{
-                    username: interaction.options.getString("email"),
-                    proxy: null, //!loginProxyObj.Proxy
-                    firstName: interaction.options.getString("first-name"),
-                    lastName: interaction.options.getString("last-name"),
-                    channel: interaction.channelId,
-                }});
-
-                loginWorker.on('message', async (message) => {
-                    console.log("update cookies");
-                    //await burnerAccountDB.updateOne({Username: interaction.options.getString("email")}, {$set: {Cookies: message.cookies}});
-                    //await burnerAccountDB.insertOne({Username: interaction.options.getString("email"), LoginProxy: loginProxyObj.Proxy, StaticProxy: , Cookies: message.cookies, LastAccessed: null, UserAgent: randomUserAgent});
-                });
             }
             else if(interaction.commandName === "facebook-warm-account" && interaction.user.id === '456168609639694376'){
                 const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});

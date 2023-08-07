@@ -5,6 +5,6 @@ module.exports = {
 		.setName('list')
 		.setDescription('List all workers'),
 	async execute(interaction) {
-		await interaction.reply("Workers:");
+		await interaction.editReply("Workers:");
 	},
 };

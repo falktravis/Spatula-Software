@@ -9,6 +9,6 @@ module.exports = {
                 .setDescription('Account cookies, check #facebook guide for more details')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply(`Updating Account...`);
+		await interaction.editReply(`Updating Account...`);
 	},
 };

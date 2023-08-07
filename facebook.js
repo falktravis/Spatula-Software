@@ -87,17 +87,17 @@ const getPrices = () => {
     }
 
     if(workerData.maxPrice < 50){
-        generateArray(10, 2);
+        generateArray(16, 2);
     }else if(workerData.maxPrice < 100){
-        generateArray(25, 5);
+        generateArray(40, 5);
     }else if(workerData.maxPrice < 1000){
-        generateArray(50, 10);
+        generateArray(80, 10);
     }else if(workerData.maxPrice < 2500){
-        generateArray(100, 20);
+        generateArray(160, 20);
     }else if(workerData.maxPrice < 10000){
-        generateArray(500, 50);
+        generateArray(400, 50);
     }else{
-        generateArray(1000, 100);
+        generateArray(800, 100);
     }
 
     return array;
@@ -115,6 +115,10 @@ const sendMessage = async (link) => {
         });
         let pages = await itemBrowser.pages();
         itemPage = pages[0];
+
+        //close the notif popup
+        const context = itemBrowser.defaultBrowserContext();
+        context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
         //create a cursor
         messageCursor = createCursor(itemPage);
@@ -532,7 +536,7 @@ function interval() {
 
             try {
                 //get a value from the start of the array
-                let value = prices.splice((Math.floor(Math.random() * (prices.length - 4))), 1);
+                let value = prices.splice((Math.floor(Math.random() * (prices.length - 6))), 1);
                 prices.push(value[0]);
 
                 //change link for results change

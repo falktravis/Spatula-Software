@@ -51,6 +51,6 @@ module.exports = {
                 .setDescription('Message content sent to seller')
                 .setRequired(false)),
 	async execute(interaction) {
-		await interaction.reply(`Starting ${interaction.options.getString('name')}`);
+		await interaction.editReply(`Starting ${interaction.options.getString('name')}`);
 	},
 };

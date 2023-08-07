@@ -9,6 +9,6 @@ module.exports = {
                 .setDescription('list of proxies')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply(`adding burner proxies...`);
+		await interaction.editReply(`adding burner proxies...`);
 	},
 };

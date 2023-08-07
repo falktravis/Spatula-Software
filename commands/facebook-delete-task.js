@@ -9,6 +9,6 @@ module.exports = {
                 .setDescription('Name of Task')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply(`Deleting ${interaction.options.getString('task-name')}`);
+		await interaction.editReply(`Deleting ${interaction.options.getString('task-name')}`);
 	},
 };

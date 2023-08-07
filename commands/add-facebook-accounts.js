@@ -9,6 +9,6 @@ module.exports = {
                 .setDescription('.txt file path')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply(`adding accounts...`);
+		await interaction.editReply(`adding accounts...`);
 	},
 };

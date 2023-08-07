@@ -5,6 +5,6 @@ module.exports = {
 		.setName('all-workers')
 		.setDescription('Admin command to list all active workers for diagnostic purposes'),
 	async execute(interaction) {
-		await interaction.reply(`Starting...`);
+		await interaction.editReply(`Starting...`);
 	},
 };

@@ -9,6 +9,6 @@ module.exports = {
                 .setDescription('list of proxies in their natural form')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply(`Adding main proxies...`);
+		await interaction.editReply(`Adding main proxies...`);
 	},
 };

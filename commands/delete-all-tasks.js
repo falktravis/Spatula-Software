@@ -5,6 +5,6 @@ module.exports = {
 		.setName('delete-all-tasks')
 		.setDescription('Admin command to close all tasks before restarting server'),
 	async execute(interaction) {
-		await interaction.reply(`Deleting...`);
+		await interaction.editReply(`Deleting...`);
 	},
 };

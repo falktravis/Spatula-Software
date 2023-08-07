@@ -9,6 +9,6 @@ module.exports = {
                 .setDescription('user info of account to be warmed')
                 .setRequired(true)),
 	async execute(interaction) {
-		await interaction.reply(`warming account...`);
+		await interaction.editReply(`warming account...`);
 	},
 };
