@@ -176,12 +176,12 @@ discordClient.on(Events.InteractionCreate, async interaction => {
             await command.execute(interaction);
         } catch (error) {
             console.error(error);
-            await interaction.reply('There was an error while executing this command!');
+            await interaction.editReply('There was an error while executing this command!');
         }
     
         await executeCommand(interaction);
     } catch (error) {
-        await interaction.reply('There was an error while executing this command!');
+        await interaction.editReply('There was an error while executing this command!');
         console.log('Error handling command: ' + error);
     }
 
@@ -402,9 +402,8 @@ const executeCommand = async (interaction) => {
                 const fs = require('fs');
                 const fileContents = fs.readFileSync(interaction.options.getString("path"), 'utf-8');
 
-                const arrayRegex = /\[(.*?)\]/g;
+                /*const arrayRegex = /\[(.*?)\]/g;
                 const cookieArray = fileContents.match(arrayRegex);
-
 
                 for(let i = 0; i < cookieArray.length; i++){
 
@@ -420,39 +419,31 @@ const executeCommand = async (interaction) => {
                     const proxyObj = await getStaticFacebookBurnerProxy();
                     
                     await burnerAccountDB.insertOne({Username: username, Cookies: cookie, Proxy: proxyObj.Proxy, Platform: randomPlatform, ActiveTasks: 0});
-                }
+                }*/
                 
-
-                /*const accountArray = fileContents.split('\n');
+                const accountArray = fileContents.split('\n');
 
                 // Regular expression patterns
                 const arrayRegex = /\[(.*?)\]/g;
-                const browserVersionRegex = /Chrome\/([\d.]{9})/;
                 const emailPasswordRegex = /;([^:;]+):([^:;]+);;/;
 
                 for(let i = 0; i < accountArray.length; i++){
 
                     //collect the cookie array
                     const cookiesMatch = accountArray[i].match(arrayRegex);
-                    console.log(cookiesMatch);
                     const cookieArray = JSON.parse(cookiesMatch[0]);
-
-                    //collect user agent
-                    const userAgentMatch = accountArray[i].match(browserVersionRegex);
-                    console.log(userAgentMatch);
-                    const userAgent = userAgentMatch[1];
 
                     //collect account user and password string
                     const emailPasswordMatch = accountArray[i].match(emailPasswordRegex);
-                    console.log(emailPasswordMatch);
                     const email = emailPasswordMatch[1];
                     const password = emailPasswordMatch[2];
 
                     //get a static proxy
-                    const proxyObj = await getStaticFacebookBurnerProxy();
+                    //const proxyObj = await getStaticFacebookBurnerProxy();
 
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, UserAgent: userAgent, ActiveTasks: 0});
-                }*/
+                    console.log({Username: email, Password: password, Cookies: cookieArray, ActiveTasks: 0, Platform: 'Windows'});
+                    //await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, ActiveTasks: 0, Platform: 'Windows'});
+                }
         
                 discordClient.channels.cache.get(interaction.channelId).send('finish');
             }else if(interaction.commandName === 'add-burner-proxies' && interaction.user.id === '456168609639694376'){
