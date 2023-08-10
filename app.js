@@ -367,11 +367,21 @@ const executeCommand = async (interaction) => {
                 let user = users.get(interaction.user.id);
                 if(user != null){
                     let list = ''; 
-                    //check to see if facebook has workers
-                    list += "\n\tFacebook:";
-                    user.facebook.forEach((task, taskKey) => {
+                    /*user.facebook.forEach(async (task, taskKey) => {
                         list += `\n\t\t-${taskKey}`;
-                    })
+                    })*/
+                    for (const [taskKey, task] of user.facebook){
+                        //Message the worker to get data
+                        await task.postMessage({ action: 'getData' });
+    
+                        let message = await new Promise(resolve => {
+                            task.on('message', message => {
+                                resolve(message);
+                            });
+                        });
+
+                        list += `\n\t- name:${taskKey} ${message}`;
+                    }
 
                     //**Ebay stuff removed
             

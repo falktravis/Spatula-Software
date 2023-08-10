@@ -28,6 +28,12 @@ parentPort.on('message', async (message) => {
 
         parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername});
     }
+    else if(message.action === 'getData'){
+        let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
+        let distances = ['1', '2', '5', '10', '20', '40', '60', '80', '100', '250', '500'];
+
+        parentPort.postMessage(`link:<${workerData.link}> message-type:${messagingTypes[workerData.messageType - 1]} start:${workerData.start} end:${workerData.end} distance:${distances[workerData.distance - 1]}`);
+    }
 });
 
 //error message send function 
