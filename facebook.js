@@ -34,13 +34,16 @@ parentPort.on('message', async (message) => {
 
         parentPort.postMessage(`link:<${workerData.link}> message-type:${messagingTypes[workerData.messageType - 1]} start:${workerData.start} end:${workerData.end} distance:${distances[workerData.distance - 1]}`);
     }
+    else if(message.action === 'getAccount'){
+        parentPort.postMessage(workerData.burnerUsername);
+    }
 });
 
 //error message send function 
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
-    client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
-    client.channels.cache.get(workerData.channel).send(message + ': ' + error);
+    //client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
+    //Channel.send(message + ': ' + error);
 }
 
 //randomize time till post check
@@ -179,7 +182,7 @@ const sendMessage = async (link) => {
                 await pause();
                 await messageCursor.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
                 await itemPage.waitForSelector('[aria-label="Message Again"]');
-                await client.channels.cache.get(workerData.channel).send("Message Sent!");
+                Channel.send("Message Sent!");
             }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
                 console.log("shipping message sequence");
                 await pause();
@@ -193,18 +196,18 @@ const sendMessage = async (link) => {
                 await pause();
                 await messageCursor.click('[aria-label="Send Message"]');
                 await itemPage.waitForSelector('[aria-label="Message Again"]');
-                await client.channels.cache.get(workerData.channel).send("Message Sent!");
+                Channel.send("Message Sent!");
             }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
                 let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.x1xlr1w8.x1a1m0xk').innerText});
-                await client.channels.cache.get(workerData.channel).send("Message Failed: item " + listingConditionText);
+                Channel.send("Message Failed: item " + listingConditionText);
             }else if(await itemPage.$('span.xk50ysn.x1a1m0xk')){//Check for the weird out of stock thing //!I have no clue if this is actually a thing
                 let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.xk50ysn.x1a1m0xk').innerText});
-                await client.channels.cache.get(workerData.channel).send("Message Failed: item " + listingConditionText);
+                Channel.send("Message Failed: item " + listingConditionText);
             }else{
-                await client.channels.cache.get(workerData.channel).send("Message Failed");
+                Channel.send("Message Failed");
             }
         }else{
-            await client.channels.cache.get(workerData.channel).send("Product Unavailable");
+            Channel.send("Product Unavailable");
         }
     } catch (error){
         errorMessage('Error with messaging', error);
@@ -235,6 +238,7 @@ let isDormant = false; //true if task can be deleted
 let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
 let mainPageInitiate = true;
+let Channel = client.channels.cache.get(workerData.channel);
 
 const start = async () => {
 
@@ -321,7 +325,7 @@ const start = async () => {
             await mainBrowser.close();
             
             //alert the user to the error
-            await client.channels.cache.get(workerData.channel).send('Task terminated, please restart. Error at URL: ' + mainPage.url());
+            Channel.send('Task terminated, please restart. Error at URL: ' + mainPage.url());
 
             if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
                 //end the task and message myself containing the account name
@@ -703,7 +707,7 @@ function interval() {
                         //Handle Discord messaging
                         if(workerData.messageType != 2){//if its not manual messaging
                             try{
-                                await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                Channel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
                                     .setTitle(postObj.title + " - " + postObj.price)
                                     .setURL(newPost)
@@ -719,7 +723,7 @@ function interval() {
                         }else{
                             let notification;
                             try{
-                                notification = await client.channels.cache.get(workerData.channel).send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                notification = Channel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
                                     .setTitle(postObj.title + " - " + postObj.price)
                                     .setURL(newPost)
@@ -795,12 +799,12 @@ function interval() {
 
                 //Check for a post hard cap
                 if(postNum > 20){
-                    client.channels.cache.get(workerData.channel).send("Too many new posts to notify. Make your query more specific");
+                    Channel.send("Too many new posts to notify. Make your query more specific");
                 }
 
                 //ping the user
                 if(isNotification){
-                    client.channels.cache.get(workerData.channel).send("New Notifications @everyone");
+                    Channel.send("New Notifications @everyone");
                 }
 
                 //set the main listing storage

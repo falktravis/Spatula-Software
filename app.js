@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Worker } = require('worker_threads');
+const { Worker, workerData } = require('worker_threads');
 
 //general set up
 const fs = require('node:fs');
@@ -213,6 +213,12 @@ discordClient.on(Events.InteractionCreate, async interaction => {
 
 const executeCommand = async (interaction) => {
     try {
+        let Channel = discordClient.channels.cache.get(interaction.channelId);
+        if(Channel == null){
+            console.log("Channel not in cache");
+            Channel = await discordClient.channels.fetch(interaction.channelId);
+        }
+
         if(interaction.guild){
             if(interaction.commandName === "facebook-create-task"){
                 await handleUser(interaction.user.id);
@@ -256,7 +262,7 @@ const executeCommand = async (interaction) => {
                                                 if(burnerAccountObj == null){
                                                     burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
                                                     console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-                                                    discordClient.channels.cache.get('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+                                                    await discordClient.channels.fetch('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
                                                 }
 
                                                 await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
@@ -283,30 +289,30 @@ const executeCommand = async (interaction) => {
 
                                                 user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id, burnerAccountObj.Username)); 
 
-                                                discordClient.channels.cache.get(interaction.channelId).send("Created " + interaction.options.getString("name"));
+                                                Channel.send("Created " + interaction.options.getString("name"));
                                             }else{
-                                                discordClient.channels.cache.get(interaction.channelId).send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
+                                                Channel.send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
                                             }
                                         } else{
-                                            discordClient.channels.cache.get(interaction.channelId).send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
+                                            Channel.send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
                                         }
                                     }else{
-                                        discordClient.channels.cache.get(interaction.channelId).send("A task with this name already exists, restart the task with a new name.");
+                                        Channel.send("A task with this name already exists, restart the task with a new name.");
                                     }
                                 }else{
-                                    discordClient.channels.cache.get(interaction.channelId).send("You have reached your task limit for your plan, upgrade to make more.");
+                                    Channel.send("You have reached your task limit for your plan, upgrade to make more.");
                                 }
                             }else{
-                                discordClient.channels.cache.get(interaction.channelId).send("Max price is to high, make your max price more realistic.");
+                                Channel.send("Max price is to high, make your max price more realistic.");
                             }
                         }else{
-                            discordClient.channels.cache.get(interaction.channelId).send("Your link must include a max price");
+                            Channel.send("Your link must include a max price");
                         }
                     }else{
-                        discordClient.channels.cache.get(interaction.channelId).send("Invalid Link");
+                        Channel.send("Invalid Link");
                     }
                 }else{
-                    discordClient.channels.cache.get(interaction.channelId).send("You do not have an active plan");
+                    Channel.send("You do not have an active plan");
                 }
             }
             else if(interaction.commandName === "facebook-delete-task"){
@@ -342,13 +348,13 @@ const executeCommand = async (interaction) => {
                             child.terminate();
                             user.facebook.delete(interaction.options.getString("task-name"));
                             user.taskCount--;
-                            discordClient.channels.cache.get(interaction.channelId).send("Deleted " + interaction.options.getString("task-name"));
+                            Channel.send("Deleted " + interaction.options.getString("task-name"));
                         }
                     }else{
-                        discordClient.channels.cache.get(interaction.channelId).send("Task does not exist");
+                        Channel.send("Task does not exist");
                     }
                 }else{
-                    discordClient.channels.cache.get(interaction.channelId).send("Task does not exist");
+                    Channel.send("Task does not exist");
                 }
             }
             else if(interaction.commandName === "facebook-warm-account" && interaction.user.id === '456168609639694376'){
@@ -367,9 +373,6 @@ const executeCommand = async (interaction) => {
                 let user = users.get(interaction.user.id);
                 if(user != null){
                     let list = ''; 
-                    /*user.facebook.forEach(async (task, taskKey) => {
-                        list += `\n\t\t-${taskKey}`;
-                    })*/
                     for (const [taskKey, task] of user.facebook){
                         //Message the worker to get data
                         await task.postMessage({ action: 'getData' });
@@ -385,9 +388,9 @@ const executeCommand = async (interaction) => {
 
                     //**Ebay stuff removed
             
-                    discordClient.channels.cache.get(interaction.channelId).send(list);
+                    Channel.send(list);
                 }else{
-                    discordClient.channels.cache.get(interaction.channelId).send("User does not exist");
+                    Channel.send("User does not exist");
                 }
             }else if(interaction.commandName === 'facebook-update-message-account'){
                 const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
@@ -407,7 +410,7 @@ const executeCommand = async (interaction) => {
                     await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Proxy' : proxy.Proxy}});
                 }
         
-                discordClient.channels.cache.get(interaction.channelId).send('Updated!');
+                Channel.send('Updated!');
             }else if(interaction.commandName === 'add-facebook-accounts' && interaction.user.id === '456168609639694376'){
                 const fs = require('fs');
                 const fileContents = fs.readFileSync(interaction.options.getString("path"), 'utf-8');
@@ -455,7 +458,7 @@ const executeCommand = async (interaction) => {
                     //await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, ActiveTasks: 0, Platform: 'Windows'});
                 }
         
-                discordClient.channels.cache.get(interaction.channelId).send('finish');
+                Channel.send('finish');
             }else if(interaction.commandName === 'add-burner-proxies' && interaction.user.id === '456168609639694376'){
         
                 //get the list of new proxies
@@ -468,7 +471,7 @@ const executeCommand = async (interaction) => {
                     await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, CurrentFacebookBurnerTasks: 0, TotalFacebookBurnerAccounts: 0})
                 })
         
-                discordClient.channels.cache.get(interaction.channelId).send('finish');
+                Channel.send('finish');
             }
             else if(interaction.commandName === 'add-main-proxies' && interaction.user.id === '456168609639694376'){
                 let proxyList = interaction.options.getString("proxy-list");
@@ -477,23 +480,32 @@ const executeCommand = async (interaction) => {
                 proxyList.forEach(async (password) => {
                     await residentialProxyDB.insertOne({Proxy: password.substring(password.indexOf("session-") + 8, password.indexOf(":proxy"))});
                 })
-                discordClient.channels.cache.get(interaction.channelId).send('finish');
+                Channel.send('finish');
             } 
             else if(interaction.commandName === 'all-workers' && interaction.user.id === '456168609639694376'){
                 let list = ''; 
-                users.forEach((user, userID) => {
-                    //check to see if facebook has workers
-                    list += '\n' + userID + "\n\tFacebook:";
-                    user.facebook.forEach((task, taskKey) => {
-                        list += `\n\t\t-${taskKey}`;
-                    })
-                })
+
+                for (const [userID, user] of users){
+                    list += '\n' + userID;
+                    for (const [taskKey, task] of user.facebook){
+                        //Message the worker to get data
+                        await task.postMessage({ action: 'getAccount' });
     
+                        let message = await new Promise(resolve => {
+                            task.on('message', message => {
+                                resolve(message);
+                            });
+                        });
+    
+                        list += `\n\t-${taskKey} - ${message}`;
+                    }
+                }
+
                 //send the completed message string
                 if(list != ''){
-                    discordClient.channels.cache.get(interaction.channelId).send(list);
+                    Channel.send(list);
                 }else{
-                    discordClient.channels.cache.get(interaction.channelId).send('No Workers');
+                    Channel.send('No Workers');
                 }
             }
             else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
@@ -529,14 +541,14 @@ const executeCommand = async (interaction) => {
                     user.facebook = new Map();
                 })
 
-                discordClient.channels.cache.get(interaction.channelId).send('Finished');
+                Channel.send('Finished');
             }
         }else{
             interaction.user.send('Commands are not allowed in direct messages.');
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        discordClient.channels.cache.get('1091532766522376243').send("Command Error: \n\t" + error);
-        discordClient.channels.cache.get(interaction.channelId).send("Command Error: \n\t" + error);
+        await discordClient.channels.fetch('1091532766522376243').send("Command Error: \n\t" + error);
+        Channel.send("Command Error: \n\t" + error);
     }
 }
