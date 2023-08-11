@@ -238,7 +238,7 @@ let isDormant = false; //true if task can be deleted
 let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
 let mainPageInitiate = true;
-let Channel = client.channels.cache.get(workerData.channel);
+let Channel;
 
 const start = async () => {
 
@@ -702,6 +702,14 @@ function interval() {
                             } catch(error){
                                 errorMessage(`Error with getting item data at ${newPost}`, error);
                             }
+                        }
+
+                        if(Channel == null){
+                            Channel = client.channels.cache.get(workerData.channel);
+                            if(Channel == null){
+                                Channel = await client.channels.fetch(workerData.channel);
+                            }
+                            console.log(Channel);
                         }
                         
                         //Handle Discord messaging
