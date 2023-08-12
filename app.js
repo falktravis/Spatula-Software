@@ -68,6 +68,17 @@ for (const file of commandFiles) {
 	}
 }
 
+// Define a global error handler
+process.on('uncaughtException', async (error) => {
+    console.error('Uncaught Exception:', error);
+    await discordClient.channels.fetch('1091532766522376243').send('Uncaught Exception: ' + error);
+});
+
+process.on('unhandledRejection', async (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    await discordClient.channels.fetch('1091532766522376243').send("Unhandled rejection");
+});
+
 //worker login listening function
 const facebookListener = async (message, task, user, username) => {
     if(message.action == 'success'){

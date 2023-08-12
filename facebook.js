@@ -39,11 +39,27 @@ parentPort.on('message', async (message) => {
     }
 });
 
+client.on('ready', async () => {
+    try {
+        mainChannel = client.channels.cache.get(workerData.channel);
+        if(mainChannel == null){
+            mainChannel = await client.channels.fetch(workerData.channel);
+        }
+
+        testChannel = client.channels.cache.get('1091532766522376243');
+        if(testChannel == null){
+            testChannel = await client.channels.fetch('1091532766522376243');
+        }
+    } catch (error) {
+        errorMessage('Error fetching channel', error);
+    }
+});
+
 //error message send function 
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
-    //client.channels.cache.get('1091532766522376243').send(message + ': ' + error);
-    //Channel.send(message + ': ' + error);
+    //testChannel.send(message + ': ' + error);
+    mainChannel.send(message + ': ' + error);
 }
 
 //randomize time till post check
@@ -182,7 +198,7 @@ const sendMessage = async (link) => {
                 await pause();
                 await messageCursor.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
                 await itemPage.waitForSelector('[aria-label="Message Again"]');
-                Channel.send("Message Sent!");
+                mainChannel.send("Message Sent!");
             }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
                 console.log("shipping message sequence");
                 await pause();
@@ -196,18 +212,18 @@ const sendMessage = async (link) => {
                 await pause();
                 await messageCursor.click('[aria-label="Send Message"]');
                 await itemPage.waitForSelector('[aria-label="Message Again"]');
-                Channel.send("Message Sent!");
+                mainChannel.send("Message Sent!");
             }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
                 let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.x1xlr1w8.x1a1m0xk').innerText});
-                Channel.send("Message Failed: item " + listingConditionText);
+                mainChannel.send("Message Failed: item " + listingConditionText);
             }else if(await itemPage.$('span.xk50ysn.x1a1m0xk')){//Check for the weird out of stock thing //!I have no clue if this is actually a thing
                 let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.xk50ysn.x1a1m0xk').innerText});
-                Channel.send("Message Failed: item " + listingConditionText);
+                mainChannel.send("Message Failed: item " + listingConditionText);
             }else{
-                Channel.send("Message Failed");
+                mainChannel.send("Message Failed");
             }
         }else{
-            Channel.send("Product Unavailable");
+            mainChannel.send("Product Unavailable");
         }
     } catch (error){
         errorMessage('Error with messaging', error);
@@ -238,7 +254,8 @@ let isDormant = false; //true if task can be deleted
 let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
 let mainPageInitiate = true;
-let Channel;
+let mainChannel;
+let testChannel;
 
 const start = async () => {
 
@@ -325,15 +342,15 @@ const start = async () => {
             await mainBrowser.close();
             
             //alert the user to the error
-            Channel.send('Task terminated, please restart. Error at URL: ' + mainPage.url());
+            mainChannel.send('Task terminated, please restart. Error at URL: ' + mainPage.url());
 
             if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
                 //end the task and message myself containing the account name
-                client.channels.cache.get('1091532766522376243').send('Account lgpd migrated: ' + workerData.burnerUsername);
+                testChannel.send('Account lgpd migrated: ' + workerData.burnerUsername);
             }
             
             if(mainPage.url().includes('checkpoint/828281030927956')){
-                client.channels.cache.get('1091532766522376243').send('Account banned: ' + workerData.burnerUsername);
+                testChannel.send('Account banned: ' + workerData.burnerUsername);
 
                 //message the main script to delete the burner account
                 parentPort.postMessage({action: 'ban'});
@@ -588,16 +605,16 @@ function interval() {
                 let postNum = 1;
                 //get the price of the post
                 let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
+                console.log(price);
                 if(price == 'FREE' || price == 'Free'){
                     price = 0;
                 }else{
-                    price = parseInt(price.replace(/[$,]/g, ''));
+                    price = parseInt(price.replace(/[$,A]/g, ''));
                 }
 
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20){
 
                     //check if "The price is right"
-                    console.log(price);
                     if(price <= workerData.maxPrice){
                         console.log("New Post: " + newPost + " post num: " + postNum);
                         isNotification = true;
@@ -703,19 +720,11 @@ function interval() {
                                 errorMessage(`Error with getting item data at ${newPost}`, error);
                             }
                         }
-
-                        if(Channel == null){
-                            Channel = client.channels.cache.get(workerData.channel);
-                            if(Channel == null){
-                                Channel = await client.channels.fetch(workerData.channel);
-                            }
-                            console.log(Channel);
-                        }
                         
                         //Handle Discord messaging
                         if(workerData.messageType != 2){//if its not manual messaging
                             try{
-                                Channel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                mainChannel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
                                     .setTitle(postObj.title + " - " + postObj.price)
                                     .setURL(newPost)
@@ -731,7 +740,7 @@ function interval() {
                         }else{
                             let notification;
                             try{
-                                notification = Channel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                notification = mainChannel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
                                     .setTitle(postObj.title + " - " + postObj.price)
                                     .setURL(newPost)
@@ -807,12 +816,12 @@ function interval() {
 
                 //Check for a post hard cap
                 if(postNum > 20){
-                    Channel.send("Too many new posts to notify. Make your query more specific");
+                    mainChannel.send("Too many new posts to notify. Make your query more specific");
                 }
 
                 //ping the user
                 if(isNotification){
-                    Channel.send("New Notifications @everyone");
+                    mainChannel.send("New Notifications @everyone");
                 }
 
                 //set the main listing storage
