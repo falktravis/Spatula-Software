@@ -605,7 +605,6 @@ function interval() {
                 let postNum = 1;
                 //get the price of the post
                 let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
-                console.log(price);
                 if(price == 'FREE' || price == 'Free'){
                     price = 0;
                 }else{
@@ -801,10 +800,10 @@ function interval() {
                             }, postNum);
 
                             price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
-                            if(price == 'FREE'){
+                            if(price == 'FREE' || price == 'Free'){
                                 price = 0;
                             }else{
-                                price = parseInt(price.replace(/[$,]/g, ''));
+                                price = parseInt(price.replace(/[$,A]/g, ''));
                             }
                         }else{
                             postNum = 21;
