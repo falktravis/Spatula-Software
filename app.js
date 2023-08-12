@@ -68,15 +68,28 @@ for (const file of commandFiles) {
 	}
 }
 
+//get log channel
+let logChannel;
+discordClient.on('ready', async () => {
+    try {
+        logChannel = discordClient.channels.cache.get('1091532766522376243');
+        if(logChannel == null){
+            logChannel = await discordClient.channels.fetch('1091532766522376243');
+        }
+    } catch (error) {
+        errorMessage('Error fetching channel', error);
+    }
+});
+
 // Define a global error handler
 process.on('uncaughtException', async (error) => {
     console.error('Uncaught Exception:', error);
-    await discordClient.channels.fetch('1091532766522376243').send('Uncaught Exception: ' + error);
+    logChannel.send('Uncaught error: ' + error);
 });
 
 process.on('unhandledRejection', async (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    await discordClient.channels.fetch('1091532766522376243').send("Unhandled rejection");
+    logChannel.send('Uncaught rejection: ' + error);
 });
 
 //worker login listening function
@@ -169,9 +182,6 @@ const scanDatabase = async () => {
 
 //pre populate this with data from supabase 
 const users = new Map();
-
-//Queue stuff so that commands won't fuck each other
-//let queue = [];
 
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
@@ -273,7 +283,7 @@ const executeCommand = async (interaction) => {
                                                 if(burnerAccountObj == null){
                                                     burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
                                                     console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-                                                    await discordClient.channels.fetch('1091532766522376243').send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+                                                    logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
                                                 }
 
                                                 await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
@@ -559,7 +569,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        await discordClient.channels.fetch('1091532766522376243').send("Command Error: \n\t" + error);
+        logChannel.send("Command Error: \n\t" + error);
         Channel.send("Command Error: \n\t" + error);
     }
 }
