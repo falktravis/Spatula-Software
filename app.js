@@ -89,7 +89,7 @@ process.on('uncaughtException', async (error) => {
 
 process.on('unhandledRejection', async (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    logChannel.send('Uncaught rejection: ' + error);
+    logChannel.send('Uncaught rejection: ' + reason);
 });
 
 //worker login listening function
@@ -392,7 +392,7 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === "list"){
                 let user = users.get(interaction.user.id);
-                if(user != null){
+                if(user.facebook.length > 0){
                     let list = ''; 
                     for (const [taskKey, task] of user.facebook){
                         //Message the worker to get data

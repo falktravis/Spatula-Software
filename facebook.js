@@ -46,9 +46,9 @@ client.on('ready', async () => {
             mainChannel = await client.channels.fetch(workerData.channel);
         }
 
-        testChannel = client.channels.cache.get('1091532766522376243');
-        if(testChannel == null){
-            testChannel = await client.channels.fetch('1091532766522376243');
+        logChannel = client.channels.cache.get('1091532766522376243');
+        if(logChannel == null){
+            logChannel = await client.channels.fetch('1091532766522376243');
         }
     } catch (error) {
         errorMessage('Error fetching channel', error);
@@ -58,7 +58,7 @@ client.on('ready', async () => {
 //error message send function 
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
-    //testChannel.send(message + ': ' + error);
+    logChannel.send(message + ': ' + error);
     mainChannel.send(message + ': ' + error);
 }
 
@@ -255,7 +255,7 @@ let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
 let mainPageInitiate = true;
 let mainChannel;
-let testChannel;
+let logChannel;
 
 const start = async () => {
 
@@ -346,11 +346,11 @@ const start = async () => {
 
             if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
                 //end the task and message myself containing the account name
-                testChannel.send('Account lgpd migrated: ' + workerData.burnerUsername);
+                logChannel.send('Account lgpd migrated: ' + workerData.burnerUsername);
             }
             
             if(mainPage.url().includes('checkpoint/828281030927956')){
-                testChannel.send('Account banned: ' + workerData.burnerUsername);
+                logChannel.send('Account banned: ' + workerData.burnerUsername);
 
                 //message the main script to delete the burner account
                 parentPort.postMessage({action: 'ban'});
@@ -739,7 +739,7 @@ function interval() {
                         }else{
                             let notification;
                             try{
-                                notification = mainChannel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                notification = await mainChannel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
                                     .setTitle(postObj.title + " - " + postObj.price)
                                     .setURL(newPost)
