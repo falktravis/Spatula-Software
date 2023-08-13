@@ -392,7 +392,7 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === "list"){
                 let user = users.get(interaction.user.id);
-                if(user.facebook.length > 0){
+                if(user.facebook.size > 0){
                     let list = ''; 
                     for (const [taskKey, task] of user.facebook){
                         //Message the worker to get data
@@ -411,7 +411,7 @@ const executeCommand = async (interaction) => {
             
                     Channel.send(list);
                 }else{
-                    Channel.send("User does not exist");
+                    Channel.send("No Active Tasks");
                 }
             }else if(interaction.commandName === 'facebook-update-message-account'){
                 const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
