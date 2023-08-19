@@ -595,6 +595,7 @@ function interval() {
                     }
                 });
             } catch (error) {
+                logChannel.send('error getting results at url: ' + mainPage.url());
                 errorMessage('Error with getting results', error);
             }
         

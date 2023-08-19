@@ -32,13 +32,6 @@ let residentialProxyDB;
         burnerAccountDB = mongoClient.db('Spatula-Software').collection('burnerAccounts');
         userDB = mongoClient.db('Spatula-Software').collection('Users');
 
-        /*const accountList = await burnerAccountDB.find({}).toArray();
-        for(const account of accountList){
-            const platform = platforms[Math.floor(Math.random() * platforms.length)];
-            console.log(platform);
-            await burnerAccountDB.updateOne({_id: account._id}, {$set: {Platform: platform}});
-        }*/
-
         //start database scan
         scanDatabase();
     } catch(error){
@@ -363,7 +356,7 @@ const executeCommand = async (interaction) => {
                             }
     
                             //!reduce active task count by one
-                            //await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
     
                             //actually delete the thing
                             child.terminate();
@@ -392,7 +385,7 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === "list"){
                 let user = users.get(interaction.user.id);
-                if(user.facebook.size > 0){
+                if(user.facebook == null || user.facebook.size > 0){
                     let list = ''; 
                     for (const [taskKey, task] of user.facebook){
                         //Message the worker to get data
@@ -552,7 +545,7 @@ const executeCommand = async (interaction) => {
                             }
     
                             //!reduce active task count by one
-                            //await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
     
                             //actually delete the thing
                             task.terminate();
