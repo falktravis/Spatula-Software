@@ -47,10 +47,10 @@ client.on('ready', async () => {
             mainChannel = await client.channels.fetch(workerData.channel);
         }
 
-        logChannel = client.channels.cache.get('1091532766522376243');
+        /*logChannel = client.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await client.channels.fetch('1091532766522376243');
-        }
+        }*/
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -59,7 +59,7 @@ client.on('ready', async () => {
 //error message send function 
 const errorMessage = (message, error) => {
     console.log(workerData.name + ': ' + message + ': ' + error);
-    logChannel.send(workerData.name + ': ' + message + ': ' + error);
+    //logChannel.send(workerData.name + ': ' + message + ': ' + error);
     mainChannel.send(workerData.name + ': ' + message + ': ' + error);
 }
 

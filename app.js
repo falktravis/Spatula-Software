@@ -65,10 +65,10 @@ for (const file of commandFiles) {
 let logChannel;
 discordClient.on('ready', async () => {
     try {
-        logChannel = discordClient.channels.cache.get('1091532766522376243');
+        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
-        }
+        }*/
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -163,10 +163,35 @@ const scanDatabase = async () => {
                 usersToDelete.push(key);
             }
         }
-        
+
         //actually delete the users from map
         usersToDelete.forEach((userId) => {
-            //!need to terminate/delete any active workers
+            users.get(userId).facebook.forEach(async (task) => {
+                //Message the worker to close browsers
+                await task.postMessage({ action: 'closeBrowsers' });
+
+                let message = await new Promise(resolve => {
+                    task.on('message', message => {
+                        resolve(message);
+                    });
+                });
+
+                //On completion worker messages back to terminate
+                if(message.action == 'terminate'){
+                    console.log('terminate');
+
+                    //set cookies in db
+                    await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
+                    if(message.messageCookies != null){
+                        await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                    }
+
+                    await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+
+                    //actually delete the thing
+                    task.terminate();
+                }
+            })
 
             users.delete(userId);
         })
@@ -592,7 +617,6 @@ const executeCommand = async (interaction) => {
                                 await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
                             }
     
-                            //!reduce active task count by one
                             await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
     
                             //actually delete the thing
@@ -608,13 +632,11 @@ const executeCommand = async (interaction) => {
             else if(interaction.commandName === 'start-all-tasks' && interaction.user.id === '456168609639694376'){
                 const taskArray = taskDB.find();
 
-                //!Change this so functions will run in order and we don't start all workers at once
-                await taskArray.forEach(async (document) => {
+                for await (const document of taskArray){
                     //handle and get the user
                     await handleUser(document.UserId);
                     const user = users.get(document.UserId);
                     if(user != null){
-
                         //increase the worker count
                         user.taskCount++;
 
@@ -632,32 +654,32 @@ const executeCommand = async (interaction) => {
                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
 
                         //create a new worker and add it to the map
-                        user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
-                            name: interaction.options.getString("name"),
-                            link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
-                            messageType: interaction.options.getNumber("message-type"),
-                            message: interaction.options.getString("message"),
+                        user.facebook.set(document.Name, new Worker('./facebook.js', { workerData:{
+                            name: document.Name,
+                            link: document.Link + "&sortBy=creation_time_descend&daysSinceListed=1",
+                            messageType: document.MessageType,
+                            message: document.Message,
                             burnerUsername: burnerAccountObj.Username,
                             burnerProxy: burnerAccountObj.Proxy,
-                            messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
+                            messageProxy: document.MessageType == 3 ? null : userObj.MessageAccount.Proxy,
                             burnerCookies: burnerAccountObj.Cookies,
-                            messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
+                            messageCookies: document.MessageType == 3 ? null : userObj.MessageAccount.Cookies,
                             burnerPlatform: burnerAccountObj.Platform,
-                            messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
+                            messagePlatform: document.MessageType == 3 ? null : userObj.MessageAccount.Platform,
                             maxPrice: maxPrice,
-                            start: start * 60,
-                            end: end * 60,
-                            distance: interaction.options.getNumber("distance"),
-                            channel: interaction.channelId,
+                            start: document.Start * 60,
+                            end: document.End * 60,
+                            distance: document.Distance,
+                            channel: document.ChannelId,
                         }}));
 
-                        user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), document.UserId, burnerAccountObj.Username)); 
+                        user.facebook.get(document.Name).on('message', message => facebookListener(message, document.Name, document.UserId, burnerAccountObj.Username)); 
 
-                        Channel.send("Created " + interaction.options.getString("name"));
+                        Channel.send("Created " + document.Name);
                     }else{
                         await taskDB.deleteOne({_id: document._id});
                     }
-                })
+                }
 
                 Channel.send('Finished');
             }
@@ -666,7 +688,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        logChannel.send("Command Error: \n\t" + error);
+        //logChannel.send("Command Error: \n\t" + error);
         Channel.send("Command Error: \n\t" + error);
     }
 }
