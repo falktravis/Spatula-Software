@@ -179,10 +179,10 @@ const users = new Map();
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
     try {
+        if (!interaction.isChatInputCommand()) return;
+
         await interaction.deferReply({ ephemeral: true });
         console.log('defer');
-    
-        if (!interaction.isChatInputCommand()) return;
     
         const command = interaction.client.commands.get(interaction.commandName);
     
@@ -355,7 +355,47 @@ const executeCommand = async (interaction) => {
                                 await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
                             }
     
-                            //!reduce active task count by one
+                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+    
+                            //actually delete the thing
+                            child.terminate();
+                            user.facebook.delete(interaction.options.getString("task-name"));
+                            user.taskCount--;
+                            Channel.send("Deleted " + interaction.options.getString("task-name"));
+                        }
+                    }else{
+                        Channel.send("Task does not exist");
+                    }
+                }else{
+                    Channel.send("Task does not exist");
+                }
+            }
+            else if(interaction.commandName === "admin-facebook-delete-task" && interaction.user.id === '456168609639694376'){
+                if(users.has(interaction.options.getString('user-id'))){
+                    const user = users.get(interaction.options.getString('user-id'));
+
+                    if(user.facebook.has(interaction.options.getString("task-name"))){
+                        let child = user.facebook.get(interaction.options.getString("task-name"));
+    
+                        //Message the worker to close browsers
+                        await child.postMessage({ action: 'closeBrowsers' });
+    
+                        let message = await new Promise(resolve => {
+                            child.on('message', message => {
+                                resolve(message);
+                            });
+                        });
+    
+                        //On completion worker messages back to terminate
+                        if(message.action == 'terminate'){
+                            console.log('terminate');
+    
+                            //set cookies in db
+                            await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
+                            if(message.messageCookies != null){
+                                await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                            }
+    
                             await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
     
                             //actually delete the thing
@@ -385,7 +425,7 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === "list"){
                 let user = users.get(interaction.user.id);
-                if(user.facebook == null || user.facebook.size > 0){
+                if(user.facebook != null && user.facebook.size > 0){
                     let list = ''; 
                     for (const [taskKey, task] of user.facebook){
                         //Message the worker to get data
@@ -397,7 +437,7 @@ const executeCommand = async (interaction) => {
                             });
                         });
 
-                        list += `\n\t- name:${taskKey} ${message}`;
+                        list += `\n- name:${taskKey} ${message}`;
                     }
 
                     //**Ebay stuff removed
@@ -423,7 +463,7 @@ const executeCommand = async (interaction) => {
                     const proxy = await getStaticFacebookMessageProxy();
                     await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Proxy' : proxy.Proxy}});
                 }
-        
+                
                 Channel.send('Updated!');
             }else if(interaction.commandName === 'add-facebook-accounts' && interaction.user.id === '456168609639694376'){
                 const fs = require('fs');
@@ -465,11 +505,14 @@ const executeCommand = async (interaction) => {
                     const email = emailPasswordMatch[1];
                     const password = emailPasswordMatch[2];
 
-                    //get a static proxy
-                    //const proxyObj = await getStaticFacebookBurnerProxy();
+                    //get random platform
+                    const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
 
-                    console.log({Username: email, Password: password, Cookies: cookieArray, ActiveTasks: 0, Platform: 'Windows'});
-                    //await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, ActiveTasks: 0, Platform: 'Windows'});
+                    //get a static proxy
+                    const proxyObj = await getStaticFacebookBurnerProxy();
+
+                    //console.log({Username: email, Password: password, Cookies: cookieArray, ActiveTasks: 0, Platform: randomPlatform});
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, ActiveTasks: 0, Platform: randomPlatform});
                 }
         
                 Channel.send('finish');

@@ -6,6 +6,7 @@ puppeteer.use(stealthPlugin());
 
 //discord.js
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+const { log } = require('console');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
@@ -32,7 +33,7 @@ parentPort.on('message', async (message) => {
         let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
         let distances = ['1', '2', '5', '10', '20', '40', '60', '80', '100', '250', '500'];
 
-        parentPort.postMessage(`link:<${workerData.link}> message-type:${messagingTypes[workerData.messageType - 1]} start:${workerData.start} end:${workerData.end} distance:${distances[workerData.distance - 1]}`);
+        parentPort.postMessage(`link:<${workerData.link}> message-type:${messagingTypes[workerData.messageType - 1]} start:${workerData.start/60} end:${workerData.end/60} distance:${distances[workerData.distance - 1]}`);
     }
     else if(message.action === 'getAccount'){
         parentPort.postMessage(workerData.burnerUsername);
@@ -57,9 +58,9 @@ client.on('ready', async () => {
 
 //error message send function 
 const errorMessage = (message, error) => {
-    console.log(message + ': ' + error);
-    logChannel.send(message + ': ' + error);
-    mainChannel.send(message + ': ' + error);
+    console.log(workerData.name + ': ' + message + ': ' + error);
+    logChannel.send(workerData.name + ': ' + message + ': ' + error);
+    mainChannel.send(workerData.name + ': ' + message + ': ' + error);
 }
 
 //randomize time till post check
@@ -185,45 +186,49 @@ const sendMessage = async (link) => {
         messageCookies = messageCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
 
         //Send the message
-        if(!itemPage.url().includes('unavailable_product')){
-            if(await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]')){//regular, pickup listing
-
-                console.log("local pickup only message sequence");
-                if(workerData.message != null){
+        if(!itemPage.url().includes('facebook.com/login')){
+            if(!itemPage.url().includes('unavailable_product')){
+                if(await itemPage.$('div.x1daaz14 [aria-label="Send seller a message"]')){//regular, pickup listing
+    
+                    console.log("local pickup only message sequence");
+                    if(workerData.message != null){
+                        await pause();
+                        await messageCursor.click('div.x1daaz14 [aria-label="Send seller a message"]');
+                        await itemPage.keyboard.press('Backspace');
+                        await typeWithRandomSpeed(itemPage, 'div.x1daaz14 [aria-label="Send seller a message"]', workerData.message);
+                    }
                     await pause();
-                    await messageCursor.click('div.x1daaz14 [aria-label="Send seller a message"]');
-                    await itemPage.keyboard.press('Backspace');
-                    await typeWithRandomSpeed(itemPage, 'div.x1daaz14 [aria-label="Send seller a message"]', workerData.message);
-                }
-                await pause();
-                await messageCursor.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
-                await itemPage.waitForSelector('[aria-label="Message Again"]');
-                mainChannel.send("Message Sent!");
-            }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
-                console.log("shipping message sequence");
-                await pause();
-                await messageCursor.click('[aria-label="Message"]');
-                await itemPage.waitForSelector('[aria-label="Please type your message to the seller"]');
-                if(workerData.message != null){
+                    await messageCursor.click('div.x1daaz14 div.x14vqqas div.xdt5ytf');
+                    await itemPage.waitForSelector('[aria-label="Message Again"]');
+                    mainChannel.send("Message Sent!");
+                }else if(await itemPage.$('[aria-label="Message"]') && await itemPage.$('span.x1xlr1w8.x1a1m0xk') == null){//shipping listing
+                    console.log("shipping message sequence");
                     await pause();
-                    await messageCursor.click('[aria-label="Please type your message to the seller"]');
-                    await typeWithRandomSpeed(itemPage, '[aria-label="Please type your message to the seller"]', workerData.message);
+                    await messageCursor.click('[aria-label="Message"]');
+                    await itemPage.waitForSelector('[aria-label="Please type your message to the seller"]');
+                    if(workerData.message != null){
+                        await pause();
+                        await messageCursor.click('[aria-label="Please type your message to the seller"]');
+                        await typeWithRandomSpeed(itemPage, '[aria-label="Please type your message to the seller"]', workerData.message);
+                    }
+                    await pause();
+                    await messageCursor.click('[aria-label="Send Message"]');
+                    await itemPage.waitForSelector('[aria-label="Message Again"]');
+                    mainChannel.send("Message Sent!");
+                }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
+                    let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.x1xlr1w8.x1a1m0xk').innerText});
+                    mainChannel.send("Message Failed: item " + listingConditionText);
+                }else if(await itemPage.$('span.xk50ysn.x1a1m0xk')){//Check for the weird out of stock thing //!I have no clue if this is actually a thing
+                    let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.xk50ysn.x1a1m0xk').innerText});
+                    mainChannel.send("Message Failed: item " + listingConditionText);
+                }else{
+                    mainChannel.send("Message Failed");
                 }
-                await pause();
-                await messageCursor.click('[aria-label="Send Message"]');
-                await itemPage.waitForSelector('[aria-label="Message Again"]');
-                mainChannel.send("Message Sent!");
-            }else if(await itemPage.$('span.x1xlr1w8.x1a1m0xk')){//check for a regular pending/sold listing
-                let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.x1xlr1w8.x1a1m0xk').innerText});
-                mainChannel.send("Message Failed: item " + listingConditionText);
-            }else if(await itemPage.$('span.xk50ysn.x1a1m0xk')){//Check for the weird out of stock thing //!I have no clue if this is actually a thing
-                let listingConditionText = await itemPage.evaluate(() => {return document.querySelector('span.xk50ysn.x1a1m0xk').innerText});
-                mainChannel.send("Message Failed: item " + listingConditionText);
             }else{
-                mainChannel.send("Message Failed");
+                mainChannel.send("Product Unavailable");
             }
         }else{
-            mainChannel.send("Product Unavailable");
+            mainChannel.send("Cookies Expired\n\tUpdate the cookies and restart the task to use messaging");
         }
     } catch (error){
         errorMessage('Error with messaging', error);
@@ -250,7 +255,7 @@ let burnerCookies = workerData.burnerCookies;
 let messageCookies = workerData.messageCookies;
 let networkData = 0;
 let startCount = 0; //number of times tried to set distance
-let isDormant = false; //true if task can be deleted
+let isDormant = true; //true if task can be deleted
 let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
 let mainPageInitiate = true;
@@ -293,6 +298,7 @@ const start = async () => {
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
                 const redirectURL = response.headers()['location'];
                 console.log(`Redirected to: ${redirectURL}`);
+                logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
             }
         });
 
@@ -349,7 +355,7 @@ const start = async () => {
                 logChannel.send('Account lgpd migrated: ' + workerData.burnerUsername);
             }
             
-            if(mainPage.url().includes('checkpoint/828281030927956')){
+            if(mainPage.url().includes('checkpoint/828281030927956') || mainPage.url().includes('checkpoint/1501092823525282')){
                 logChannel.send('Account banned: ' + workerData.burnerUsername);
 
                 //message the main script to delete the burner account
@@ -381,8 +387,7 @@ const start = async () => {
             await pause();
             await mainCursor.click('[aria-label="Apply"]');
             //wait for the results to update, we aren't concerned about time
-            await new Promise(r => setTimeout(r, 9000));
-            //!await mainPage.reload({ waitUntil: 'networkidle2' });
+            await new Promise(r => setTimeout(r, 10000));
         } catch (error) {
             startCount++;
             console.log(startCount + " : " + error);
@@ -402,8 +407,7 @@ const setListingStorage = async () => {
     // Set listingStorage, run once in the begging of the day
     try{
         mainListingStorage = await mainPage.evaluate(() => {
-            let searchResults = document.querySelector('div.xx6bls6');
-            if(searchResults == null){
+            if(document.querySelector('div.xx6bls6') == null && document.querySelector('[aria-label="Browse Marketplace"]') == null){
                 let links = [document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(2) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(3) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(4) a")];
                 return links.map((link) => {
                     if(link != null){
@@ -571,23 +575,27 @@ function interval() {
                 console.log(mainPage.url());
 
                 console.log(prices);
-            } catch(error) {
-                errorMessage('Error with results refresh', error);
-            }
 
-            try {
-                //!fix null (.href) error?
-                if(await mainPage.$(".x3ct3a4 a") == null){
-                    await mainPage.waitForSelector(".x3ct3a4 a");
+                //if the listings dont exist on the page, refresh
+                if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
+                    await mainPage.reload({waitUntil: 'domcontentloaded'});
+                    //mainChannel.send('Refresh for null .href error'); //!
+                    logChannel.send('Refresh for null .href error');
                 }
-            } catch (error) {
-                console.log('Waiting for results: ' + error);
+            } catch(error) {
+                if(error.includes('TargetCloseError')){
+                    logChannel.send("Page Closed");
+                    await mainBrowser.close();
+                    await start();
+                }else{
+                    errorMessage('Error with results refresh', error);
+                }
             }
 
             try {
                 //check for new posts
                 newPost = await mainPage.evaluate(() => {
-                    if(document.querySelector('div.xx6bls6') == null){
+                    if(document.querySelector('div.xx6bls6') == null && document.querySelector('[aria-label="Browse Marketplace"]') == null){
                         let link = document.querySelector(".x3ct3a4 a").href;
                         return link.substring(0, link.indexOf("?"));
                     }else{
@@ -595,7 +603,6 @@ function interval() {
                     }
                 });
             } catch (error) {
-                logChannel.send('error getting results at url: ' + mainPage.url());
                 errorMessage('Error with getting results', error);
             }
         
@@ -780,15 +787,6 @@ function interval() {
                         }
                     }else{
                         console.log("\n\nThe Price is Wrong, price: " + price + " max: " + workerData.maxPrice + "\n\n");
-                    }
-
-                    try {
-                        //!fix null (.href) error?
-                        if(await mainPage.$(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${postNum}) a`) == null){
-                            await mainPage.waitForSelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${postNum}) a`);
-                        }
-                    } catch (error) {
-                        console.log('Waiting for results: ' + error);
                     }
 
                     //Update newPost
