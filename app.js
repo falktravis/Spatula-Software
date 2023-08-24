@@ -425,24 +425,28 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === "list"){
                 let user = users.get(interaction.user.id);
-                if(user.facebook != null && user.facebook.size > 0){
-                    let list = ''; 
-                    for (const [taskKey, task] of user.facebook){
-                        //Message the worker to get data
-                        await task.postMessage({ action: 'getData' });
-    
-                        let message = await new Promise(resolve => {
-                            task.on('message', message => {
-                                resolve(message);
+                if(user.facebook != null){
+                    if(user.facebook.size > 0){
+                        let list = ''; 
+                        for (const [taskKey, task] of user.facebook){
+                            //Message the worker to get data
+                            await task.postMessage({ action: 'getData' });
+        
+                            let message = await new Promise(resolve => {
+                                task.on('message', message => {
+                                    resolve(message);
+                                });
                             });
-                        });
-
-                        list += `\n- name:${taskKey} ${message}`;
+    
+                            list += `\n- name:${taskKey} ${message}`;
+                        }
+    
+                        //**Ebay stuff removed
+                
+                        Channel.send(list);
+                    }else{
+                        Channel.send("No Active Tasks");
                     }
-
-                    //**Ebay stuff removed
-            
-                    Channel.send(list);
                 }else{
                     Channel.send("No Active Tasks");
                 }

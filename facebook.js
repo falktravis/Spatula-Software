@@ -583,7 +583,7 @@ function interval() {
                     logChannel.send('Refresh for null .href error');
                 }
             } catch(error) {
-                if(error.includes('TargetCloseError')){
+                if(error.message.includes('TargetCloseError')){
                     logChannel.send("Page Closed");
                     await mainBrowser.close();
                     await start();
