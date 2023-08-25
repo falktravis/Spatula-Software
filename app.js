@@ -65,10 +65,10 @@ for (const file of commandFiles) {
 let logChannel;
 discordClient.on('ready', async () => {
     try {
-        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
+        logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
-        }*/
+        }
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -154,47 +154,55 @@ const handleUser = async (userId) => {
 const scanDatabase = async () => {
 
     setTimeout(async () => {
-        usersToDelete = [];
+        try {
+            usersToDelete = [];
 
-        //check map against db
-        for (const [key, value] of users) {
-            const userObj = await userDB.findOne({ UserId: key });
-            if (!userObj) {
-                usersToDelete.push(key);
-            }
-        }
-
-        //actually delete the users from map
-        usersToDelete.forEach((userId) => {
-            users.get(userId).facebook.forEach(async (task) => {
-                //Message the worker to close browsers
-                await task.postMessage({ action: 'closeBrowsers' });
-
-                let message = await new Promise(resolve => {
-                    task.on('message', message => {
-                        resolve(message);
-                    });
-                });
-
-                //On completion worker messages back to terminate
-                if(message.action == 'terminate'){
-                    console.log('terminate');
-
-                    //set cookies in db
-                    await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
-                    if(message.messageCookies != null){
-                        await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
-                    }
-
-                    await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-
-                    //actually delete the thing
-                    task.terminate();
+            //check map against db
+            for (const [key, value] of users) {
+                const userObj = await userDB.findOne({ UserId: key });
+                if (!userObj) {
+                    usersToDelete.push(key);
                 }
-            })
+            }
 
-            users.delete(userId);
-        })
+            //actually delete the users from map
+            usersToDelete.forEach(async (userId) => {
+                users.get(userId).facebook.forEach(async (task) => {
+                    //Message the worker to close browsers
+                    await task.postMessage({ action: 'closeBrowsers' });
+
+                    let message = await new Promise(resolve => {
+                        task.on('message', message => {
+                            resolve(message);
+                        });
+                    });
+
+                    //On completion worker messages back to terminate
+                    if(message.action == 'terminate'){
+                        console.log('terminate');
+
+                        //set cookies in db
+                        await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
+                        if(message.messageCookies != null){
+                            await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                        }
+
+                        await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+
+                        //actually delete the thing
+                        task.terminate();
+                    }
+                })
+                
+                //delete from db
+                await taskDB.deleteMany({UserId: userId});
+
+                users.delete(userId);
+            })
+        } catch (error) {
+            console.log("Error scaning Database: \n\t" + error);
+            logChannel.send("Error scaning Database: \n\t" + error);
+        }
 
         scanDatabase();
     }, 86400000) //24 hours
@@ -253,12 +261,19 @@ discordClient.on(Events.InteractionCreate, async interaction => {
 }*/
 
 const executeCommand = async (interaction) => {
+    let Channel
     try {
-        let Channel = discordClient.channels.cache.get(interaction.channelId);
+        Channel = discordClient.channels.cache.get(interaction.channelId);
         if(Channel == null){
             console.log("Channel not in cache");
             Channel = await discordClient.channels.fetch(interaction.channelId);
         }
+    } catch (error) {
+        console.log("Error getting channel for command: " + error);
+        logChannel.send("Error getting channel for command: " + error);
+    }
+
+    try {
 
         if(interaction.guild){
             if(interaction.commandName === "facebook-create-task"){
@@ -433,10 +448,14 @@ const executeCommand = async (interaction) => {
     
                             await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
     
-                            //actually delete the thing
+                            //delete from server
                             child.terminate();
                             user.facebook.delete(interaction.options.getString("task-name"));
                             user.taskCount--;
+
+                            //delete from db
+                            await taskDB.deleteOne({UserId: interaction.user.id, Name: interaction.options.getString("task-name")});
+
                             Channel.send("Deleted " + interaction.options.getString("task-name"));
                         }
                     }else{
@@ -625,6 +644,7 @@ const executeCommand = async (interaction) => {
                     })
 
                     user.facebook = new Map();
+                    user.taskCount = 0;
                 })
 
                 Channel.send('Finished');
@@ -653,6 +673,10 @@ const executeCommand = async (interaction) => {
                         //increase number of active tasks on the burner account
                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
 
+                        //get the max price from link
+                        let maxPrice = (document.Link).match(/[?&]maxPrice=(\d+)/);
+                        maxPrice = parseInt(maxPrice[1]);
+
                         //create a new worker and add it to the map
                         user.facebook.set(document.Name, new Worker('./facebook.js', { workerData:{
                             name: document.Name,
@@ -676,6 +700,8 @@ const executeCommand = async (interaction) => {
                         user.facebook.get(document.Name).on('message', message => facebookListener(message, document.Name, document.UserId, burnerAccountObj.Username)); 
 
                         Channel.send("Created " + document.Name);
+
+                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 20000 + 20000))); //20s to 40s
                     }else{
                         await taskDB.deleteOne({_id: document._id});
                     }
@@ -688,7 +714,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        //logChannel.send("Command Error: \n\t" + error);
+        logChannel.send("Command Error: \n\t" + error);
         Channel.send("Command Error: \n\t" + error);
     }
 }
