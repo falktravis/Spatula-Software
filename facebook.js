@@ -27,16 +27,32 @@ parentPort.on('message', async (message) => {
             await itemBrowser.close();
         }
 
-        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: workerData.burnerUsername});
+        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: burnerUsername});
     }
-    else if(message.action === 'getData'){
-        let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
-        let distances = ['1', '2', '5', '10', '20', '40', '60', '80', '100', '250', '500'];
+    else if(message.action === 'newAccount'){
+        isDormant = false;
 
-        parentPort.postMessage(`link:<${workerData.link}> message-type:${messagingTypes[workerData.messageType - 1]} start:${workerData.start/60} end:${workerData.end/60} distance:${distances[workerData.distance - 1]}`);
+        //set all new account data
+        burnerCookies = message.Cookies;
+        burnerUsername = message.Username;
+        burnerProxy = message.Proxy;
+        burnerPlatform = message.Platform;
+
+        //close browser
+        await mainBrowser.close();
+        startError = false;
+
+        //restart the main page
+        await start();
+
+        if(mainListingStorage == null){
+            await setListingStorage();
+        }
+
+        isDormant = true;
     }
     else if(message.action === 'getAccount'){
-        parentPort.postMessage(workerData.burnerUsername);
+        parentPort.postMessage(burnerUsername);
     }
 });
 
@@ -251,24 +267,32 @@ let mainPage;
 let itemPage;
 let itemBrowser;
 let mainListingStorage;
-let burnerCookies = workerData.burnerCookies;
-let messageCookies = workerData.messageCookies;
 let networkData = 0;
 let startCount = 0; //number of times tried to set distance
 let isDormant = true; //true if task can be deleted
 let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
-let mainPageInitiate = true;
+let mainPageInitiate;
 let mainChannel;
 let logChannel;
+
+//changeable account stuff
+let messageCookies = workerData.messageCookies;
+
+let burnerCookies = workerData.burnerCookies;
+let burnerUsername = workerData.burnerUsername;
+let burnerProxy = workerData.burnerProxy;
+let burnerPlatform = workerData.burnerPlatform;
 
 const start = async () => {
 
     try{
+        mainPageInitiate = true;
+
         //initialize the static isp proxy page
         mainBrowser = await puppeteer.launch({
             headless: 'new',
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.burnerProxy}`],
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`],
             timeout: 60000
         });
 
@@ -299,6 +323,25 @@ const start = async () => {
                 const redirectURL = response.headers()['location'];
                 console.log(`Redirected to: ${redirectURL}`);
                 logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
+
+                startError = true;
+
+                if(redirectURL.includes('privacy/consent/lgpd_migrated')){
+                    //end the task and message myself containing the account name
+                    logChannel.send('Account lgpd migrated: ' + burnerUsername);
+                    console.log('Account lgpd migrated: ' + burnerUsername);
+                }
+                
+                if(redirectURL.includes('/checkpoint/')){
+                    logChannel.send('Account banned: ' + burnerUsername);
+                    console.log('Account banned: ' + burnerUsername);
+            
+                    //message the main script to delete the burner account
+                    parentPort.postMessage({action: 'ban'});
+                }else{
+                    //message the main script to terminate the task
+                    parentPort.postMessage({action: 'failure'});
+                }
             }
         });
 
@@ -327,7 +370,7 @@ const start = async () => {
             'Referer': 'https://www.facebook.com/login',
             'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
             'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-            'Sec-Ch-Ua-Platform': workerData.burnerPlatform
+            'Sec-Ch-Ua-Platform': burnerPlatform
         });
         
         //Set cookies in browser
@@ -335,72 +378,52 @@ const start = async () => {
 
         //go to the search page
         await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
-        
+
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
         burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-
-        //make sure the url is correct
-        if(mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
-            console.log("Link is wrong: " + mainPage.url());
-
-            startError = true;
-            await mainBrowser.close();
-            
-            //alert the user to the error
-            mainChannel.send('Task terminated, please restart. Error at URL: ' + mainPage.url());
-
-            if(mainPage.url().includes('privacy/consent/lgpd_migrated')){
-                //end the task and message myself containing the account name
-                logChannel.send('Account lgpd migrated: ' + workerData.burnerUsername);
-            }
-            
-            if(mainPage.url().includes('checkpoint/828281030927956') || mainPage.url().includes('checkpoint/1501092823525282')){
-                logChannel.send('Account banned: ' + workerData.burnerUsername);
-
-                //message the main script to delete the burner account
-                parentPort.postMessage({action: 'ban'});
-            }else{
-                //message the main script to terminate the task
-                parentPort.postMessage({action: 'failure'});
-            }
-        }else{
-            //message to delete listener
-            parentPort.postMessage({action: 'success'});
-        }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
     }
+
+    //make sure the url is correct
+    if(mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
+        console.log("Link is wrong: " + mainPage.url());
+
+        startError = true;
+    }
     
     //set distance
-    if(workerData.distance != null && isCreate == true && startError == false){
+    if(startError == false){
+        if(workerData.distance != null && isCreate == true){
 
-        try {
-            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
-            await pause();
-            await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
-            await pause();
-            await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
-            await pause();
-            await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
-            await pause();
-            await mainCursor.click('[aria-label="Apply"]');
-            //wait for the results to update, we aren't concerned about time
-            await new Promise(r => setTimeout(r, 10000));
-        } catch (error) {
-            startCount++;
-            console.log(startCount + " : " + error);
-            if(startCount < 3){
-                await mainBrowser.close();
-                await start();
-            }else{
-                errorMessage('Error with setting distance', error);
+            try {
+                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
+                await pause();
+                await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+                await pause();
+                await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
+                await pause();
+                await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
+                await pause();
+                await mainCursor.click('[aria-label="Apply"]');
+                //wait for the results to update, we aren't concerned about time
+                await new Promise(r => setTimeout(r, 10000));
+            } catch (error) {
+                startCount++;
+                console.log(startCount + " : " + error);
+                if(startCount < 3){
+                    await mainBrowser.close();
+                    await start();
+                }else{
+                    errorMessage('Error with setting distance', error);
+                }
             }
         }
+    
+        mainPageInitiate = false;
     }
-
-    mainPageInitiate = false;
 }
 
 const setListingStorage = async () => {
@@ -485,11 +508,11 @@ const handleTime = async (intervalFunction) => {
                     await setListingStorage();
                     isCreate = false;
                 }
-
-                isDormant = true;
     
                 intervalFunction(); 
             }
+
+            isDormant = true;
         } catch (error) {
             errorMessage('Error starting task', error);
         }
@@ -688,7 +711,7 @@ function interval() {
                                     'Referer': 'https://www.facebook.com/login',
                                     'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
                                     'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-                                    'Sec-Ch-Ua-Platform': workerData.burnerPlatform
+                                    'Sec-Ch-Ua-Platform': burnerPlatform
                                 });
     
                                 //change the viewport

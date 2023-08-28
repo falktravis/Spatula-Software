@@ -87,27 +87,27 @@ process.on('unhandledRejection', async (reason, promise) => {
 
 //worker login listening function
 const facebookListener = async (message, task, user, username) => {
-    if(message.action == 'success'){
-        users.get(user).facebook.get(task).removeListener('message', facebookListener);
-        console.log("listener gone");
-    }else if(message.action == 'failure'){
-        users.get(user).facebook.get(task).terminate();
-        users.get(user).facebook.delete(task);
+    if(message.action == 'failure'){
 
-        //Free the burner account for use
+        //Increase active task count
         await burnerAccountDB.updateOne({Username: username}, {$inc: {ActiveTasks: 1}});
-
-        //decrease worker count
-        users.get(user).workerCount--;
     }else if(message.action == 'ban'){
-        users.get(user).facebook.get(task).terminate();
-        users.get(user).facebook.delete(task);
 
-        //Free the burner account for use
-        await burnerAccountDB.deleteOne({Username: username});
+        //decrease the proxy account num before deleting account
+        const oldAccountObj = await burnerAccountDB.findOne({Username: username});
+        await staticProxyDB.updateOne({Proxy: oldAccountObj.Proxy}, {$inc: {TotalFacebookBurnerAccounts: -1}});
 
-        //decrease worker count
-        users.get(user).workerCount--;
+        //Delete the burner account
+        await burnerAccountDB.deleteOne({_id: oldAccountObj._id});
+    }
+
+    if(message.action == 'failure' || message.action == 'ban'){
+
+        //get a new account to send back to the task
+        const newAccountObj = await getFacebookAccount();
+
+        //send the data to the task
+        users.get(user).facebook.get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Platform: newAccountObj.Platform});
     }
 }
 
@@ -135,6 +135,24 @@ const getStaticFacebookBurnerProxy = async () => {
     await staticProxyDB.updateOne({_id: staticProxyObj._id}, {$inc: { TotalFacebookBurnerAccounts: 1 }});
 
     return staticProxyObj;
+}
+
+const getFacebookAccount = async () => {
+
+    //burner account assignment
+    let burnerAccountObj = await burnerAccountDB.findOne({ActiveTasks: 0});
+
+    //if there is no un-active accounts 
+    if(burnerAccountObj == null){
+        burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
+        console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
+        logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+    }
+
+    //increase number of active tasks on the burner account
+    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
+
+    return burnerAccountObj;
 }
 
 const handleUser = async (userId) => {
@@ -234,31 +252,8 @@ discordClient.on(Events.InteractionCreate, async interaction => {
         console.log('Error handling command: ' + error);
     }
 
-    /*//push command into the queue
-    queue.push(interaction);
-
-    //run the queue handler if it is not already going
-    if(queue.length == 1){
-        handleQueue();
-    }*/
 });
 
-/*const handleQueue = async () => {
-    //run the command
-    if(queue[0].message != null){
-        await executeMessage(queue[0]);
-    }else{
-        await executeCommand(queue[0]);
-    }
-
-    //delete the executed command from queue
-    queue.shift();
-
-    //check the queue for more commands and run it back if necessary
-    if(queue.length > 0){
-        handleQueue();
-    }
-}*/
 
 const executeCommand = async (interaction) => {
     let Channel
@@ -312,17 +307,7 @@ const executeCommand = async (interaction) => {
                                                 user.taskCount++;
 
                                                 //burner account assignment
-                                                let burnerAccountObj = await burnerAccountDB.findOne({ActiveTasks: 0});
-
-                                                //if there is no un-active accounts 
-                                                if(burnerAccountObj == null){
-                                                    burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
-                                                    console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-                                                    logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
-                                                }
-
-                                                //increase number of active tasks on the burner account
-                                                await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
+                                                const burnerAccountObj = await getFacebookAccount();
 
                                                 //set the task in db
                                                 await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance"), Start: start, End: end});
@@ -478,29 +463,19 @@ const executeCommand = async (interaction) => {
                 }});
             }
             else if(interaction.commandName === "list"){
-                let user = users.get(interaction.user.id);
-                if(user.facebook != null){
-                    if(user.facebook.size > 0){
-                        let list = ''; 
-                        for (const [taskKey, task] of user.facebook){
-                            //Message the worker to get data
-                            await task.postMessage({ action: 'getData' });
-        
-                            let message = await new Promise(resolve => {
-                                task.on('message', message => {
-                                    resolve(message);
-                                });
-                            });
-    
-                            list += `\n- name:${taskKey} ${message}`;
-                        }
-    
-                        //**Ebay stuff removed
-                
-                        Channel.send(list);
-                    }else{
-                        Channel.send("No Active Tasks");
-                    }
+                const taskArray = await taskDB.find({UserId: interaction.user.id});
+
+                if(taskArray != null){
+                    let list = '';
+
+                    await taskArray.forEach((task) => {
+                        let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
+                        let distances = ['1', '2', '5', '10', '20', '40', '60', '80', '100', '250', '500'];
+
+                        list += '- name: ' + task.Name +  'link: <' + task.Link +  '>message-type: ' + messagingTypes[task.MessageType] +  'distance: ' + distances[task.Distance] +  'start: ' + task.Start +  'end: ' + task.End + '\n';
+                    })
+
+                    Channel.send(list);
                 }else{
                     Channel.send("No Active Tasks");
                 }
