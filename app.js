@@ -652,6 +652,12 @@ const executeCommand = async (interaction) => {
                         let maxPrice = (document.Link).match(/[?&]maxPrice=(\d+)/);
                         maxPrice = parseInt(maxPrice[1]);
 
+                        //get the user obj if necessary for messaging
+                        let userObj;
+                        if(document.MessageType != 3){
+                            userObj = await userDB.findOne({UserId: document.UserId});
+                        }
+
                         //create a new worker and add it to the map
                         user.facebook.set(document.Name, new Worker('./facebook.js', { workerData:{
                             name: document.Name,
