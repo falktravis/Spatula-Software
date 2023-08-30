@@ -138,8 +138,10 @@ const getPrices = () => {
         generateArray(160, 20);
     }else if(workerData.maxPrice < 10000){
         generateArray(400, 50);
-    }else{
-        generateArray(800, 100);
+    }else if(workerData.maxPrice < 100000){
+        generateArray(1000, 100);
+    }else if(workerData.maxPrice < 500000){
+        generateArray(10000, 1000);
     }
 
     return array;
@@ -588,32 +590,38 @@ function interval() {
                 errorMessage('Error with results refresh', error);
             }*/
 
-            try {
-                //get a value from the start of the array
-                let value = prices.splice((Math.floor(Math.random() * (prices.length - 6))), 1);
-                prices.push(value[0]);
+            //get a value from the start of the array
+            let value = prices.splice((Math.floor(Math.random() * (prices.length - 6))), 1);
+            prices.push(value[0]);
 
-                //change link for results change
-                await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
-                console.log(mainPage.url());
-
-                console.log(prices);
-
-                //if the listings dont exist on the page, refresh
-                if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
-                    await mainPage.reload({waitUntil: 'domcontentloaded'});
-                    //mainChannel.send('Refresh for null .href error'); //!
-                    logChannel.send('Refresh for null .href error');
+            let resultsRefreshMaxAttempts = 0;
+            const resultsRefresh = async () => {
+                try {
+                    //change link for results change
+                    await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
+                    console.log(mainPage.url());
+            
+                    console.log(prices);
+            
+                    //if the listings dont exist on the page, refresh
+                    if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
+                        await mainPage.reload({waitUntil: 'domcontentloaded'});
+                        logChannel.send('Refresh for null .href error');
+                    }
+                } catch(error) {
+                    if(error.message.includes('TargetCloseError')){
+                        logChannel.send("Page Closed");
+                        await mainBrowser.close();
+                        await start();
+                    }else if(error.message.includes('ERR_TUNNEL_CONNECTION_FAILED') && resultsRefreshMaxAttempts < 3){
+                        resultsRefreshMaxAttempts++;
+                        await resultsRefresh();
+                    }else{
+                        errorMessage('Error with results refresh', error);
+                    }
                 }
-            } catch(error) {
-                if(error.message.includes('TargetCloseError')){
-                    logChannel.send("Page Closed");
-                    await mainBrowser.close();
-                    await start();
-                }else{
-                    errorMessage('Error with results refresh', error);
-                }
-            }
+            };
+            await resultsRefresh();
 
             try {
                 //check for new posts

@@ -280,7 +280,7 @@ const executeCommand = async (interaction) => {
                         if(interaction.options.getString("link").includes("maxPrice")){
                             let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
                             maxPrice = parseInt(maxPrice[1]);
-                            if(maxPrice.toString() <= 100000){
+                            if(maxPrice.toString() <= 500000){
                                 //compare with db total task count
                                 const userObj = await userDB.findOne({UserId: interaction.user.id});
 
@@ -676,7 +676,7 @@ const executeCommand = async (interaction) => {
 
                         Channel.send("Created " + document.Name);
 
-                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 20000 + 20000))); //20s to 40s
+                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 15000 + 15000))); //15s to 30s //!Maybe decrease this
                     }else{
                         await taskDB.deleteOne({_id: document._id});
                     }
