@@ -762,9 +762,9 @@ function interval() {
                         //Handle Discord messaging
                         if(workerData.messageType != 2){//if its not manual messaging
                             try{
-                                mainChannel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                mainChannel.send({ content: postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
-                                    .setTitle(postObj.title + " - " + postObj.price)
+                                    .setTitle(postObj.price + " - " + postObj.title)
                                     .setURL(newPost)
                                     .setAuthor({ name: workerData.name })
                                     .setDescription(postObj.description)
@@ -778,9 +778,9 @@ function interval() {
                         }else{
                             let notification;
                             try{
-                                notification = await mainChannel.send({ content: "New Facebook Post From " + workerData.name, embeds: [new EmbedBuilder()
+                                notification = await mainChannel.send({ content: postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
-                                    .setTitle(postObj.title + " - " + postObj.price)
+                                    .setTitle(postObj.price + " - " + postObj.title)
                                     .setURL(newPost)
                                     .setAuthor({ name: workerData.name })
                                     .setDescription(postObj.description)

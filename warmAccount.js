@@ -29,7 +29,7 @@ const platformConverter = (platform) => {
 let warmingBrowser;
 let warmingPage;
 
-/*const warmAccount = async () => {
+const warmAccount = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         warmingBrowser = await puppeteer.launch({
@@ -58,9 +58,9 @@ let warmingPage;
     }catch(error){
         errorMessage('Error with page initiation', error);
     }
-}*/
+}
 
-const warmAccount = async () => {
+/*const warmAccount = async () => {
     //initiate the new page for collecting data
     let itemPageFullLoad = false;
     let itemPage;
@@ -105,7 +105,7 @@ const warmAccount = async () => {
         //change the viewport
         warmingPage.setViewport({ width: 1366, height: 768 });
 
-        await warmingPage.goto('https://www.facebook.com/marketplace/item/848621506386662/', { waitUntil: 'domcontentloaded' });
+        await warmingPage.goto('https://www.facebook.com/marketplace/item/256848603938148/', { waitUntil: 'domcontentloaded' });
     }catch(error){
         errorMessage('Error with product page initiation, no message', error);
     }
@@ -138,5 +138,5 @@ const warmAccount = async () => {
     } catch(error){
         errorMessage('Error with getting item data', error);
     }
-}
+}*/
 warmAccount();

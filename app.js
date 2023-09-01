@@ -472,7 +472,7 @@ const executeCommand = async (interaction) => {
                         let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
                         let distances = ['1', '2', '5', '10', '20', '40', '60', '80', '100', '250', '500'];
 
-                        list += '- name: ' + task.Name +  'link: <' + task.Link +  '>message-type: ' + messagingTypes[task.MessageType] +  'distance: ' + distances[task.Distance] +  'start: ' + task.Start +  'end: ' + task.End + '\n';
+                        list += '- name: ' + task.Name +  ' link: <' + task.Link +  '> message-type: ' + messagingTypes[task.MessageType - 1] +  ' distance: ' + distances[task.Distance - 1] +  ' start: ' + task.Start +  ' end: ' + task.End + '\n';
                     })
 
                     Channel.send(list);
