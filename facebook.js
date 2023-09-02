@@ -230,6 +230,7 @@ const sendMessage = async (link) => {
                         await typeWithRandomSpeed(itemPage, '[aria-label="Please type your message to the seller"]', workerData.message);
                     }
                     await pause();
+                    //await itemPage.waitForSelector('[aria-label="Message Again"]'); //!Gotta test this
                     await messageCursor.click('[aria-label="Send Message"]');
                     await itemPage.waitForSelector('[aria-label="Message Again"]');
                     mainChannel.send("Message Sent!");
