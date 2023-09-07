@@ -521,6 +521,11 @@ const handleTime = async (intervalFunction) => {
         }
     }else if(isCreate == false){
         try {
+            while(isDormant == false){
+                console.log('task non dormant');
+                await new Promise(r => setTimeout(r, 10000));
+            }
+
             await mainBrowser.close();
             mainBrowser = null;
             console.log("page close");
@@ -758,6 +763,10 @@ function interval() {
                             } catch(error){
                                 errorMessage(`Error with getting item data at ${newPost}`, error);
                             }
+                        }
+
+                        if(postObj.description.length > 800){
+                            postObj.description = postObj.description.substring(0, 800) + '...';
                         }
                         
                         //Handle Discord messaging

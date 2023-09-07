@@ -590,8 +590,8 @@ const executeCommand = async (interaction) => {
                 }
             }
             else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
-                users.forEach((user) => {
-                    user.facebook.forEach(async (task) => {
+                for(const user of users){
+                    for(const task of user.facebook){
                         //Message the worker to close browsers
                         await task.postMessage({ action: 'closeBrowsers' });
     
@@ -616,11 +616,11 @@ const executeCommand = async (interaction) => {
                             //actually delete the thing
                             task.terminate();
                         }
-                    })
+                    }
 
                     user.facebook = new Map();
                     user.taskCount = 0;
-                })
+                }
 
                 Channel.send('Finished');
             }
@@ -682,7 +682,7 @@ const executeCommand = async (interaction) => {
 
                         Channel.send("Created " + document.Name);
 
-                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 15000 + 15000))); //15s to 30s //!Maybe decrease this
+                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 20000 + 20000)));
                     }else{
                         await taskDB.deleteOne({_id: document._id});
                     }
