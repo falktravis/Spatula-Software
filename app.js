@@ -673,6 +673,9 @@ const executeCommand = async (interaction) => {
                         //increase number of active tasks on the burner account
                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
 
+                        //!Fix the fucking staticAccountDB
+                        await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, {$inc: {TotalFacebookBurnerAccounts: 1}});
+
                         //!Add burnerUsername to the task db
                         await taskDB.updateOne({UserId: document.UserId, Name: document.Name}, {$set: {burnerAccount: burnerAccountObj.Username}});
 
