@@ -366,38 +366,48 @@ const executeCommand = async (interaction) => {
 
                     if(user.facebook.has(interaction.options.getString("task-name"))){
                         let child = user.facebook.get(interaction.options.getString("task-name"));
+                        let messageSuccess;
     
                         //Message the worker to close browsers
                         await child.postMessage({ action: 'closeBrowsers' });
     
-                        let message = await new Promise(resolve => {
-                            child.on('message', message => {
-                                resolve(message);
-                            });
-                        });
+                        let message = await Promise.race([
+                            new Promise(resolve => {
+                                child.on('message', message => {
+                                    messageSuccess = true;
+                                    resolve(message);
+                                });
+                            }),
+                            new Promise(resolve => {
+                                setTimeout(() => {
+                                    logChannel.send("Message failed @everyone");
+                                    messageSuccess = false;
+                                    resolve();
+                                  }, 90000); //90 seconds
+                            })
+                        ]);
     
                         //On completion worker messages back to terminate
-                        if(message.action == 'terminate'){
-                            console.log('terminate');
+                        if(messageSuccess){
     
                             //set cookies in db
                             await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
                             if(message.messageCookies != null){
-                                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                                await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
                             }
     
                             await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-    
-                            //delete from server
-                            child.terminate();
-                            user.facebook.delete(interaction.options.getString("task-name"));
-                            user.taskCount--;
-
-                            //delete from db
-                            await taskDB.deleteOne({UserId: interaction.user.id, Name: interaction.options.getString("task-name")}); 
-
-                            Channel.send("Deleted " + interaction.options.getString("task-name"));
                         }
+
+                        //delete from server
+                        child.terminate();
+                        user.facebook.delete(interaction.options.getString("task-name"));
+                        user.taskCount--;
+
+                        //delete from db
+                        await taskDB.deleteOne({UserId: interaction.user.id, Name: interaction.options.getString("task-name")}); 
+
+                        Channel.send("Deleted " + interaction.options.getString("task-name"));
                     }else{
                         Channel.send("Task does not exist");
                     }
@@ -595,6 +605,8 @@ const executeCommand = async (interaction) => {
                 for(const user of users){
                     if(user.facebook != null){
                         for(const task of user.facebook){
+                            let messageSuccess;
+                            
                             //Message the worker to close browsers
                             await task.postMessage({ action: 'closeBrowsers' });
     
