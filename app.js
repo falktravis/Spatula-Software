@@ -310,7 +310,7 @@ const executeCommand = async (interaction) => {
                                                 const burnerAccountObj = await getFacebookAccount();
 
                                                 //set the task in db
-                                                await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance"), Start: start, End: end});
+                                                await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance"), Start: start, End: end});
 
                                                 //create a new worker and add it to the map
                                                 user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
@@ -394,7 +394,7 @@ const executeCommand = async (interaction) => {
                             user.taskCount--;
 
                             //delete from db
-                            await taskDB.deleteOne({UserId: interaction.user.id, Name: interaction.options.getString("task-name")});
+                            await taskDB.deleteOne({UserId: interaction.user.id, Name: interaction.options.getString("task-name")}); 
 
                             Channel.send("Deleted " + interaction.options.getString("task-name"));
                         }
@@ -411,19 +411,29 @@ const executeCommand = async (interaction) => {
 
                     if(user.facebook.has(interaction.options.getString("task-name"))){
                         let child = user.facebook.get(interaction.options.getString("task-name"));
+                        let messageSuccess;
     
                         //Message the worker to close browsers
                         await child.postMessage({ action: 'closeBrowsers' });
     
-                        let message = await new Promise(resolve => {
-                            child.on('message', message => {
-                                resolve(message);
-                            });
-                        });
+                        let message = await Promise.race([
+                            new Promise(resolve => {
+                                child.on('message', message => {
+                                    messageSuccess = true;
+                                    resolve(message);
+                                });
+                            }),
+                            new Promise(resolve => {
+                                setTimeout(() => {
+                                    logChannel.send("Message failed @everyone");
+                                    messageSuccess = false;
+                                    resolve();
+                                  }, 90000); //90 seconds
+                            })
+                        ]);
     
                         //On completion worker messages back to terminate
-                        if(message.action == 'terminate'){
-                            console.log('terminate');
+                        if(messageSuccess){
     
                             //set cookies in db
                             await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
@@ -432,17 +442,17 @@ const executeCommand = async (interaction) => {
                             }
     
                             await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-    
-                            //delete from server
-                            child.terminate();
-                            user.facebook.delete(interaction.options.getString("task-name"));
-                            user.taskCount--;
-
-                            //delete from db
-                            await taskDB.deleteOne({UserId: interaction.user.id, Name: interaction.options.getString("task-name")});
-
-                            Channel.send("Deleted " + interaction.options.getString("task-name"));
                         }
+    
+                        //delete from server
+                        child.terminate();
+                        user.facebook.delete(interaction.options.getString("task-name"));
+                        user.taskCount--;
+
+                        //delete from db
+                        await taskDB.deleteOne({UserId: interaction.user.id, Name: interaction.options.getString("task-name")});
+
+                        Channel.send("Deleted " + interaction.options.getString("task-name"));
                     }else{
                         Channel.send("Task does not exist");
                     }
@@ -569,16 +579,8 @@ const executeCommand = async (interaction) => {
                 for (const [userID, user] of users){
                     list += '\n' + userID;
                     for (const [taskKey, task] of user.facebook){
-                        //Message the worker to get data
-                        await task.postMessage({ action: 'getAccount' });
     
-                        let message = await new Promise(resolve => {
-                            task.on('message', message => {
-                                resolve(message);
-                            });
-                        });
-    
-                        list += `\n\t-${taskKey} - ${message}`;
+                        list += `\n\t-${taskKey}`;
                     }
                 }
 
@@ -594,28 +596,37 @@ const executeCommand = async (interaction) => {
                     for(const task of user.facebook){
                         //Message the worker to close browsers
                         await task.postMessage({ action: 'closeBrowsers' });
-    
-                        let message = await new Promise(resolve => {
-                            task.on('message', message => {
-                                resolve(message);
-                            });
-                        });
+
+                        let message = await Promise.race([
+                            new Promise(resolve => {
+                                child.on('message', message => {
+                                    messageSuccess = true;
+                                    resolve(message);
+                                });
+                            }),
+                            new Promise(resolve => {
+                                setTimeout(() => {
+                                    logChannel.send("Message failed @everyone");
+                                    messageSuccess = false;
+                                    resolve();
+                                  }, 90000); //90 seconds
+                            })
+                        ]);
     
                         //On completion worker messages back to terminate
-                        if(message.action == 'terminate'){
-                            console.log('terminate');
+                        if(messageSuccess){
     
                             //set cookies in db
                             await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
                             if(message.messageCookies != null){
-                                await userDB.updateOne({UserId: interaction.user.id}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                                await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
                             }
     
                             await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-    
-                            //actually delete the thing
-                            task.terminate();
                         }
+    
+                        //delete from server
+                        child.terminate();
                     }
 
                     user.facebook = new Map();
@@ -647,6 +658,9 @@ const executeCommand = async (interaction) => {
 
                         //increase number of active tasks on the burner account
                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
+
+                        //!Add burnerUsername to the task db
+                        await taskDB.updateOne({UserId: document.UserId, Name: document.Name}, {$set: {burnerAccount: burnerAccountObj.Username}});
 
                         //get the max price from link
                         let maxPrice = (document.Link).match(/[?&]maxPrice=(\d+)/);

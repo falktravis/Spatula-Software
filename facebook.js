@@ -27,7 +27,7 @@ parentPort.on('message', async (message) => {
             await itemBrowser.close();
         }
 
-        parentPort.postMessage({action: 'terminate', messageCookies: messageCookies, burnerCookies: burnerCookies, username: burnerUsername});
+        parentPort.postMessage({messageCookies: messageCookies, burnerCookies: burnerCookies, username: burnerUsername});
     }
     else if(message.action === 'newAccount'){
         isDormant = false;
@@ -50,9 +50,6 @@ parentPort.on('message', async (message) => {
         }
 
         isDormant = true;
-    }
-    else if(message.action === 'getAccount'){
-        parentPort.postMessage(burnerUsername);
     }
 });
 
@@ -548,54 +545,6 @@ function interval() {
         if(isRunning){
             isDormant = false;
 
-            /*try {
-                //Get new price or refresh
-                if((possiblePrices.length - availablePrices.length) < 4){
-                    //get a value to use and remove it from possible values
-                    let value = availablePrices.splice((Math.floor(Math.random() * availablePrices.length)), 1);
-                    
-                    //Use price to refresh results
-                    await mainCursor.click('[aria-label="Maximum Range"]');
-
-                    //delete the current value
-                    await mainPage.keyboard.down('Control');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
-                    await mainPage.keyboard.press('a');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
-                    await mainPage.keyboard.up('Control');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (70 - 30 + 1)) + 30));
-                    await mainPage.keyboard.press('Backspace');
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
-
-                    //type the new value and press enter
-                    await typeWithRandomSpeed(mainPage, '[aria-label="Maximum Range"]', value.toString());
-                    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (100 - 50 + 1)) + 50));
-                    await mainPage.keyboard.press('Enter');
-
-                    //wait for results to update
-                    await new Promise(r => setTimeout(r, 5000));
-                }else{
-                    //refresh the page
-                    console.log("Refresh");
-                    await mainPage.reload({waitUntil: 'networkidle2'});
-                    availablePrices = [...possiblePrices];
-                    console.log(mainPage.url());
-
-                    //get the current value
-                    let value = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
-                    value = parseInt(value.replace(/[$,A]/g, ''));
-
-                    //remove the current value from the available ones
-                    availablePrices.splice(availablePrices.indexOf(value), 1);
-                }
-
-                let logPrice = await mainPage.$eval('[aria-label="Maximum Range"]', el => el.value);
-                logPrice = parseInt(logPrice.replace(/[$,]/g, ''));
-                console.log(logPrice);
-            } catch(error) {
-                errorMessage('Error with results refresh', error);
-            }*/
-
             //get a value from the start of the array
             let value = prices.splice((Math.floor(Math.random() * (prices.length - 6))), 1);
             prices.push(value[0]);
@@ -765,7 +714,7 @@ function interval() {
                             }
                         }
 
-                        if(postObj.description.length > 800){
+                        if(postObj.description != null && postObj.description.length > 800){
                             postObj.description = postObj.description.substring(0, 800) + '...';
                         }
                         
