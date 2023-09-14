@@ -593,40 +593,42 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
                 for(const user of users){
-                    for(const task of user.facebook){
-                        //Message the worker to close browsers
-                        await task.postMessage({ action: 'closeBrowsers' });
-
-                        let message = await Promise.race([
-                            new Promise(resolve => {
-                                child.on('message', message => {
-                                    messageSuccess = true;
-                                    resolve(message);
-                                });
-                            }),
-                            new Promise(resolve => {
-                                setTimeout(() => {
-                                    logChannel.send("Message failed @everyone");
-                                    messageSuccess = false;
-                                    resolve();
-                                  }, 90000); //90 seconds
-                            })
-                        ]);
+                    if(user.facebook != null){
+                        for(const task of user.facebook){
+                            //Message the worker to close browsers
+                            await task.postMessage({ action: 'closeBrowsers' });
     
-                        //On completion worker messages back to terminate
-                        if(messageSuccess){
-    
-                            //set cookies in db
-                            await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
-                            if(message.messageCookies != null){
-                                await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                            let message = await Promise.race([
+                                new Promise(resolve => {
+                                    child.on('message', message => {
+                                        messageSuccess = true;
+                                        resolve(message);
+                                    });
+                                }),
+                                new Promise(resolve => {
+                                    setTimeout(() => {
+                                        logChannel.send("Message failed @everyone");
+                                        messageSuccess = false;
+                                        resolve();
+                                      }, 90000); //90 seconds
+                                })
+                            ]);
+        
+                            //On completion worker messages back to terminate
+                            if(messageSuccess){
+        
+                                //set cookies in db
+                                await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
+                                if(message.messageCookies != null){
+                                    await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                                }
+        
+                                await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
                             }
-    
-                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+        
+                            //delete from server
+                            child.terminate();
                         }
-    
-                        //delete from server
-                        child.terminate();
                     }
 
                     user.facebook = new Map();
