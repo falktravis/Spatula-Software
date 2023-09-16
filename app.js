@@ -674,10 +674,10 @@ const executeCommand = async (interaction) => {
                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
 
                         //!Fix the fucking staticAccountDB
-                        await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, {$inc: {TotalFacebookBurnerAccounts: 1}});
+                        //await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, {$inc: {TotalFacebookBurnerAccounts: 1}});
 
                         //!Add burnerUsername to the task db
-                        await taskDB.updateOne({UserId: document.UserId, Name: document.Name}, {$set: {burnerAccount: burnerAccountObj.Username}});
+                        //await taskDB.updateOne({UserId: document.UserId, Name: document.Name}, {$set: {burnerAccount: burnerAccountObj.Username}});
 
                         //get the max price from link
                         let maxPrice = (document.Link).match(/[?&]maxPrice=(\d+)/);
