@@ -602,7 +602,7 @@ function interval() {
                 if(price == 'FREE' || price == 'Free'){
                     price = 0;
                 }else{
-                    price = parseInt(price.replace(/[$,A]/g, ''));
+                    price = parseInt(price.replace(/[$,AC]/g, ''));
                 }
 
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20){
