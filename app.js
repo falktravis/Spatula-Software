@@ -603,8 +603,10 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
                 for(const user of users){
+                    console.log('delete user');
                     if(user.facebook != null){
                         for(const task of user.facebook){
+                            console.log('delete task');
                             let messageSuccess;
                             
                             //Message the worker to close browsers

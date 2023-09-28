@@ -716,7 +716,8 @@ function interval() {
 
                         try {
                             if(postObj.description != null && postObj.description.length > 800){
-                                postObj.description = postObj.description.substring(0, 800) + '...';
+                                console.log((postObj.description).substring(0, 800) + '...');
+                                postObj.description = (postObj.description).substring(0, 800) + '...';
                             }
                         } catch (error) {
                             logChannel.send("Error managing description: \n" + postObj.description);
