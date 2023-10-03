@@ -372,13 +372,13 @@ const executeCommand = async (interaction) => {
                         await child.postMessage({ action: 'closeBrowsers' });
     
                         let message = await Promise.race([
-                            new Promise(resolve => {
+                            await new Promise(resolve => {
                                 child.on('message', message => {
                                     messageSuccess = true;
                                     resolve(message);
                                 });
                             }),
-                            new Promise(resolve => {
+                            await new Promise(resolve => {
                                 setTimeout(() => {
                                     logChannel.send("Message failed @everyone");
                                     messageSuccess = false;
@@ -604,7 +604,7 @@ const executeCommand = async (interaction) => {
             else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
                 for(const user of users){
                     console.log('delete user');
-                    if(user.facebook != null){
+                    //if(user.facebook != null){
                         for(const task of user.facebook){
                             console.log('delete task');
                             let messageSuccess;
@@ -643,7 +643,7 @@ const executeCommand = async (interaction) => {
                             //delete from server
                             child.terminate();
                         }
-                    }
+                    //}
 
                     user.facebook = new Map();
                     user.taskCount = 0;
