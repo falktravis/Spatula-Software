@@ -602,10 +602,10 @@ const executeCommand = async (interaction) => {
                 }
             }
             else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
-                for(const user of users){
-                    console.log('delete user');
-                    //if(user.facebook != null){
-                        for(const task of user.facebook){
+                for await(const userObj of users){
+                    console.log(userObj);
+                    if(userObj.facebook != null){
+                        for await(const task of userObj.facebook){
                             console.log('delete task');
                             let messageSuccess;
                             
@@ -643,10 +643,10 @@ const executeCommand = async (interaction) => {
                             //delete from server
                             child.terminate();
                         }
-                    //}
+                    }
 
-                    user.facebook = new Map();
-                    user.taskCount = 0;
+                    userObj.facebook = new Map();
+                    userObj.taskCount = 0;
                 }
 
                 Channel.send('Finished');
