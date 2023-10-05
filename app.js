@@ -604,8 +604,8 @@ const executeCommand = async (interaction) => {
             else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
                 for await(const userObj of users){
                     console.log(userObj);
-                    if(userObj.facebook != null){
-                        for await(const task of userObj.facebook){
+                    if(userObj[1].facebook != null){
+                        for await(const task of userObj[1].facebook){
                             console.log('delete task');
                             let messageSuccess;
                             
@@ -645,8 +645,8 @@ const executeCommand = async (interaction) => {
                         }
                     }
 
-                    userObj.facebook = new Map();
-                    userObj.taskCount = 0;
+                    userObj[1].facebook = new Map();
+                    userObj[1].taskCount = 0;
                 }
 
                 Channel.send('Finished');
