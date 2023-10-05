@@ -610,7 +610,7 @@ const executeCommand = async (interaction) => {
                             let messageSuccess;
                             
                             //Message the worker to close browsers
-                            await task.postMessage({ action: 'closeBrowsers' });
+                            await task[1].postMessage({ action: 'closeBrowsers' });
     
                             let message = await Promise.race([
                                 new Promise(resolve => {
