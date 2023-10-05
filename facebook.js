@@ -556,8 +556,6 @@ function interval() {
                     await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
                     console.log(mainPage.url());
             
-                    console.log(prices);
-            
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
                         await mainPage.reload({waitUntil: 'domcontentloaded'});
@@ -597,6 +595,7 @@ function interval() {
 
                 let isNotification = false;
                 let postNum = 1;
+                let newPostExists = true;
                 //get the price of the post
                 let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
                 if(price == 'FREE' || price == 'Free'){
@@ -605,7 +604,7 @@ function interval() {
                     price = parseInt(price.replace(/[$,AC]/g, ''));
                 }
 
-                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20){
+                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){
 
                     //check if "The price is right"
                     if(price <= workerData.maxPrice){
@@ -715,12 +714,11 @@ function interval() {
                         }
 
                         try {
-                            if(postObj.description != null && postObj.description.length > 800){
-                                console.log((postObj.description).substring(0, 800) + '...');
-                                postObj.description = (postObj.description).substring(0, 800) + '...';
+                            if(postObj.description != null && postObj.description.length > 700){
+                                postObj.description = (postObj.description).substring(0, 700) + '...';
                             }
                         } catch (error) {
-                            logChannel.send("Error managing description: \n" + postObj.description);
+                            logChannel.send("Error managing description");
                         }
                         
                         //Handle Discord messaging
@@ -787,6 +785,7 @@ function interval() {
                     //Update newPost
                     postNum++;
                     try {
+                        //check if there is another listing that exists
                         if(await mainPage.$(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${postNum}) a`) != null){
                             newPost = await mainPage.evaluate((num) => {
                                 let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`).href;
@@ -800,7 +799,7 @@ function interval() {
                                 price = parseInt(price.replace(/[$,A]/g, ''));
                             }
                         }else{
-                            postNum = 21;
+                            newPostExists = false;
                         }
                     } catch (error) {
                         errorMessage('Error re-setting new post', error);
@@ -819,8 +818,6 @@ function interval() {
 
                 //set the main listing storage
                 await setListingStorage();
-            }else{
-                console.log(`\n No New Post @${workerData.link} with distance: ${workerData.distance} \n`);
             }
             interval();
 
