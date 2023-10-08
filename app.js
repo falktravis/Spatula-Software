@@ -188,30 +188,39 @@ const scanDatabase = async () => {
                 users.get(userId).facebook.forEach(async (task) => {
                     //Message the worker to close browsers
                     await task.postMessage({ action: 'closeBrowsers' });
-
-                    let message = await new Promise(resolve => {
-                        task.on('message', message => {
-                            resolve(message);
-                        });
-                    });
-
+    
+                    let message = await Promise.race([
+                        await new Promise(resolve => {
+                            task.on('message', message => {
+                                messageSuccess = true;
+                                resolve(message);
+                            });
+                        }),
+                        await new Promise(resolve => {
+                            setTimeout(() => {
+                                logChannel.send("Message failed @everyone");
+                                messageSuccess = false;
+                                resolve();
+                              }, 90000); //90 seconds
+                        })
+                    ]);
+    
                     //On completion worker messages back to terminate
-                    if(message.action == 'terminate'){
-                        console.log('terminate');
-
+                    if(messageSuccess){
+    
                         //set cookies in db
                         await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
                         if(message.messageCookies != null){
-                            await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+                            await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
                         }
-
+    
                         await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-
-                        //actually delete the thing
-                        task.terminate();
                     }
+
+                    //delete from server
+                    task.terminate();
                 })
-                
+                                
                 //delete from db
                 await taskDB.deleteMany({UserId: userId});
 
@@ -652,6 +661,9 @@ const executeCommand = async (interaction) => {
                 Channel.send('Finished');
             }
             else if(interaction.commandName === 'start-all-tasks' && interaction.user.id === '456168609639694376'){
+                //reset burner accounts
+                await burnerAccountDB.updateMany({}, {$set: {ActiveTasks: 0}});
+
                 const taskArray = taskDB.find();
 
                 for await (const document of taskArray){
