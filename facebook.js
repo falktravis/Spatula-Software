@@ -60,10 +60,10 @@ client.on('ready', async () => {
             mainChannel = await client.channels.fetch(workerData.channel);
         }
 
-        logChannel = client.channels.cache.get('1091532766522376243');
+        /*logChannel = client.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await client.channels.fetch('1091532766522376243');
-        }
+        }*/
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -72,7 +72,7 @@ client.on('ready', async () => {
 //error message send function 
 const errorMessage = (message, error) => {
     console.log(workerData.name + ': ' + message + ': ' + error);
-    logChannel.send(workerData.name + ': ' + message + ': ' + error);
+    //logChannel.send(workerData.name + ': ' + message + ': ' + error);
     mainChannel.send(workerData.name + ': ' + message + ': ' + error);
 }
 
@@ -278,7 +278,6 @@ let logChannel;
 
 //changeable account stuff
 let messageCookies = workerData.messageCookies;
-
 let burnerCookies = workerData.burnerCookies;
 let burnerUsername = workerData.burnerUsername;
 let burnerProxy = workerData.burnerProxy;
@@ -559,11 +558,11 @@ function interval() {
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
                         await mainPage.reload({waitUntil: 'domcontentloaded'});
-                        logChannel.send('Refresh for null .href error');
+                        //logChannel.send('Refresh for null .href error');
                     }
                 } catch(error) {
                     if(error.message.includes('TargetCloseError')){
-                        logChannel.send("Page Closed");
+                        //logChannel.send("Page Closed");
                         await mainBrowser.close();
                         await start();
                     }else if(error.message.includes('ERR_TUNNEL_CONNECTION_FAILED') && resultsRefreshMaxAttempts < 3){
@@ -714,11 +713,13 @@ function interval() {
                         }
 
                         try {
-                            if(postObj.description != null && postObj.description.length > 700){
-                                postObj.description = (postObj.description).substring(0, 700) + '...';
+                            if(postObj.description != null){
+                                if(postObj.description.length > 700){
+                                    postObj.description = (postObj.description).substring(0, 700) + '...';
+                                }
                             }
                         } catch (error) {
-                            logChannel.send("Error managing description");
+                            //logChannel.send("Error managing description");
                         }
                         
                         //Handle Discord messaging
