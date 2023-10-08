@@ -65,10 +65,10 @@ for (const file of commandFiles) {
 let logChannel;
 discordClient.on('ready', async () => {
     try {
-        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
+        logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
-        }*/
+        }
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -77,12 +77,12 @@ discordClient.on('ready', async () => {
 // Define a global error handler
 process.on('uncaughtException', async (error) => {
     console.error('Uncaught Exception:', error);
-    //logChannel.send('Uncaught error: ' + error);
+    logChannel.send('Uncaught error: ' + error);
 });
 
 process.on('unhandledRejection', async (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    //logChannel.send('Uncaught rejection: ' + reason);
+    logChannel.send('Uncaught rejection: ' + reason);
 });
 
 //worker login listening function
@@ -274,7 +274,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Error getting channel for command: " + error);
-        //logChannel.send("Error getting channel for command: " + error);
+        logChannel.send("Error getting channel for command: " + error);
     }
 
     try {
@@ -389,7 +389,7 @@ const executeCommand = async (interaction) => {
                             }),
                             await new Promise(resolve => {
                                 setTimeout(() => {
-                                    //logChannel.send("Message failed @everyone");
+                                    logChannel.send("Message failed @everyone");
                                     messageSuccess = false;
                                     resolve();
                                   }, 90000); //90 seconds
@@ -444,7 +444,7 @@ const executeCommand = async (interaction) => {
                             }),
                             await new Promise(resolve => {
                                 setTimeout(() => {
-                                    //logChannel.send("Message failed @everyone");
+                                    logChannel.send("Message failed @everyone");
                                     messageSuccess = false;
                                     resolve();
                                   }, 90000); //90 seconds
@@ -630,7 +630,7 @@ const executeCommand = async (interaction) => {
                                 }),
                                 await new Promise(resolve => {
                                     setTimeout(() => {
-                                        //logChannel.send("Message failed @everyone");
+                                        logChannel.send("Message failed @everyone");
                                         messageSuccess = false;
                                         resolve();
                                       }, 90000); //90 seconds
@@ -740,7 +740,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        //logChannel.send("Command Error: \n\t" + error);
+        logChannel.send("Command Error: \n\t" + error);
         Channel.send("Command Error: \n\t" + error);
     }
 }
