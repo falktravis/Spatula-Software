@@ -27,7 +27,7 @@ parentPort.on('message', async (message) => {
             await itemBrowser.close();
         }
 
-        parentPort.postMessage({messageCookies: messageCookies, burnerCookies: burnerCookies, username: burnerUsername});
+        parentPort.postMessage({messageCookies: messageCookies, burnerCookies: burnerCookies});
     }
     else if(message.action === 'newAccount'){
         isDormant = false;

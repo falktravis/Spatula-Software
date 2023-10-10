@@ -169,6 +169,49 @@ const handleUser = async (userId) => {
     }
 }
 
+const deleteTask = async (task, taskName, userId) => {
+    let messageSuccess;
+
+    //Message the worker to close browsers
+    await task.postMessage({ action: 'closeBrowsers' });
+
+    let message = await Promise.race([
+        new Promise(resolve => {
+            task.on('message', message => {
+                messageSuccess = true;
+                resolve(message);
+            });
+        }),
+        new Promise(resolve => {
+            setTimeout(() => {
+                messageSuccess = false;
+                resolve();
+            }, 90000); //90 seconds
+        })
+    ]);
+
+    const taskObj = await taskDB.findOne({UserId: userId, Name: taskName});
+
+    if(messageSuccess){
+        //set cookies in db
+        await burnerAccountDB.updateOne({Username: taskObj.burnerAccount}, {$set: {Cookies: message.burnerCookies}});
+        if(message.messageCookies != null){
+            await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+        }
+    }else{
+        console.log("Message failed");//!delete for production
+        logChannel.send("Message failed @everyone");
+    }
+
+    //update account and proxy stats
+    let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
+    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: -1}});
+    await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+
+    //delete from server
+    task.terminate();
+}
+
 const scanDatabase = async () => {
 
     setTimeout(async () => {
@@ -185,40 +228,8 @@ const scanDatabase = async () => {
 
             //actually delete the users from map
             usersToDelete.forEach(async (userId) => {
-                users.get(userId).facebook.forEach(async (task) => {
-                    //Message the worker to close browsers
-                    await task.postMessage({ action: 'closeBrowsers' });
-    
-                    let message = await Promise.race([
-                        await new Promise(resolve => {
-                            task.on('message', message => {
-                                messageSuccess = true;
-                                resolve(message);
-                            });
-                        }),
-                        await new Promise(resolve => {
-                            setTimeout(() => {
-                                logChannel.send("Message failed @everyone");
-                                messageSuccess = false;
-                                resolve();
-                              }, 90000); //90 seconds
-                        })
-                    ]);
-    
-                    //On completion worker messages back to terminate
-                    if(messageSuccess){
-    
-                        //set cookies in db
-                        await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
-                        if(message.messageCookies != null){
-                            await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
-                        }
-    
-                        await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-                    }
-
-                    //delete from server
-                    task.terminate();
+                users.get(userId).facebook.forEach(async (task, key) => {
+                    await deleteTask(task, key, userId);
                 })
                                 
                 //delete from db
@@ -374,42 +385,9 @@ const executeCommand = async (interaction) => {
                     const user = users.get(interaction.user.id);
 
                     if(user.facebook.has(interaction.options.getString("task-name"))){
-                        let child = user.facebook.get(interaction.options.getString("task-name"));
-                        let messageSuccess;
     
-                        //Message the worker to close browsers
-                        await child.postMessage({ action: 'closeBrowsers' });
-    
-                        let message = await Promise.race([
-                            await new Promise(resolve => {
-                                child.on('message', message => {
-                                    messageSuccess = true;
-                                    resolve(message);
-                                });
-                            }),
-                            await new Promise(resolve => {
-                                setTimeout(() => {
-                                    logChannel.send("Message failed @everyone");
-                                    messageSuccess = false;
-                                    resolve();
-                                  }, 90000); //90 seconds
-                            })
-                        ]);
-    
-                        //On completion worker messages back to terminate
-                        if(messageSuccess){
-    
-                            //set cookies in db
-                            await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
-                            if(message.messageCookies != null){
-                                await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
-                            }
-    
-                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-                        }
+                        await deleteTask(user.facebook.get(interaction.options.getString("task-name")), interaction.options.getString("task-name"), interaction.user.id);
 
-                        //delete from server
-                        child.terminate();
                         user.facebook.delete(interaction.options.getString("task-name"));
                         user.taskCount--;
 
@@ -429,42 +407,9 @@ const executeCommand = async (interaction) => {
                     const user = users.get(interaction.options.getString('user-id'));
 
                     if(user.facebook.has(interaction.options.getString("task-name"))){
-                        let child = user.facebook.get(interaction.options.getString("task-name"));
-                        let messageSuccess;
     
-                        //Message the worker to close browsers
-                        await child.postMessage({ action: 'closeBrowsers' });
-    
-                        let message = await Promise.race([
-                            await new Promise(resolve => {
-                                child.on('message', message => {
-                                    messageSuccess = true;
-                                    resolve(message);
-                                });
-                            }),
-                            await new Promise(resolve => {
-                                setTimeout(() => {
-                                    logChannel.send("Message failed @everyone");
-                                    messageSuccess = false;
-                                    resolve();
-                                  }, 90000); //90 seconds
-                            })
-                        ]);
-    
-                        //On completion worker messages back to terminate
-                        if(messageSuccess){
-    
-                            //set cookies in db
-                            await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
-                            if(message.messageCookies != null){
-                                await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
-                            }
-    
-                            await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-                        }
-    
-                        //delete from server
-                        child.terminate();
+                        await deleteTask(user.facebook.get(interaction.options.getString("task-name")), interaction.options.getString("task-name"), interaction.options.getString('user-id'));
+
                         user.facebook.delete(interaction.options.getString("task-name"));
                         user.taskCount--;
 
@@ -616,46 +561,11 @@ const executeCommand = async (interaction) => {
                     if(userObj[1].facebook != null){
                         for await(const task of userObj[1].facebook){
                             console.log('delete task');
-                            let messageSuccess;
-                            
-                            //Message the worker to close browsers
-                            await task[1].postMessage({ action: 'closeBrowsers' });
-    
-                            let message = await Promise.race([
-                                await new Promise(resolve => {
-                                    task[1].on('message', message => {
-                                        messageSuccess = true;
-                                        resolve(message);
-                                    });
-                                }),
-                                await new Promise(resolve => {
-                                    setTimeout(() => {
-                                        logChannel.send("Message failed @everyone");
-                                        messageSuccess = false;
-                                        resolve();
-                                      }, 90000); //90 seconds
-                                })
-                            ]);
-        
-                            //On completion worker messages back to terminate
-                            if(messageSuccess){
-        
-                                //set cookies in db
-                                await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.burnerCookies}, $inc: {ActiveTasks: -1}});
-                                if(message.messageCookies != null){
-                                    await userDB.updateOne({UserId: interaction.options.getString('user-id')}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
-                                }
-        
-                                await staticProxyDB.updateOne({Proxy: message.proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-                            }
-        
-                            //delete from server
-                            task[1].terminate();
+                            await deleteTask(task[1], task[0], userObj[0]);
                         }
                     }
 
-                    userObj[1].facebook = new Map();
-                    userObj[1].taskCount = 0;
+                    users = new Map();
                 }
 
                 Channel.send('Finished');
