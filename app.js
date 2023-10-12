@@ -205,7 +205,7 @@ const deleteTask = async (task, taskName, userId) => {
 
     //update account and proxy stats
     let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
-    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: -1}});
+    await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$inc: {ActiveTasks: -1}});
     await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
 
     //delete from server
@@ -493,6 +493,13 @@ const executeCommand = async (interaction) => {
                     const proxyObj = await getStaticFacebookBurnerProxy();
                     
                     await burnerAccountDB.insertOne({Username: username, Cookies: cookie, Proxy: proxyObj.Proxy, Platform: randomPlatform, ActiveTasks: 0});
+                }*/
+                
+                //**reset proxy tracking
+                /*await staticProxyDB.updateMany({}, {$set: {TotalFacebookBurnerAccounts: 0}});
+                let accounts = await burnerAccountDB.find({});
+                for await (const account of accounts){
+                    await staticProxyDB.updateOne({Proxy: account.Proxy}, {$inc: {TotalFacebookBurnerAccounts: 1}});
                 }*/
                 
                 const accountArray = fileContents.split('\n');

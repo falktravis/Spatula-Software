@@ -376,7 +376,7 @@ const start = async () => {
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
-        await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
+        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
 
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
@@ -619,7 +619,7 @@ function interval() {
                             if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
                                 console.log('video sequence one: ' + newPost);
                                 itemPageFullLoad = true;
-                                await itemPage.reload({ waitUntil: 'domcontentloaded' });
+                                await itemPage.reload({ waitUntil: 'networkidle0' });
                                 isVideo = true;
                             }else if(await itemPage.$('[aria-label="Thumbnail 0"] i') != null){
                                 console.log('video sequence two: ' + newPost);
@@ -678,7 +678,7 @@ function interval() {
                                 //change the viewport
                                 itemPage.setViewport({ width: 1366, height: 768 });
     
-                                await itemPage.goto(newPost, { waitUntil: 'domcontentloaded' });
+                                await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
                             }catch(error){
                                 errorMessage('Error with product page initiation, no message', error);
                             }
@@ -690,7 +690,7 @@ function interval() {
                                 if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
                                     console.log('video sequence: ' + newPost);
                                     itemPageFullLoad = true;
-                                    await itemPage.reload({ waitUntil: 'domcontentloaded' });
+                                    await itemPage.reload({ waitUntil: 'networkidle0' });
                                     isVideo = true;
                                 }
     

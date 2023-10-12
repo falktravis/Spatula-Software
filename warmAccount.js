@@ -29,12 +29,12 @@ const platformConverter = (platform) => {
 let warmingBrowser;
 let warmingPage;
 
-const warmAccount = async () => {
+/*const warmAccount = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         warmingBrowser = await puppeteer.launch({
             headless: false,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`]//, `--proxy-server=${workerData.proxy}`
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
@@ -58,9 +58,9 @@ const warmAccount = async () => {
     }catch(error){
         errorMessage('Error with page initiation', error);
     }
-}
+}*/
 
-/*const warmAccount = async () => {
+const warmAccount = async () => {
     //initiate the new page for collecting data
     let itemPageFullLoad = false;
     let itemPage;
@@ -68,7 +68,7 @@ const warmAccount = async () => {
     try{
         warmingBrowser = await puppeteer.launch({
             headless: false,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`]//, `--proxy-server=${workerData.proxy}`
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
@@ -105,7 +105,7 @@ const warmAccount = async () => {
         //change the viewport
         warmingPage.setViewport({ width: 1366, height: 768 });
 
-        await warmingPage.goto('https://www.facebook.com/marketplace/item/256848603938148/', { waitUntil: 'domcontentloaded' });
+        await warmingPage.goto('https://www.facebook.com/marketplace/item/2089249541415783/', { waitUntil: 'networkidle2' });
     }catch(error){
         errorMessage('Error with product page initiation, no message', error);
     }
@@ -117,7 +117,7 @@ const warmAccount = async () => {
         if(await warmingPage.$('.xpz12be[aria-label="Loading..."]') != null){
             console.log('video sequence: ');
             itemPageFullLoad = true;
-            await warmingPage.reload({ waitUntil: 'domcontentloaded' });
+            await warmingPage.reload({ waitUntil: 'networkidle2' });
             isVideo = true;
         }
 
@@ -138,5 +138,5 @@ const warmAccount = async () => {
     } catch(error){
         errorMessage('Error with getting item data', error);
     }
-}*/
+}
 warmAccount();
