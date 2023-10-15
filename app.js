@@ -199,7 +199,7 @@ const deleteTask = async (task, taskName, userId) => {
             await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
         }
     }else{
-        console.log("Message failed");//!delete for production
+        //console.log("Message failed");//!delete for production
         logChannel.send("Message failed @everyone");
     }
 
@@ -247,7 +247,7 @@ const scanDatabase = async () => {
 }
 
 //pre populate this with data from supabase 
-const users = new Map();
+let users = new Map();
 
 //listen for commands
 discordClient.on(Events.InteractionCreate, async interaction => {
@@ -571,9 +571,8 @@ const executeCommand = async (interaction) => {
                             await deleteTask(task[1], task[0], userObj[0]);
                         }
                     }
-
-                    users = new Map();
                 }
+                users = new Map();
 
                 Channel.send('Finished');
             }
