@@ -170,46 +170,50 @@ const handleUser = async (userId) => {
 }
 
 const deleteTask = async (task, taskName, userId) => {
-    let messageSuccess;
+    try {
+        let messageSuccess;
 
-    //Message the worker to close browsers
-    await task.postMessage({ action: 'closeBrowsers' });
+        //Message the worker to close browsers
+        await task.postMessage({ action: 'closeBrowsers' });
 
-    let message = await Promise.race([
-        new Promise(resolve => {
-            task.on('message', message => {
-                messageSuccess = true;
-                resolve(message);
-            });
-        }),
-        new Promise(resolve => {
-            setTimeout(() => {
-                messageSuccess = false;
-                resolve();
-            }, 90000); //90 seconds
-        })
-    ]);
+        let message = await Promise.race([
+            new Promise(resolve => {
+                task.on('message', message => {
+                    messageSuccess = true;
+                    resolve(message);
+                });
+            }),
+            new Promise(resolve => {
+                setTimeout(() => {
+                    messageSuccess = false;
+                    resolve();
+                }, 90000); //90 seconds
+            })
+        ]);
 
-    const taskObj = await taskDB.findOne({UserId: userId, Name: taskName});
+        const taskObj = await taskDB.findOne({UserId: userId, Name: taskName});
 
-    if(messageSuccess){
-        //set cookies in db
-        await burnerAccountDB.updateOne({Username: taskObj.burnerAccount}, {$set: {Cookies: message.burnerCookies}});
-        if(message.messageCookies != null){
-            await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+        if(messageSuccess){
+            //set cookies in db
+            await burnerAccountDB.updateOne({Username: taskObj.burnerAccount}, {$set: {Cookies: message.burnerCookies}});
+            if(message.messageCookies != null){
+                await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
+            }
+        }else{
+            //console.log("Message failed");//!delete for production
+            logChannel.send("Message failed @everyone");
         }
-    }else{
-        //console.log("Message failed");//!delete for production
-        logChannel.send("Message failed @everyone");
+
+        //update account and proxy stats
+        let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
+        await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$inc: {ActiveTasks: -1}});
+        await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
+
+        //delete from server
+        task.terminate();
+    } catch (error) {
+        errorMessage("Error deleting task", error);
     }
-
-    //update account and proxy stats
-    let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
-    await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$inc: {ActiveTasks: -1}});
-    await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
-
-    //delete from server
-    task.terminate();
 }
 
 const scanDatabase = async () => {

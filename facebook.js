@@ -552,12 +552,12 @@ function interval() {
             const resultsRefresh = async () => {
                 try {
                     //change link for results change
-                    await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
+                    await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'networkidle0'});
                     console.log(mainPage.url());
             
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
-                        await mainPage.reload({waitUntil: 'domcontentloaded'});
+                        await mainPage.reload({waitUntil: 'networkidle0'});
                         logChannel.send('Refresh for null .href error');
                     }
                 } catch(error) {
