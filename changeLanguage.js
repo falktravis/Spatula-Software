@@ -40,17 +40,21 @@ client.on('ready', async () => {
 
 //scrape the html content for testing
 const logPageContent = async (page) => {
-    const htmlContent = await page.content();
-    const { Readable } = require('stream');
-    const htmlStream = Readable.from([htmlContent]);
-    mainChannel.send({
-        files: [
-            {
-                attachment: htmlStream,
-                name: 'website.html',
-            },
-        ],
-    });
+    try{
+        const htmlContent = await page.content();
+        const { Readable } = require('stream');
+        const htmlStream = Readable.from([htmlContent]);
+        mainChannel.send({
+            files: [
+                {
+                    attachment: htmlStream,
+                    name: 'website.html',
+                },
+            ],
+        });
+    }catch(error){
+        errorMessage('error loggin content: ', error);
+    }
 }
 
 //general instantiation
@@ -95,8 +99,8 @@ const changeLanguage = async () => {
 
         await languageBrowser.close();
     }catch(error){
-        logPageContent(languagePage);
         errorMessage('Error with page initiation', error);
+        logPageContent(languagePage);
         await languageBrowser.close();
     }
 }
