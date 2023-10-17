@@ -29,9 +29,9 @@ const platformConverter = (platform) => {
 let mainChannel;
 client.on('ready', async () => {
     try {
-        mainChannel = client.channels.cache.get('1078421785629954099');
+        mainChannel = client.channels.cache.get('1111129387669127191');
         if(mainChannel == null){
-            mainChannel = await client.channels.fetch('1078421785629954099');
+            mainChannel = await client.channels.fetch('1111129387669127191');
         }
     } catch (error) {
         errorMessage('Error fetching channel', error);
@@ -93,14 +93,13 @@ const changeLanguage = async () => {
         await languagePage.click('.x1xmf6yo.xezivpi');
         await languagePage.waitForSelector('.xb57i2i .x4k7w5x');
         await languagePage.click('.xb57i2i .x4k7w5x > :nth-child(19)');
-        console.log(languagePage.evaluate(() => {return document.querySelector('.xb57i2i .x4k7w5x > :nth-child(19)').innerText}));
         await languagePage.click('.x1rdy4ex > :nth-child(2)');
         await languagePage.waitForNavigation({waitUntil: 'networkidle0'});
-
+        await logPageContent(languagePage);
         await languageBrowser.close();
     }catch(error){
         errorMessage('Error with page initiation', error);
-        logPageContent(languagePage);
+        await logPageContent(languagePage);
         await languageBrowser.close();
     }
 }
