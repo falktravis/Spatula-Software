@@ -25,6 +25,18 @@ const platformConverter = (platform) => {
     }
 }
 
+let mainChannel;
+client.on('ready', async () => {
+    try {
+        mainChannel = client.channels.cache.get('1111129387669127191');
+        if(mainChannel == null){
+            mainChannel = await client.channels.fetch('1111129387669127191');
+        }
+    } catch (error) {
+        errorMessage('Error fetching channel', error);
+    }
+});
+
 //general instantiation
 let warmingBrowser;
 let warmingPage;
@@ -33,7 +45,7 @@ const warmAccount = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         warmingBrowser = await puppeteer.launch({
-            headless: false,
+            headless: "new",
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`]//, `--proxy-server=${workerData.proxy}`
         });
         let pages = await warmingBrowser.pages();
@@ -54,7 +66,20 @@ const warmAccount = async () => {
         await warmingPage.setCookie(...workerData.cookies);
 
         //go to the search page
-        await warmingPage.goto('https://www.facebook.com/', { waitUntil: 'networkidle0' });
+        await warmingPage.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
+
+        //scrape the html content for testing
+        const htmlContent = await warmingPage.content();
+        const { Readable } = require('stream');
+        const htmlStream = Readable.from([htmlContent]);
+        mainChannel.send({
+            files: [
+                {
+                    attachment: htmlStream,
+                    name: 'website.html',
+                },
+            ],
+        });
     }catch(error){
         errorMessage('Error with page initiation', error);
     }
@@ -68,7 +93,7 @@ const warmAccount = async () => {
     try{
         warmingBrowser = await puppeteer.launch({
             headless: false,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`]//, `--proxy-server=${workerData.proxy}`
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]//
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];

@@ -557,6 +557,19 @@ function interval() {
             
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
+                        //scrape the html content for testing
+                        const htmlContent = await mainPage.content();
+                        const { Readable } = require('stream');
+                        const htmlStream = Readable.from([htmlContent]);
+                        logChannel.send({
+                            files: [
+                                {
+                                    attachment: htmlStream,
+                                    name: 'website.html',
+                                },
+                            ],
+                        });
+
                         await mainPage.reload({waitUntil: 'networkidle0'});
                         logChannel.send('Refresh for null .href error');
                     }
