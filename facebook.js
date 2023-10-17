@@ -87,6 +87,21 @@ const getRandomInterval = () => {
     return Math.round(number);
 }
 
+//scrape the html content for testing
+const logPageContent = async (page) => {
+    const htmlContent = await page.content();
+    const { Readable } = require('stream');
+    const htmlStream = Readable.from([htmlContent]);
+    logChannel.send({
+        files: [
+            {
+                attachment: htmlStream,
+                name: 'website.html',
+            },
+        ],
+    });
+}
+
 //pause for 0.5s-2s to humanize behavior
 const pause = async () => {
     await new Promise(r => setTimeout(r, Math.floor(Math.random() * (1200 - 500 + 1)) + 500));
@@ -552,25 +567,14 @@ function interval() {
             const resultsRefresh = async () => {
                 try {
                     //change link for results change
-                    await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'networkidle0'});
+                    await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
                     console.log(mainPage.url());
             
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
-                        //scrape the html content for testing
-                        const htmlContent = await mainPage.content();
-                        const { Readable } = require('stream');
-                        const htmlStream = Readable.from([htmlContent]);
-                        logChannel.send({
-                            files: [
-                                {
-                                    attachment: htmlStream,
-                                    name: 'website.html',
-                                },
-                            ],
-                        });
 
-                        await mainPage.reload({waitUntil: 'networkidle0'});
+
+                        await mainPage.reload({waitUntil: 'domcontentloaded'});
                         logChannel.send('Refresh for null .href error');
                     }
                 } catch(error) {

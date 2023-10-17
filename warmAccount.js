@@ -6,6 +6,7 @@ puppeteer.use(stealthPlugin());
 
 //discord.js
 const { Client, GatewayIntentBits } = require('discord.js');
+const { Page } = require('puppeteer');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
@@ -45,8 +46,8 @@ const warmAccount = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         warmingBrowser = await puppeteer.launch({
-            headless: "new",
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`]//, `--proxy-server=${workerData.proxy}`
+            headless: false,
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]//
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
@@ -67,19 +68,6 @@ const warmAccount = async () => {
 
         //go to the search page
         await warmingPage.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
-
-        //scrape the html content for testing
-        const htmlContent = await warmingPage.content();
-        const { Readable } = require('stream');
-        const htmlStream = Readable.from([htmlContent]);
-        mainChannel.send({
-            files: [
-                {
-                    attachment: htmlStream,
-                    name: 'website.html',
-                },
-            ],
-        });
     }catch(error){
         errorMessage('Error with page initiation', error);
     }
