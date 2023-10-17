@@ -87,7 +87,7 @@ const changeLanguage = async () => {
 
         //go to the search page
         await languagePage.goto('https://www.facebook.com/settings/?tab=language', {waitUntil: 'networkidle0'});
-        await logPageContent(languagePage);
+        //await logPageContent(languagePage);
         await languagePage.waitForSelector('.xdppsyt .x1i10hfl');
         await languagePage.click('.xdppsyt .x1i10hfl');
         await languagePage.waitForSelector('.x1xmf6yo.xezivpi');
@@ -96,8 +96,9 @@ const changeLanguage = async () => {
         await languagePage.click('.xb57i2i .x4k7w5x > :nth-child(19)');
         await languagePage.click('.x1rdy4ex > :nth-child(2)');
         await languagePage.waitForNavigation();
-        await logPageContent(languagePage);
+        //await logPageContent(languagePage);
         await languageBrowser.close();
+        await mainChannel.send("Finish");
     }catch(error){
         errorMessage('Error with page initiation', error);
         await logPageContent(languagePage);
