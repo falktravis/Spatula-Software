@@ -606,7 +606,7 @@ const executeCommand = async (interaction) => {
                         }
 
                         //update task for new burnerAccount
-                        await taskDB.updateOne({_id: document._id}, {Username: burnerAccountObj.Username});
+                        await taskDB.updateOne({_id: document._id}, {$set: {Username: burnerAccountObj.Username}});
 
                         //increase number of active tasks on the burner account
                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
