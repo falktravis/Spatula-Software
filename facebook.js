@@ -559,8 +559,8 @@ handleTime(interval);
 
 //the meat and cheese
 function interval() {
+    let reloadBlock = false;
     setTimeout(async () => {
-        let reloadBlock = false;
         if(isRunning){
             isDormant = false;
 
@@ -576,7 +576,7 @@ function interval() {
                     console.log(mainPage.url());
             
                     //if the listings dont exist on the page, refresh
-                    if(await mainPage.$('[aria-label="Reload Page"]') != null){
+                    if(await mainPage.$('.xbbxn1n .xqui205 [aria-label="Reload Page"]') != null){
                         reloadBlock = true;
                         logChannel.send("Reload block: " + workerData.name);
                     }else if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
