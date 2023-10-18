@@ -78,8 +78,8 @@ const errorMessage = (message, error) => {
 
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 480000; //8 mins
-    const maxNumber = 720000; //12 mins
+    const minNumber = 600000; //10 mins
+    const maxNumber = 900000; //15 mins
     const power = 1.5;
     const random = Math.random();
     const range = maxNumber - minNumber;
@@ -560,6 +560,7 @@ handleTime(interval);
 //the meat and cheese
 function interval() {
     setTimeout(async () => {
+        let reloadBlock = false;
         if(isRunning){
             isDormant = false;
 
@@ -575,9 +576,10 @@ function interval() {
                     console.log(mainPage.url());
             
                     //if the listings dont exist on the page, refresh
-                    if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
-
-
+                    if(await mainPage.$('[aria-label="Reload Page"]') != null){
+                        reloadBlock = true;
+                        logChannel.send("Reload block: " + workerData.name);
+                    }else if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
                         await mainPage.reload({waitUntil: 'domcontentloaded'});
                         logChannel.send('Refresh for null .href error');
                     }
@@ -596,254 +598,255 @@ function interval() {
             };
             await resultsRefresh();
 
-            try {
-                //check for new posts
-                newPost = await mainPage.evaluate(() => {
-                    if(document.querySelector('div.xx6bls6') == null && document.querySelector('[aria-label="Browse Marketplace"]') == null){
-                        let link = document.querySelector(".x3ct3a4 a").href;
-                        return link.substring(0, link.indexOf("?"));
-                    }else{
-                        return null;
-                    }
-                });
-            } catch (error) {
-                errorMessage('Error with getting results', error);
-            }
-        
-            //newPost is actually new
-            if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
-
-                let isNotification = false;
-                let postNum = 1;
-                let newPostExists = true;
-                //get the price of the post
-                let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
-                if(price == 'FREE' || price == 'Free'){
-                    price = 0;
-                }else{
-                    price = parseInt(price.replace(/[$,AC]/g, ''));
-                }
-
-                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){
-
-                    //check if "The price is right"
-                    if(price <= workerData.maxPrice){
-                        console.log("New Post: " + newPost + " post num: " + postNum);
-                        isNotification = true;
-
-                        let postObj;
-                        if(workerData.messageType == 1){//auto message
-                            await sendMessage(newPost);
-    
-                            //check for video
-                            let isVideo = false;
-                            if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
-                                console.log('video sequence one: ' + newPost);
-                                itemPageFullLoad = true;
-                                await itemPage.reload({ waitUntil: 'networkidle0' });
-                                isVideo = true;
-                            }else if(await itemPage.$('[aria-label="Thumbnail 0"] i') != null){
-                                console.log('video sequence two: ' + newPost);
-                                isVideo = true;
-                            }
-    
-                            //get post data
-                            try{
-                                postObj = await itemPage.evaluate((isVideo) => {
-                                    return {
-                                        img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
-                                        title: document.querySelector('div.xyamay9 h1').innerText,
-                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
-                                        description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                        shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                        price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
-                                    };
-                                }, isVideo);
-    
-                                await itemBrowser.close();
-                                itemBrowser = null;
-                            } catch(error){
-                                errorMessage('Error with getting item data', error);
-                            }
+            if(reloadBlock == false){
+                try {
+                    //check for new posts
+                    newPost = await mainPage.evaluate(() => {
+                        if(document.querySelector('div.xx6bls6') == null && document.querySelector('[aria-label="Browse Marketplace"]') == null){
+                            let link = document.querySelector(".x3ct3a4 a").href;
+                            return link.substring(0, link.indexOf("?"));
                         }else{
-                            //initiate the new page for collecting data
-                            let itemPageFullLoad = false;
-                            try{
-                                itemPage = await mainBrowser.newPage();
-                                await itemPage.setRequestInterception(true);
-                                itemPage.on('request', async request => {
-                                    const resource = request.resourceType();
-                                    if(itemPageFullLoad){
-                                        if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
-                                            request.abort();
-                                        }else{
-                                            request.continue();
-                                        }
-                                    }else{
-                                        if(resource != 'document'){
-                                            request.abort();
-                                        }else{
-                                            request.continue();
-                                        }
-                                    }
-                                });
+                            return null;
+                        }
+                    });
+                } catch (error) {
+                    errorMessage('Error with getting results', error);
+                }
+            
+                //newPost is actually new
+                if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
     
-                                //change http headers
-                                itemPage.setExtraHTTPHeaders({
-                                    'Referer': 'https://www.facebook.com/login',
-                                    'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-                                    'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-                                    'Sec-Ch-Ua-Platform': burnerPlatform
-                                });
+                    let isNotification = false;
+                    let postNum = 1;
+                    let newPostExists = true;
+                    //get the price of the post
+                    let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
+                    if(price == 'FREE' || price == 'Free'){
+                        price = 0;
+                    }else{
+                        price = parseInt(price.replace(/[$,AC]/g, ''));
+                    }
     
-                                //change the viewport
-                                itemPage.setViewport({ width: 1366, height: 768 });
+                    while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){
     
-                                await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
-                            }catch(error){
-                                errorMessage('Error with product page initiation, no message', error);
-                            }
+                        //check if "The price is right"
+                        if(price <= workerData.maxPrice){
+                            console.log("New Post: " + newPost + " post num: " + postNum);
+                            isNotification = true;
     
-                            //get post data
-                            try{
+                            let postObj;
+                            if(workerData.messageType == 1){//auto message
+                                await sendMessage(newPost);
+        
                                 //check for video
                                 let isVideo = false;
                                 if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
-                                    console.log('video sequence: ' + newPost);
+                                    console.log('video sequence one: ' + newPost);
                                     itemPageFullLoad = true;
                                     await itemPage.reload({ waitUntil: 'networkidle0' });
                                     isVideo = true;
+                                }else if(await itemPage.$('[aria-label="Thumbnail 0"] i') != null){
+                                    console.log('video sequence two: ' + newPost);
+                                    isVideo = true;
                                 }
-    
-                                //set post data obj
-                                postObj = await itemPage.evaluate((isVideo) => {
-                                    return {
-                                        img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
-                                        title: document.querySelector('div.xyamay9 h1').innerText,
-                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
-                                        description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                        shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                        price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
-                                    };
-                                }, isVideo);
-    
-                                await itemPage.close();
-                            } catch(error){
-                                errorMessage(`Error with getting item data at ${newPost}`, error);
-                            }
-                        }
-
-                        try {
-                            if(postObj.description != null){
-                                if(postObj.description.length > 700){
-                                    postObj.description = (postObj.description).substring(0, 700) + '...';
+        
+                                //get post data
+                                try{
+                                    postObj = await itemPage.evaluate((isVideo) => {
+                                        return {
+                                            img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
+                                            title: document.querySelector('div.xyamay9 h1').innerText,
+                                            date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
+                                            description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                            shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                            price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
+                                        };
+                                    }, isVideo);
+        
+                                    await itemBrowser.close();
+                                    itemBrowser = null;
+                                } catch(error){
+                                    errorMessage('Error with getting item data', error);
                                 }
-                            }
-                        } catch (error) {
-                            logChannel.send("Error managing description");
-                        }
-                        
-                        //Handle Discord messaging
-                        if(workerData.messageType != 2){//if its not manual messaging
-                            try{
-                                mainChannel.send({ content: postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
-                                    .setColor(0x0099FF)
-                                    .setTitle(postObj.price + " - " + postObj.title)
-                                    .setURL(newPost)
-                                    .setAuthor({ name: workerData.name })
-                                    .setDescription(postObj.description)
-                                    .addFields({ name: postObj.date, value: postObj.shipping })
-                                    .setImage(postObj.img)
-                                    .setTimestamp(new Date())
-                                ]});
-                            }catch(error){
-                                errorMessage('Error with item notification', error);
-                            }
-                        }else{
-                            let notification;
-                            try{
-                                notification = await mainChannel.send({ content: postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
-                                    .setColor(0x0099FF)
-                                    .setTitle(postObj.price + " - " + postObj.title)
-                                    .setURL(newPost)
-                                    .setAuthor({ name: workerData.name })
-                                    .setDescription(postObj.description)
-                                    .addFields({ name: postObj.date, value: postObj.shipping })
-                                    .setImage(postObj.img)
-                                    .setTimestamp(new Date())
-                                ], components: [new ActionRowBuilder()
-                                    .addComponents(
-                                        new ButtonBuilder()
-                                        .setCustomId('message-' + newPost)
-                                        .setLabel('Message')
-                                        .setStyle(ButtonStyle.Primary),
-                                    )
-                                ]});
-                            }catch(error){
-                                errorMessage('Error with new item notification with message button', error);
+                            }else{
+                                //initiate the new page for collecting data
+                                let itemPageFullLoad = false;
+                                try{
+                                    itemPage = await mainBrowser.newPage();
+                                    await itemPage.setRequestInterception(true);
+                                    itemPage.on('request', async request => {
+                                        const resource = request.resourceType();
+                                        if(itemPageFullLoad){
+                                            if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
+                                                request.abort();
+                                            }else{
+                                                request.continue();
+                                            }
+                                        }else{
+                                            if(resource != 'document'){
+                                                request.abort();
+                                            }else{
+                                                request.continue();
+                                            }
+                                        }
+                                    });
+        
+                                    //change http headers
+                                    itemPage.setExtraHTTPHeaders({
+                                        'Referer': 'https://www.facebook.com/login',
+                                        'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
+                                        'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
+                                        'Sec-Ch-Ua-Platform': burnerPlatform
+                                    });
+        
+                                    //change the viewport
+                                    itemPage.setViewport({ width: 1366, height: 768 });
+        
+                                    await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
+                                }catch(error){
+                                    errorMessage('Error with product page initiation, no message', error);
+                                }
+        
+                                //get post data
+                                try{
+                                    //check for video
+                                    let isVideo = false;
+                                    if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
+                                        console.log('video sequence: ' + newPost);
+                                        itemPageFullLoad = true;
+                                        await itemPage.reload({ waitUntil: 'networkidle0' });
+                                        isVideo = true;
+                                    }
+        
+                                    //set post data obj
+                                    postObj = await itemPage.evaluate((isVideo) => {
+                                        return {
+                                            img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
+                                            title: document.querySelector('div.xyamay9 h1').innerText,
+                                            date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
+                                            description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                            shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                            price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
+                                        };
+                                    }, isVideo);
+        
+                                    await itemPage.close();
+                                } catch(error){
+                                    errorMessage(`Error with getting item data at ${newPost}`, error);
+                                }
                             }
     
                             try {
-                                const filter = i => i.customId.split("-")[0] == 'message';
-                                const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
-                                collector.on('collect', async i => {
-                                    i.reply("Sending...");
-    
-                                    sendMessage(i.customId.split("-")[1]);
-        
-                                    collector.stop();
-                                });
-                                collector.on('end', () => {
-                                    notification.edit({ components: [] });
-                                });
+                                if(postObj.description != null){
+                                    if(postObj.description.length > 700){
+                                        postObj.description = (postObj.description).substring(0, 700) + '...';
+                                    }
+                                }
                             } catch (error) {
-                                errorMessage('Error collecting new item notification button', error);
+                                logChannel.send("Error managing description");
                             }
-                        }
-                    }else{
-                        console.log("\n\nThe Price is Wrong, price: " + price + " max: " + workerData.maxPrice + "\n\n");
-                    }
-
-                    //Update newPost
-                    postNum++;
-                    try {
-                        //check if there is another listing that exists
-                        if(await mainPage.$(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${postNum}) a`) != null){
-                            newPost = await mainPage.evaluate((num) => {
-                                let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`).href;
-                                return link.substring(0, link.indexOf("?"));
-                            }, postNum);
-
-                            price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
-                            if(price == 'FREE' || price == 'Free'){
-                                price = 0;
+                            
+                            //Handle Discord messaging
+                            if(workerData.messageType != 2){//if its not manual messaging
+                                try{
+                                    mainChannel.send({ content: postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
+                                        .setColor(0x0099FF)
+                                        .setTitle(postObj.price + " - " + postObj.title)
+                                        .setURL(newPost)
+                                        .setAuthor({ name: workerData.name })
+                                        .setDescription(postObj.description)
+                                        .addFields({ name: postObj.date, value: postObj.shipping })
+                                        .setImage(postObj.img)
+                                        .setTimestamp(new Date())
+                                    ]});
+                                }catch(error){
+                                    errorMessage('Error with item notification', error);
+                                }
                             }else{
-                                price = parseInt(price.replace(/[$,A]/g, ''));
+                                let notification;
+                                try{
+                                    notification = await mainChannel.send({ content: postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
+                                        .setColor(0x0099FF)
+                                        .setTitle(postObj.price + " - " + postObj.title)
+                                        .setURL(newPost)
+                                        .setAuthor({ name: workerData.name })
+                                        .setDescription(postObj.description)
+                                        .addFields({ name: postObj.date, value: postObj.shipping })
+                                        .setImage(postObj.img)
+                                        .setTimestamp(new Date())
+                                    ], components: [new ActionRowBuilder()
+                                        .addComponents(
+                                            new ButtonBuilder()
+                                            .setCustomId('message-' + newPost)
+                                            .setLabel('Message')
+                                            .setStyle(ButtonStyle.Primary),
+                                        )
+                                    ]});
+                                }catch(error){
+                                    errorMessage('Error with new item notification with message button', error);
+                                }
+        
+                                try {
+                                    const filter = i => i.customId.split("-")[0] == 'message';
+                                    const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
+                                    collector.on('collect', async i => {
+                                        i.reply("Sending...");
+        
+                                        sendMessage(i.customId.split("-")[1]);
+            
+                                        collector.stop();
+                                    });
+                                    collector.on('end', () => {
+                                        notification.edit({ components: [] });
+                                    });
+                                } catch (error) {
+                                    errorMessage('Error collecting new item notification button', error);
+                                }
                             }
                         }else{
-                            newPostExists = false;
+                            console.log("\n\nThe Price is Wrong, price: " + price + " max: " + workerData.maxPrice + "\n\n");
                         }
-                    } catch (error) {
-                        errorMessage('Error re-setting new post', error);
+    
+                        //Update newPost
+                        postNum++;
+                        try {
+                            //check if there is another listing that exists
+                            if(await mainPage.$(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${postNum}) a`) != null){
+                                newPost = await mainPage.evaluate((num) => {
+                                    let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`).href;
+                                    return link.substring(0, link.indexOf("?"));
+                                }, postNum);
+    
+                                price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
+                                if(price == 'FREE' || price == 'Free'){
+                                    price = 0;
+                                }else{
+                                    price = parseInt(price.replace(/[$,A]/g, ''));
+                                }
+                            }else{
+                                newPostExists = false;
+                            }
+                        } catch (error) {
+                            errorMessage('Error re-setting new post', error);
+                        }
                     }
+    
+                    //Check for a post hard cap
+                    if(postNum > 20){
+                        mainChannel.send("Too many new posts to notify. Make your query more specific");
+                    }
+    
+                    //ping the user
+                    if(isNotification){
+                        mainChannel.send("New Notifications @everyone");
+                    }
+    
+                    //set the main listing storage
+                    await setListingStorage();
                 }
-
-                //Check for a post hard cap
-                if(postNum > 20){
-                    mainChannel.send("Too many new posts to notify. Make your query more specific");
-                }
-
-                //ping the user
-                if(isNotification){
-                    mainChannel.send("New Notifications @everyone");
-                }
-
-                //set the main listing storage
-                await setListingStorage();
+                interval();
             }
-            interval();
-
             isDormant = true;
         }
-    }, getRandomInterval()); 
+    }, reloadBlock ? 180000 : getRandomInterval()); //30 mins or random
 } 

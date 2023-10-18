@@ -10,6 +10,7 @@ discordClient.login(process.env.DISCORD_BOT_TOKEN);
 
 //Database connection
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const { Console } = require('console');
 const uri = "mongodb+srv://SpatulaSoftware:jpTANtS4n59oqlam@spatula-software.tyas5mn.mongodb.net/?retryWrites=true&w=majority";
 const mongoClient = new MongoClient(uri, {
   serverApi: {
@@ -70,7 +71,7 @@ discordClient.on('ready', async () => {
             logChannel = await discordClient.channels.fetch('1091532766522376243');
         }
     } catch (error) {
-        errorMessage('Error fetching channel', error);
+        console.log('Error fetching channel: ' + error)
     }
 });
 
@@ -212,7 +213,7 @@ const deleteTask = async (task, taskName, userId) => {
         //delete from server
         task.terminate();
     } catch (error) {
-        errorMessage("Error deleting task", error);
+        logChannel.send("Error Deleting Task: " + error);
     }
 }
 
@@ -582,7 +583,7 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === 'start-all-tasks' && interaction.user.id === '456168609639694376'){
                 //reset burner accounts
-                //await burnerAccountDB.updateMany({}, {$set: {ActiveTasks: 0}});
+                await burnerAccountDB.updateMany({ActiveTasks: {$lt: 4}}, {$set: {ActiveTasks: 0}});
 
                 const taskArray = taskDB.find();
 
@@ -603,6 +604,9 @@ const executeCommand = async (interaction) => {
                             console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
                             logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
                         }
+
+                        //update task for new burnerAccount
+                        await taskDB.updateOne({_id: document._id}, {Username: burnerAccountObj.Username});
 
                         //increase number of active tasks on the burner account
                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$inc: {ActiveTasks: 1}});
