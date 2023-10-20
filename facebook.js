@@ -167,7 +167,7 @@ const getPrices = () => {
 const accountRotation = () => {
     setTimeout(async () => {
         try {
-            mainChannel.log('rotate account');//!testing
+            mainChannel.send('rotate account');//!testing
             while(isDormant == false){
                 console.log('task non dormant');
                 await new Promise(r => setTimeout(r, 10000));
