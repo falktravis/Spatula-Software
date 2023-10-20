@@ -179,7 +179,7 @@ const accountRotation = () => {
         } catch (error) {
             errorMessage("Error with account rotation: ", error);
         }
-    }, (Math.random() * 360000) + 720000);//2-3 hours
+    }, (Math.random() * 3600000) + 7200000);//2-3 hours
 }
 
 const sendMessage = async (link) => {
