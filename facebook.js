@@ -60,10 +60,10 @@ client.on('ready', async () => {
             mainChannel = await client.channels.fetch(workerData.channel);
         }
 
-        logChannel = client.channels.cache.get('1091532766522376243');
+        /*logChannel = client.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await client.channels.fetch('1091532766522376243');
-        }
+        }*/
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -72,7 +72,7 @@ client.on('ready', async () => {
 //error message send function 
 const errorMessage = (message, error) => {
     console.log(workerData.name + ': ' + message + ': ' + error);
-    logChannel.send(workerData.name + ': ' + message + ': ' + error);
+    //logChannel.send(workerData.name + ': ' + message + ': ' + error);
     mainChannel.send(workerData.name + ': ' + message + ': ' + error);
 }
 
@@ -161,6 +161,25 @@ const getPrices = () => {
     }
 
     return array;
+}
+
+//timeout to rotate accounts
+const accountRotation = () => {
+    setTimeout(async () => {
+        try {
+            mainChannel.log('rotate account');//!testing
+            while(isDormant == false){
+                console.log('task non dormant');
+                await new Promise(r => setTimeout(r, 10000));
+            }
+
+            //send message to main
+            parentPort.postMessage({action: "rotateAccount"});
+            accountRotation();
+        } catch (error) {
+            errorMessage("Error with account rotation: ", error);
+        }
+    }, (Math.random() * 360000) + 720000);//2-3 hours
 }
 
 const sendMessage = async (link) => {
@@ -340,25 +359,25 @@ const start = async () => {
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
                 const redirectURL = response.headers()['location'];
                 console.log(`Redirected to: ${redirectURL}`);
-                logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
+                //logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
 
                 startError = true;
 
                 if(redirectURL.includes('privacy/consent/lgpd_migrated')){
                     //end the task and message myself containing the account name
-                    logChannel.send('Account lgpd migrated: ' + burnerUsername);
+                    //logChannel.send('Account lgpd migrated: ' + burnerUsername);
                     console.log('Account lgpd migrated: ' + burnerUsername);
                 }
                 
                 if(redirectURL.includes('/checkpoint/')){
-                    logChannel.send('Account banned: ' + burnerUsername);
+                    //logChannel.send('Account banned: ' + burnerUsername);
                     console.log('Account banned: ' + burnerUsername);
             
                     //message the main script to delete the burner account
                     parentPort.postMessage({action: 'ban'});
                 }else{
                     //message the main script to terminate the task
-                    parentPort.postMessage({action: 'failure'});
+                    parentPort.postMessage({action: 'rotateAccount'});
                 }
             }
         });
@@ -523,6 +542,7 @@ const handleTime = async (intervalFunction) => {
             if(startError == false){
                 //set the listing storage, only on the initial creation
                 if(isCreate == true){
+                    accountRotation();
                     await setListingStorage();
                     isCreate = false;
                 }
@@ -578,14 +598,14 @@ function interval() {
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$('.xbbxn1n .xqui205 [aria-label="Reload Page"]') != null){
                         reloadBlock = true;
-                        logChannel.send("Reload block: " + workerData.name);
+                        //logChannel.send("Reload block: " + workerData.name);
                     }else if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
                         await mainPage.reload({waitUntil: 'domcontentloaded'});
-                        logChannel.send('Refresh for null .href error');
+                        //logChannel.send('Refresh for null .href error');
                     }
                 } catch(error) {
                     if(error.message.includes('TargetCloseError')){
-                        logChannel.send("Page Closed");
+                        //logChannel.send("Page Closed");
                         await mainBrowser.close();
                         await start();
                     }else if(error.message.includes('ERR_TUNNEL_CONNECTION_FAILED') && resultsRefreshMaxAttempts < 3){
@@ -666,6 +686,8 @@ function interval() {
                                     await itemBrowser.close();
                                     itemBrowser = null;
                                 } catch(error){
+                                    await itemBrowser.close();
+                                    await logPageContent(itemPage);
                                     errorMessage('Error with getting item data', error);
                                 }
                             }else{
@@ -732,6 +754,8 @@ function interval() {
         
                                     await itemPage.close();
                                 } catch(error){
+                                    await logPageContent(itemPage);
+                                    await itemPage.close();
                                     errorMessage(`Error with getting item data at ${newPost}`, error);
                                 }
                             }
@@ -743,7 +767,7 @@ function interval() {
                                     }
                                 }
                             } catch (error) {
-                                logChannel.send("Error managing description");
+                                //logChannel.send("Error managing description");
                             }
                             
                             //Handle Discord messaging
