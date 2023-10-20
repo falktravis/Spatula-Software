@@ -144,11 +144,7 @@ const getStaticFacebookBurnerProxy = async () => {
 const getFacebookAccount = async () => {
 
     //burner account assignment
-    let burnerAccountObj = await burnerAccountDB.aggregate([
-        { $match: { lastActive: { $ne: null } } },
-        { $sort: { lastActive: 1 } },
-        { $limit: 1 }
-    ])//ActiveTasks: 0
+    let burnerAccountObj = await burnerAccountDB.findOne({LastActive: {$ne: null}}, {sort: {LastActive: 1}});//ActiveTasks: 0
 
 
     //if there is no un-active accounts, This should NEVER happen
@@ -604,11 +600,7 @@ const executeCommand = async (interaction) => {
                         user.taskCount++;
 
                         //burner account assignment
-                        let burnerAccountObj = await burnerAccountDB.aggregate([
-                            { $match: { lastActive: { $ne: null } } },
-                            { $sort: { lastActive: 1 } },
-                            { $limit: 1 }
-                        ])//ActiveTasks: 0
+                        let burnerAccountObj = await burnerAccountDB.findOne({LastActive: {$ne: null}}, {sort: {LastActive: 1}});
 
                         //if there is no un-active accounts 
                         if(burnerAccountObj == null){
