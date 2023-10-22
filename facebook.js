@@ -662,7 +662,7 @@ function interval() {
                                 await sendMessage(newPost);
         
                                 //check for video
-                                if(await itemPage.$eval('.xcg96fm img', element => element.getAttribute('src')).includes("video")){
+                                if(await itemPage.$('.xcg96fm img') == null){
                                     logChannel.send('video sequence one: ' + newPost);
                                     itemPageFullLoad = true;
                                     await itemPage.reload({ waitUntil: 'networkidle0' });
@@ -720,7 +720,7 @@ function interval() {
                                 try{
 
                                     //check for video
-                                    if(await itemPage.$eval('.xcg96fm img', element => element.getAttribute('src')).includes("video")){
+                                    if(await itemPage.$('.xcg96fm img') == null){
                                         logChannel.send('video sequence one: ' + newPost);
                                         itemPageFullLoad = true;
                                         await itemPage.reload({ waitUntil: 'networkidle0' });
