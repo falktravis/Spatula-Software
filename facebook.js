@@ -78,8 +78,8 @@ const errorMessage = (message, error) => {
 
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 600000; //10 mins
-    const maxNumber = 900000; //15 mins
+    const minNumber = 520000; //9 mins
+    const maxNumber = 720000; //12 mins
     const power = 1.5;
     const random = Math.random();
     const range = maxNumber - minNumber;
@@ -175,7 +175,9 @@ const accountRotation = () => {
 
             //send message to main
             parentPort.postMessage({action: "rotateAccount"});
-            accountRotation();
+            if(isRunning){
+                accountRotation();
+            }
         } catch (error) {
             errorMessage("Error with account rotation: ", error);
         }
@@ -542,11 +544,11 @@ const handleTime = async (intervalFunction) => {
             if(startError == false){
                 //set the listing storage, only on the initial creation
                 if(isCreate == true){
-                    accountRotation();
                     await setListingStorage();
                     isCreate = false;
                 }
     
+                accountRotation();
                 intervalFunction(); 
             }
 
@@ -598,6 +600,7 @@ function interval() {
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$('.xbbxn1n .xqui205 [aria-label="Reload Page"]') != null){
                         reloadBlock = true;
+                        parentPort.postMessage({action: "rotateAccount"});
                         //logChannel.send("Reload block: " + workerData.name);
                     }else if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
                         await mainPage.reload({waitUntil: 'domcontentloaded'});
@@ -658,30 +661,17 @@ function interval() {
                             if(workerData.messageType == 1){//auto message
                                 await sendMessage(newPost);
         
-                                //check for video
-                                let isVideo = false;
-                                if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
-                                    console.log('video sequence one: ' + newPost);
-                                    itemPageFullLoad = true;
-                                    await itemPage.reload({ waitUntil: 'networkidle0' });
-                                    isVideo = true;
-                                }else if(await itemPage.$('[aria-label="Thumbnail 0"] i') != null){
-                                    console.log('video sequence two: ' + newPost);
-                                    isVideo = true;
-                                }
-        
                                 //get post data
                                 try{
-                                    postObj = await itemPage.evaluate((isVideo) => {
+                                    postObj = await itemPage.evaluate(() => {
                                         return {
-                                            img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('img').src,
-                                            title: document.querySelector('div.xyamay9 h1').innerText,
+                                            img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
                                             date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
                                             description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                             shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                             price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
                                         };
-                                    }, isVideo);
+                                    });
         
                                     await itemBrowser.close();
                                     itemBrowser = null;
@@ -691,25 +681,15 @@ function interval() {
                                     errorMessage('Error with getting item data', error);
                                 }
                             }else{
-                                //initiate the new page for collecting data
-                                let itemPageFullLoad = false;
                                 try{
                                     itemPage = await mainBrowser.newPage();
                                     await itemPage.setRequestInterception(true);
                                     itemPage.on('request', async request => {
                                         const resource = request.resourceType();
-                                        if(itemPageFullLoad){
-                                            if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
-                                                request.abort();
-                                            }else{
-                                                request.continue();
-                                            }
+                                        if(resource != 'document'){
+                                            request.abort();
                                         }else{
-                                            if(resource != 'document'){
-                                                request.abort();
-                                            }else{
-                                                request.continue();
-                                            }
+                                            request.continue();
                                         }
                                     });
         
@@ -731,26 +711,17 @@ function interval() {
         
                                 //get post data
                                 try{
-                                    //check for video
-                                    let isVideo = false;
-                                    if(await itemPage.$('.xpz12be[aria-label="Loading..."]') != null){
-                                        console.log('video sequence: ' + newPost);
-                                        itemPageFullLoad = true;
-                                        await itemPage.reload({ waitUntil: 'networkidle0' });
-                                        isVideo = true;
-                                    }
-        
                                     //set post data obj
-                                    postObj = await itemPage.evaluate((isVideo) => {
+                                    postObj = await itemPage.evaluate(() => {
                                         return {
-                                            img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
+                                            img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
                                             title: document.querySelector('div.xyamay9 h1').innerText,
                                             date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
                                             description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                             shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                             price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
                                         };
-                                    }, isVideo);
+                                    });
         
                                     await itemPage.close();
                                 } catch(error){
@@ -872,5 +843,5 @@ function interval() {
             }
             isDormant = true;
         }
-    }, reloadBlock ? 180000 : getRandomInterval()); //30 mins or random
+    }, getRandomInterval()); //30 mins or random
 } 

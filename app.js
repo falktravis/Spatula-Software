@@ -90,8 +90,8 @@ process.on('unhandledRejection', async (reason, promise) => {
 const facebookListener = async (message, task, user, username) => {
     if(message.action == 'rotateAccount'){
         console.log("\nrotate Account - main\n");
-        //set lastActive to null
-        await burnerAccountDB.updateOne({Username: username}, {$set: {LastActive: null}});//$inc: {ActiveTasks: 1}
+        //set lastActive to now, account is no longer in use
+        await burnerAccountDB.updateOne({Username: username}, {$set: {LastActive: Date.now()}});//$inc: {ActiveTasks: 1}
     }else if(message.action == 'ban'){
 
         //decrease the proxy account num before deleting account
@@ -154,8 +154,8 @@ const getFacebookAccount = async () => {
         //logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
     }
 
-    //increase number of active tasks on the burner account
-    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$set: {LastActive: Date.now()}});//{$inc: {ActiveTasks: 1}}
+    //change LastActive to null, signifing the account is being used
+    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$set: {LastActive: null}});//{$inc: {ActiveTasks: 1}}
 
     return burnerAccountObj;
 }
@@ -211,7 +211,7 @@ const deleteTask = async (task, taskName, userId) => {
 
         //update account and proxy stats
         let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
-        await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$set: {LastActive: null}});//{$inc: {ActiveTasks: -1}
+        await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$set: {LastActive: Date.now()}});//{$inc: {ActiveTasks: -1}
         await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
 
         //delete from server
@@ -534,8 +534,8 @@ const executeCommand = async (interaction) => {
                     //get a static proxy
                     const proxyObj = await getStaticFacebookBurnerProxy();
 
-                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: null, Platform: randomPlatform});
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LstActive: null, Platform: randomPlatform});
+                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform});
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 1, Platform: randomPlatform});
                 }
         
                 Channel.send('finish');
@@ -587,7 +587,7 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === 'start-all-tasks' && interaction.user.id === '456168609639694376'){
                 //reset burner accounts
-                await burnerAccountDB.updateMany({$set: {LastActive: null}});//{ActiveTasks: {$lt: 4}}, {$set: {ActiveTasks: 0}}
+                await burnerAccountDB.updateMany({$set: {LastActive: 1}});//{ActiveTasks: {$lt: 4}}, {$set: {ActiveTasks: 0}}
                 
                 const taskArray = taskDB.find();
 
