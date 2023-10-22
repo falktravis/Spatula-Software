@@ -661,6 +661,13 @@ function interval() {
                             if(workerData.messageType == 1){//auto message
                                 await sendMessage(newPost);
         
+                                //check for video
+                                if(await itemPage.$eval('.xcg96fm img', element => element.getAttribute('src')).includes("video")){
+                                    logChannel.send('video sequence one: ' + newPost);
+                                    itemPageFullLoad = true;
+                                    await itemPage.reload({ waitUntil: 'networkidle0' });
+                                }
+        
                                 //get post data
                                 try{
                                     postObj = await itemPage.evaluate(() => {
@@ -711,6 +718,14 @@ function interval() {
         
                                 //get post data
                                 try{
+
+                                    //check for video
+                                    if(await itemPage.$eval('.xcg96fm img', element => element.getAttribute('src')).includes("video")){
+                                        logChannel.send('video sequence one: ' + newPost);
+                                        itemPageFullLoad = true;
+                                        await itemPage.reload({ waitUntil: 'networkidle0' });
+                                    }
+
                                     //set post data obj
                                     postObj = await itemPage.evaluate(() => {
                                         return {
@@ -843,5 +858,5 @@ function interval() {
             }
             isDormant = true;
         }
-    }, getRandomInterval()); //30 mins or random
+    }, getRandomInterval());
 } 
