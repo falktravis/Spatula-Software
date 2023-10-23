@@ -30,6 +30,7 @@ parentPort.on('message', async (message) => {
         parentPort.postMessage({messageCookies: messageCookies, burnerCookies: burnerCookies});
     }
     else if(message.action === 'newAccount'){
+        await mainChannel.send("parent message received");
         isDormant = false;
 
         //set all new account data
