@@ -13,44 +13,56 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 //Closes browsers before terminating the task with facebook-delete command
 parentPort.on('message', async (message) => {
     if(message.action === 'closeBrowsers') {
-
-        while(isDormant == false){
-            console.log('task non dormant');
-            await new Promise(r => setTimeout(r, 10000));
+        try {
+            while(isDormant == false){
+                console.log('task non dormant');
+                await new Promise(r => setTimeout(r, 10000));
+            }
+    
+            console.log('close browsers');
+            if(mainBrowser != null){
+                await mainBrowser.close();
+                mainBrowser = null;
+            }
+            if(itemBrowser != null){
+                await itemBrowser.close();
+                itemBrowser = null;
+            }
+    
+            parentPort.postMessage({messageCookies: messageCookies, burnerCookies: burnerCookies});
+        } catch (error) {
+            errorMessage("Error closing browser: ", error);
         }
-
-        console.log('close browsers');
-        if(mainBrowser != null){
-            await mainBrowser.close();
-        }
-        if(itemBrowser != null){
-            await itemBrowser.close();
-        }
-
-        parentPort.postMessage({messageCookies: messageCookies, burnerCookies: burnerCookies});
     }
     else if(message.action === 'newAccount'){
-        await mainChannel.send("parent message received");
-        isDormant = false;
-
-        //set all new account data
-        burnerCookies = message.Cookies;
-        burnerUsername = message.Username;
-        burnerProxy = message.Proxy;
-        burnerPlatform = message.Platform;
-
-        //close browser
-        await mainBrowser.close();
-        startError = false;
-
-        //restart the main page
-        await start();
-
-        if(mainListingStorage == null){
-            await setListingStorage();
+        try {
+            await mainChannel.send("parent message received");
+            isDormant = false;
+    
+            //set all new account data
+            burnerCookies = message.Cookies;
+            burnerUsername = message.Username;
+            burnerProxy = message.Proxy;
+            burnerPlatform = message.Platform;
+    
+            //close browser
+            if(mainBrowser != null){
+                await mainBrowser.close();
+                mainBrowser = null;
+            }
+            startError = false;
+    
+            //restart the main page
+            await start();
+    
+            if(mainListingStorage == null){
+                await setListingStorage();
+            }
+    
+            isDormant = true;
+        } catch (error) {
+            errorMessage("Error assigning new account: ", error);
         }
-
-        isDormant = true;
     }
 });
 
@@ -294,6 +306,7 @@ const sendMessage = async (link) => {
     try {
         if(workerData.messageType != 1){//if its not auto messaging
             await itemBrowser.close();
+            itemBrowser = null;
         }
     } catch (error) {
         errorMessage('Error with closing itemBrowser', error);
@@ -455,6 +468,7 @@ const start = async () => {
                 console.log(startCount + " : " + error);
                 if(startCount < 3){
                     await mainBrowser.close();
+                    mainBrowser = null;
                     await start();
                 }else{
                     errorMessage('Error with setting distance', error);
@@ -611,6 +625,7 @@ function interval() {
                     if(error.message.includes('TargetCloseError')){
                         //logChannel.send("Page Closed");
                         await mainBrowser.close();
+                        mainBrowser = null;
                         await start();
                     }else if(error.message.includes('ERR_TUNNEL_CONNECTION_FAILED') && resultsRefreshMaxAttempts < 3){
                         resultsRefreshMaxAttempts++;
@@ -684,8 +699,9 @@ function interval() {
                                     await itemBrowser.close();
                                     itemBrowser = null;
                                 } catch(error){
-                                    await itemBrowser.close();
                                     await logPageContent(itemPage);
+                                    await itemBrowser.close();
+                                    itemBrowser = null;
                                     errorMessage('Error with getting item data', error);
                                 }
                             }else{
@@ -740,9 +756,11 @@ function interval() {
                                     });
         
                                     await itemPage.close();
+                                    itemPage = null;
                                 } catch(error){
                                     await logPageContent(itemPage);
                                     await itemPage.close();
+                                    itemPage = null;
                                     errorMessage(`Error with getting item data at ${newPost}`, error);
                                 }
                             }
