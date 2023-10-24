@@ -115,7 +115,7 @@ const logPageContent = async (page) => {
             ],
         });
     }catch(error){
-        errorMessage('error loggin content: ', error);
+        errorMessage('error login content: ', error);
     }
 }
 
@@ -834,6 +834,9 @@ function interval() {
                             }
                         }else{
                             console.log("\n\nThe Price is Wrong, price: " + price + " max: " + workerData.maxPrice + "\n\n");
+                            if(price == NaN){
+                                logChannel.send("Price NaN: " + newPost);
+                            }
                         }
     
                         //Update newPost
