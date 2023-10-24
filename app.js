@@ -587,8 +587,7 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === 'start-all-tasks' && interaction.user.id === '456168609639694376'){
                 //reset burner accounts
-                await burnerAccountDB.updateMany({}, {$unset: {ActiveTasks: ""}});
-                await burnerAccountDB.updateMany({ActiveTasks: {$lt: 6}}, {$set: {LastActive: Date.now()}});
+                await burnerAccountDB.updateMany({}, {$set: {LastActive: Date.now()}});
                 //await burnerAccountDB.updateMany({LastActive: null}, {$set: {LastActive: Date.now()}});
                 
                 const taskArray = taskDB.find();
