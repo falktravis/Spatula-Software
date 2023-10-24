@@ -437,7 +437,7 @@ const executeCommand = async (interaction) => {
                 const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
     
                 //create a new worker
-                const warmAccountWorker = new Worker('./changeLanguage.js', { workerData:{ //!'./warmAccount.js'
+                const warmAccountWorker = new Worker('./warmAccount.js', { workerData:{
                     username: interaction.options.getString("email-or-phone"),
                     proxy: accountObj.Proxy,
                     cookies: accountObj.Cookies,
@@ -536,6 +536,15 @@ const executeCommand = async (interaction) => {
 
                     //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform});
                     await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 1, Platform: randomPlatform});
+
+                    const warmAccountWorker = new Worker('./changeLanguage.js', { workerData:{
+                        username: email,
+                        proxy: proxyObj.Proxy,
+                        cookies: cookieArray,
+                        platform: randomPlatform,
+                        channel: interaction.channelId,
+                    }});
+                    await new Promise(r => setTimeout(r, Math.random() * 30000 + 30000));
                 }
         
                 Channel.send('finish');
@@ -587,8 +596,7 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === 'start-all-tasks' && interaction.user.id === '456168609639694376'){
                 //reset burner accounts
-                await burnerAccountDB.updateMany({}, {$set: {LastActive: Date.now()}});
-                //await burnerAccountDB.updateMany({LastActive: null}, {$set: {LastActive: Date.now()}});
+                await burnerAccountDB.updateMany({LastActive: null}, {$set: {LastActive: Date.now()}});
                 
                 const taskArray = taskDB.find();
 
