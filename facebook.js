@@ -676,13 +676,6 @@ function interval() {
                             if(workerData.messageType == 1){//auto message
                                 await sendMessage(newPost);
         
-                                //check for video
-                                if(await itemPage.$('.xcg96fm img') == null){
-                                    logChannel.send('video sequence');
-                                    itemPageFullLoad = true;
-                                    await itemPage.reload({ waitUntil: 'networkidle0' });
-                                }
-        
                                 //get post data
                                 try{
                                     postObj = await itemPage.evaluate(() => {
@@ -705,14 +698,23 @@ function interval() {
                                 }
                             }else{
                                 try{
+                                    let itemPageFullLoad = false;
                                     itemPage = await mainBrowser.newPage();
                                     await itemPage.setRequestInterception(true);
                                     itemPage.on('request', async request => {
                                         const resource = request.resourceType();
-                                        if(resource != 'document'){
-                                            request.abort();
+                                        if(itemPageFullLoad){
+                                            if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
+                                                request.abort();
+                                            }else{
+                                                request.continue();
+                                            }
                                         }else{
-                                            request.continue();
+                                            if(resource != 'document'){
+                                                request.abort();
+                                            }else{
+                                                request.continue();
+                                            }
                                         }
                                     });
         
