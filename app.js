@@ -584,7 +584,7 @@ const executeCommand = async (interaction) => {
                 for await(const userObj of users){
                     console.log(userObj);
                     if(userObj[1].facebook != null){
-                        for await(const task of userObj[1].facebook){
+                        for (const task of userObj[1].facebook){
                             console.log('delete task');
                             await deleteTask(task[1], task[0], userObj[0]);
                         }

@@ -433,6 +433,14 @@ const start = async () => {
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
         burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+
+        // Detect the current language
+        const language = await mainPage.evaluate(() => document.documentElement.lang);
+        if (language !== 'en') {
+            logChannel.send('Language Wrong: ' + language + " -> " + burnerUsername);
+            startError = true;
+            parentPort.postMessage({action: 'rotateAccount'});
+        }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
     }
@@ -697,8 +705,8 @@ function interval() {
                                     errorMessage('Error with getting item data', error);
                                 }
                             }else{
+                                let itemPageFullLoad = false;
                                 try{
-                                    let itemPageFullLoad = false;
                                     itemPage = await mainBrowser.newPage();
                                     await itemPage.setRequestInterception(true);
                                     itemPage.on('request', async request => {
