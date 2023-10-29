@@ -52,7 +52,9 @@ parentPort.on('message', async (message) => {
             startError = false;
     
             //restart the main page
-            await start();
+            if(isRunning){
+                await start();
+            }
     
             if(mainListingStorage == null){
                 await setListingStorage();
