@@ -87,15 +87,16 @@ process.on('unhandledRejection', async (reason, promise) => {
 });
 
 //worker login listening function
-const facebookListener = async (message, task, user, username) => {
+const facebookListener = async (message, task, user) => {
     if(message.action == 'rotateAccount'){
-        console.log("\nrotate Account - main\n");
         //set lastActive to now, account is no longer in use
-        await burnerAccountDB.updateOne({Username: username}, {$set: {LastActive: Date.now()}});//$inc: {ActiveTasks: 1}
+        await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: Date.now()}});
+    }else if(message.action == 'languageWrong'){
+        await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: 10000000000000}});
     }else if(message.action == 'ban'){
 
         //decrease the proxy account num before deleting account
-        const oldAccountObj = await burnerAccountDB.findOne({Username: username});
+        const oldAccountObj = await burnerAccountDB.findOne({Username: message.username});
         await staticProxyDB.updateOne({Proxy: oldAccountObj.Proxy}, {$inc: {TotalFacebookBurnerAccounts: -1}});
 
         //Delete the burner account
@@ -361,7 +362,7 @@ const executeCommand = async (interaction) => {
                                                     channel: interaction.channelId,
                                                 }}));
 
-                                                user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id, burnerAccountObj.Username)); 
+                                                user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id)); 
 
                                                 Channel.send("Created " + interaction.options.getString("name"));
                                             }else{
@@ -660,7 +661,7 @@ const executeCommand = async (interaction) => {
                             channel: document.ChannelId,
                         }}));
 
-                        user.facebook.get(document.Name).on('message', message => facebookListener(message, document.Name, document.UserId, burnerAccountObj.Username)); 
+                        user.facebook.get(document.Name).on('message', message => facebookListener(message, document.Name, document.UserId)); 
 
                         Channel.send("Created " + document.Name);
 

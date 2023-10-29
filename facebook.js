@@ -187,7 +187,7 @@ const accountRotation = () => {
             }
 
             //send message to main
-            parentPort.postMessage({action: "rotateAccount"});
+            parentPort.postMessage({action: "rotateAccount", username: burnerUsername});
             if(isRunning){
                 accountRotation();
             }
@@ -390,10 +390,10 @@ const start = async () => {
                     console.log('Account banned: ' + burnerUsername);
             
                     //message the main script to delete the burner account
-                    parentPort.postMessage({action: 'ban'});
+                    parentPort.postMessage({action: 'ban', username: burnerUsername});
                 }else{
                     //message the main script to terminate the task
-                    parentPort.postMessage({action: 'rotateAccount'});
+                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername});
                 }
             }
         });
@@ -441,7 +441,7 @@ const start = async () => {
         if (language !== 'en') {
             logChannel.send('Language Wrong: ' + language + " -> " + burnerUsername);
             startError = true;
-            parentPort.postMessage({action: 'rotateAccount'});
+            parentPort.postMessage({action: 'languageWrong', username: burnerUsername});
         }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
@@ -623,7 +623,7 @@ function interval() {
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$('.xbbxn1n .xqui205 [aria-label="Reload Page"]') != null){
                         reloadBlock = true;
-                        parentPort.postMessage({action: "rotateAccount"});
+                        parentPort.postMessage({action: "rotateAccount", username: burnerUsername});
                         logChannel.send("Reload block: " + workerData.name);
                     }else if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
                         await mainPage.reload({waitUntil: 'domcontentloaded'});
