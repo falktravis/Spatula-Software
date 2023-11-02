@@ -446,6 +446,18 @@ const executeCommand = async (interaction) => {
                     channel: interaction.channelId,
                 }});
             }
+            else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
+                const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
+    
+                //create a new worker
+                const warmAccountWorker = new Worker('./warmAccount.js', { workerData:{
+                    username: interaction.options.getString("email-or-phone"),
+                    proxy: accountObj.Proxy,
+                    cookies: accountObj.Cookies,
+                    platform: accountObj.Platform,
+                    channel: interaction.channelId,
+                }});
+            }
             else if(interaction.commandName === "list"){
                 const taskArray = await taskDB.find({UserId: interaction.user.id});
 

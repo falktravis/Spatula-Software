@@ -56,9 +56,7 @@ parentPort.on('message', async (message) => {
                 await start();
             }
     
-            if(mainListingStorage == null){
-                await setListingStorage();
-            }
+            await setListingStorage();
     
             isDormant = true;
         } catch (error) {
