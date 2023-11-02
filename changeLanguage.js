@@ -29,9 +29,9 @@ const platformConverter = (platform) => {
 let mainChannel;
 client.on('ready', async () => {
     try {
-        mainChannel = client.channels.cache.get('1111129387669127191');
+        mainChannel = client.channels.cache.get(workerData.channel);
         if(mainChannel == null){
-            mainChannel = await client.channels.fetch('1111129387669127191');
+            mainChannel = await client.channels.fetch(workerData.channel);
         }
     } catch (error) {
         errorMessage('Error fetching channel', error);
