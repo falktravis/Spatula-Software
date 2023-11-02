@@ -430,7 +430,7 @@ const start = async () => {
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
-        await mainPage.goto(workerData.link, { waitUntil: 'networkidle0' });
+        await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
 
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
