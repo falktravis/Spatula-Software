@@ -71,6 +71,10 @@ const changeLanguage = async () => {
         let pages = await languageBrowser.pages();
         languagePage = pages[0];
 
+        //close the notif popup
+        const context = languageBrowser.defaultBrowserContext();
+        context.overridePermissions("https://www.facebook.com", ["notifications"]);
+
         //change http headers
         languagePage.setExtraHTTPHeaders({
             'Referer': 'https://www.facebook.com/login',

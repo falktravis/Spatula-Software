@@ -390,7 +390,10 @@ const start = async () => {
                     //message the main script to delete the burner account
                     parentPort.postMessage({action: 'ban', username: burnerUsername});
                 }else{
-                    //message the main script to terminate the task
+                    //message the main script to get a new accounts
+                    logChannel.send("Rotate Account: " + burnerUsername);
+                    await mainBrowser.close();
+                    mainBrowser = null;
                     parentPort.postMessage({action: 'rotateAccount', username: burnerUsername});
                 }
             }

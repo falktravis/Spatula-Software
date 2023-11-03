@@ -438,7 +438,7 @@ const executeCommand = async (interaction) => {
                 const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
     
                 //create a new worker
-                const warmAccountWorker = new Worker('./warmAccount.js', { workerData:{
+                new Worker('./viewAccount.js', { workerData:{
                     username: interaction.options.getString("email-or-phone"),
                     proxy: accountObj.Proxy,
                     cookies: accountObj.Cookies,
@@ -449,8 +449,8 @@ const executeCommand = async (interaction) => {
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
                 const newAccs = await burnerAccountDB.find({LastActive: 10000000000000});
 
-                const warmAccount = async (acc) => {
-                    const warmAccountWorker = new Worker('./changeLanguage.js', { workerData:{
+                const changeLanguage = async (acc) => {
+                    new Worker('./changeLanguage.js', { workerData:{
                         username: acc.Username,
                         proxy: acc.Proxy,
                         cookies: acc.Cookies,
@@ -462,7 +462,7 @@ const executeCommand = async (interaction) => {
                 }
 
                 for await(const acc of newAccs){
-                    await warmAccount(acc);
+                    await changeLanguage(acc);
                 }
             }
             else if(interaction.commandName === "list"){
