@@ -81,6 +81,7 @@ client.on('ready', async () => {
         errorMessage('Error fetching channel', error);
     }
 });
+console.log("Test"); //!TESTING
 
 //error message send function 
 const errorMessage = (message, error) => {
@@ -497,6 +498,12 @@ const start = async () => {
                 await pause();
                 await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
                 await pause();
+
+                //Check for kilometers
+                if((await mainPage.$(`role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`).innerText).includes("kilo")){
+                    logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
+                }
+
                 await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
                 await pause();
                 await mainCursor.click('[aria-label="Apply"]');
