@@ -506,9 +506,12 @@ const start = async () => {
                 await pause();
 
                 //Check for kilometers
-                if((await mainPage.$(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`).innerText).includes("kilo")){
-                    logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
-                }
+                try {
+                    let distanceText = await mainPage.$(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`).innerText;
+                    if(distanceText.includes("kilo")){
+                        logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
+                    }
+                } catch (error) {logChannel.send("checking for kilo error: " + error);}
 
                 await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
                 await pause();
