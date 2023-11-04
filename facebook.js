@@ -81,7 +81,6 @@ client.on('ready', async () => {
         errorMessage('Error fetching channel', error);
     }
 });
-console.log("Test"); //!TESTING
 
 //error message send function 
 const errorMessage = (message, error) => {
