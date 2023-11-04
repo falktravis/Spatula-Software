@@ -393,16 +393,20 @@ const start = async () => {
                     parentPort.postMessage({action: 'ban', username: burnerUsername});
                 }else if(redirectURL.includes('/login/?next')){
                     try{
-                        await mainPage.waitForSelector('[name="pass"]');
+                        await mainPage.waitForSelector('[name="email"]');
                     }catch(error){}
 
                     try {
                         logChannel.send("Re-Login Required: " + burnerUsername);
+                        await mainCursor.click('[name="email"]');
+                        await pause();
+                        await mainPage.keyboard.type(burnerUsername);
+                        await pause();
                         await mainCursor.click('[name="pass"]');
                         await pause();
                         await mainPage.keyboard.type(burnerPassword);
                         await pause();
-                        await mainCursor.click('[value="Continue"]');
+                        await mainCursor.click('[name="login"]');
                     } catch (error) {
                         await logChannel.send('error with re-login: ' + error);
                     }
