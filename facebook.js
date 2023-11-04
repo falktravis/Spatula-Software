@@ -321,7 +321,6 @@ let itemPage;
 let itemBrowser;
 let mainListingStorage;
 let networkData = 0;
-let startCount = 0; //number of times tried to set distance
 let isDormant = true; //true if task can be deleted
 let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
@@ -507,7 +506,7 @@ const start = async () => {
                 await pause();
 
                 //Check for kilometers
-                if((await mainPage.$(`role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`).innerText).includes("kilo")){
+                if((await mainPage.$(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`).innerText).includes("kilo")){
                     logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
                 }
 
@@ -517,15 +516,7 @@ const start = async () => {
                 //wait for the results to update, we aren't concerned about time
                 await new Promise(r => setTimeout(r, 10000));
             } catch (error) {
-                startCount++;
-                console.log(startCount + " : " + error);
-                if(startCount < 3){
-                    await mainBrowser.close();
-                    mainBrowser = null;
-                    await start();
-                }else{
-                    errorMessage('Error with setting distance', error);
-                }
+                errorMessage('Error with setting distance', error);
             }
         }
     
