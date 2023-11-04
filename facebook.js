@@ -29,7 +29,7 @@ parentPort.on('message', async (message) => {
                 itemBrowser = null;
             }
     
-            parentPort.postMessage({messageCookies: messageCookies, burnerCookies: burnerCookies});
+            parentPort.postMessage({messageCookies: messageCookies, cookies: burnerCookies});
         } catch (error) {
             errorMessage("Error closing browser: ", error);
         }
@@ -41,6 +41,7 @@ parentPort.on('message', async (message) => {
             //set all new account data
             burnerCookies = message.Cookies;
             burnerUsername = message.Username;
+            burnerPassword = message.Password;
             burnerProxy = message.Proxy;
             burnerPlatform = message.Platform;
     
@@ -185,7 +186,7 @@ const accountRotation = () => {
             }
 
             //send message to main
-            parentPort.postMessage({action: "rotateAccount", username: burnerUsername});
+            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, burnerCookies: burnerCookies});
             if(isRunning){
                 accountRotation();
             }
@@ -332,6 +333,7 @@ let logChannel;
 let messageCookies = workerData.messageCookies;
 let burnerCookies = workerData.burnerCookies;
 let burnerUsername = workerData.burnerUsername;
+let burnerPassword = workerData.burnerPassword;
 let burnerProxy = workerData.burnerProxy;
 let burnerPlatform = workerData.burnerPlatform;
 
@@ -389,12 +391,32 @@ const start = async () => {
             
                     //message the main script to delete the burner account
                     parentPort.postMessage({action: 'ban', username: burnerUsername});
+                }else if(redirectURL.includes('/login/?next')){
+                    try {
+                        logChannel.send("Re-Login Required: " + burnerUsername);
+                        await mainCursor.click('[name="pass"]');
+                        await pause();
+                        await mainPage.keyboard.type(burnerPassword);
+                        await pause();
+                        await mainCursor.click('[value="Continue"]');
+                        await mainPage.waitForNavigation({waitUntil: 'networkidle2'});
+    
+                        if(!(mainPage.url()).includes('facebook.com/marketplace')){
+                            //message the main script to get a new accounts
+                            logChannel.send("Rotate Account: " + burnerUsername);
+                            await mainBrowser.close();
+                            mainBrowser = null;
+                            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
+                        }
+                    } catch (error) {
+                        await logChannel.send('error with re-login');
+                    }
                 }else{
                     //message the main script to get a new accounts
                     logChannel.send("Rotate Account: " + burnerUsername);
                     await mainBrowser.close();
                     mainBrowser = null;
-                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername});
+                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
                 }
             }
         });
@@ -624,7 +646,7 @@ function interval() {
                     //if the listings dont exist on the page, refresh
                     if(await mainPage.$('.xbbxn1n .xqui205 [aria-label="Reload Page"]') != null){
                         reloadBlock = true;
-                        parentPort.postMessage({action: "rotateAccount", username: burnerUsername});
+                        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
                         logChannel.send("Reload block: " + workerData.name);
                     }else if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
                         await mainPage.reload({waitUntil: 'domcontentloaded'});

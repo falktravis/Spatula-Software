@@ -90,7 +90,7 @@ process.on('unhandledRejection', async (reason, promise) => {
 const facebookListener = async (message, task, user) => {
     if(message.action == 'rotateAccount'){
         //set lastActive to now, account is no longer in use
-        await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: Date.now()}});
+        await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: Date.now(), Cookies: message.cookies}});
     }else if(message.action == 'languageWrong'){
         await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: 10000000000000}});
     }else if(message.action == 'ban'){
@@ -112,7 +112,7 @@ const facebookListener = async (message, task, user) => {
         await taskDB.updateOne({UserId: user, Name: task}, {$set: {burnerAccount: newAccountObj.Username}});
 
         //send the data to the task
-        users.get(user).facebook.get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Platform: newAccountObj.Platform});
+        users.get(user).facebook.get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
     }
 }
 
@@ -349,6 +349,7 @@ const executeCommand = async (interaction) => {
                                                     messageType: interaction.options.getNumber("message-type"),
                                                     message: interaction.options.getString("message"),
                                                     burnerUsername: burnerAccountObj.Username,
+                                                    burnerPassword: burnerAccountObj.Password,
                                                     burnerProxy: burnerAccountObj.Proxy,
                                                     messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
                                                     burnerCookies: burnerAccountObj.Cookies,
@@ -667,6 +668,7 @@ const executeCommand = async (interaction) => {
                             messageType: document.MessageType,
                             message: document.Message,
                             burnerUsername: burnerAccountObj.Username,
+                            burnerPassword: burnerAccountObj.Password,
                             burnerProxy: burnerAccountObj.Proxy,
                             messageProxy: document.MessageType == 3 ? null : userObj.MessageAccount.Proxy,
                             burnerCookies: burnerAccountObj.Cookies,
