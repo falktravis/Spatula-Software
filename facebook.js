@@ -392,6 +392,10 @@ const start = async () => {
                     //message the main script to delete the burner account
                     parentPort.postMessage({action: 'ban', username: burnerUsername});
                 }else if(redirectURL.includes('/login/?next')){
+                    try{
+                        await mainPage.waitForSelector('[name="pass"]');
+                    }catch(error){}
+
                     try {
                         logChannel.send("Re-Login Required: " + burnerUsername);
                         await mainCursor.click('[name="pass"]');
