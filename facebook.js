@@ -399,8 +399,15 @@ const start = async () => {
                         await mainPage.keyboard.type(burnerPassword);
                         await pause();
                         await mainCursor.click('[value="Continue"]');
-                        await mainPage.waitForNavigation({waitUntil: 'networkidle2'});
+                    } catch (error) {
+                        await logChannel.send('error with re-login: ' + error);
+                    }
     
+                    try{
+                        await mainPage.waitForNavigation();
+                    }catch (error) {}
+
+                    try{
                         if(!(mainPage.url()).includes('facebook.com/marketplace')){
                             //message the main script to get a new accounts
                             logChannel.send("Rotate Account: " + burnerUsername);
@@ -408,9 +415,10 @@ const start = async () => {
                             mainBrowser = null;
                             parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
                         }
-                    } catch (error) {
-                        await logChannel.send('error with re-login');
+                    }catch (error) {
+                        await logChannel.send('error with re-login: ' + error);
                     }
+                    
                 }else{
                     //message the main script to get a new accounts
                     logChannel.send("Rotate Account: " + burnerUsername);
