@@ -417,9 +417,10 @@ const start = async () => {
                     try{
                         if(!(mainPage.url()).includes('facebook.com/marketplace')){
                             //message the main script to get a new accounts
-                            logChannel.send("Rotate Account: " + burnerUsername);
+                            logChannel.send("Rotate Account: " + burnerUsername + " at " + mainPage.url());
                             await mainBrowser.close();
                             mainBrowser = null;
+                            //This might just be a ban
                             parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
                         }
                     }catch (error) {
@@ -507,8 +508,7 @@ const start = async () => {
 
                 //Check for kilometers
                 try {
-                    let distanceText = await mainPage.$(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`).innerText;
-                    if(distanceText.includes("kilo")){
+                    if((await mainPage.evaluate((distance) => {return document.querySelector(`[role="listbox"] div.x4k7w5x > :nth-child(${distance})`).innerText}, workerData.distance)).includes("kilo")){
                         logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
                     }
                 } catch (error) {logChannel.send("checking for kilo error: " + error);}

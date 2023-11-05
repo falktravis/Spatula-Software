@@ -11,6 +11,7 @@ discordClient.login(process.env.DISCORD_BOT_TOKEN);
 //Database connection
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const { Console } = require('console');
+const { log } = require('util');
 const uri = "mongodb+srv://SpatulaSoftware:jpTANtS4n59oqlam@spatula-software.tyas5mn.mongodb.net/?retryWrites=true&w=majority";
 const mongoClient = new MongoClient(uri, {
   serverApi: {
@@ -90,7 +91,12 @@ process.on('unhandledRejection', async (reason, promise) => {
 const facebookListener = async (message, task, user) => {
     if(message.action == 'rotateAccount'){
         //set lastActive to now, account is no longer in use
-        await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: Date.now(), Cookies: message.cookies}});
+        await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: Date.now()}});
+        if(message.cookies != null){
+            await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.cookies}});
+        }else{
+            logChannel.send("cookies null");
+        }
     }else if(message.action == 'languageWrong'){
         await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: 10000000000000}});
     }else if(message.action == 'ban'){
@@ -531,6 +537,35 @@ const executeCommand = async (interaction) => {
                 for await (const account of accounts){
                     await staticProxyDB.updateOne({Proxy: account.Proxy}, {$inc: {TotalFacebookBurnerAccounts: 1}});
                 }*/
+
+                //** Reset Cookies for null insertion
+                /* 
+                let accs = await burnerAccountDB.find({Cookies: null}).toArray();
+
+                const accountArray = fileContents.split('\n');
+
+                // Regular expression patterns
+                const arrayRegex = /\[(.*?)\]/g;
+                const emailPasswordRegex = /;([^:;]+):([^:;]+);;/;
+
+                for(let i = 0; i < accountArray.length; i++){
+                    //collect account user and password string
+                    const emailPasswordMatch = accountArray[i].match(emailPasswordRegex);
+                    const email = emailPasswordMatch[1];
+
+                    accs.forEach(async (acc) => {
+                        if(acc.Username == email){
+                            //collect the cookie array
+                            const cookiesMatch = accountArray[i].match(arrayRegex);
+                            const cookieArray = JSON.parse(cookiesMatch[0]);
+
+                            console.log(email);
+
+                            await burnerAccountDB.updateOne({Username: email}, {$set: {Cookies: cookieArray}});
+                        }
+                    })
+                }
+                */
                 
                 const accountArray = fileContents.split('\n');
 
