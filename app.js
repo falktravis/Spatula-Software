@@ -185,9 +185,7 @@ const handleUser = async (userId) => {
 const deleteTask = async (task, taskName, userId) => {
     try {
         let messageSuccess;
-
-        //Message the worker to close browsers
-        await task.postMessage({ action: 'closeBrowsers' });
+        const taskObj = await taskDB.findOne({UserId: userId, Name: taskName});
 
         let message = await Promise.race([
             new Promise(resolve => {
@@ -204,7 +202,8 @@ const deleteTask = async (task, taskName, userId) => {
             })
         ]);
 
-        const taskObj = await taskDB.findOne({UserId: userId, Name: taskName});
+        //Message the worker to close browsers
+        await task.postMessage({ action: 'closeBrowsers' });
 
         if(messageSuccess){
             //set cookies in db
@@ -219,7 +218,7 @@ const deleteTask = async (task, taskName, userId) => {
 
         //update account and proxy stats
         let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
-        await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$set: {LastActive: Date.now()}});//{$inc: {ActiveTasks: -1}
+        await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$set: {LastActive: Date.now()}});
         await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
 
         //delete from server

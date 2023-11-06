@@ -605,6 +605,7 @@ const handleTime = async (intervalFunction) => {
             await start();
 
             if(startError == false){
+                setListingStorage();
                 accountRotation();
                 intervalFunction(); 
             }
