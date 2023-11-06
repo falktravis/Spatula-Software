@@ -207,7 +207,9 @@ const deleteTask = async (task, taskName, userId) => {
 
         if(messageSuccess){
             //set cookies in db
-            await burnerAccountDB.updateOne({Username: taskObj.burnerAccount}, {$set: {Cookies: message.burnerCookies}});
+            if(message.burnerCookies != null){
+                await burnerAccountDB.updateOne({Username: taskObj.burnerAccount}, {$set: {Cookies: message.burnerCookies}});
+            }
             if(message.messageCookies != null){
                 await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
             }
