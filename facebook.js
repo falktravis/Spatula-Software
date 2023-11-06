@@ -55,9 +55,8 @@ parentPort.on('message', async (message) => {
             //restart the main page
             if(isRunning){
                 await start();
+                await setListingStorage();
             }
-    
-            await setListingStorage();
     
             isDormant = true;
         } catch (error) {
@@ -406,15 +405,11 @@ const start = async () => {
                         await mainPage.keyboard.type(burnerPassword);
                         await pause();
                         await mainCursor.click('[name="login"]');
-                    } catch (error) {
-                        await logChannel.send('error with re-login: ' + error);
-                    }
-    
-                    try{
-                        await mainPage.waitForNavigation();
-                    }catch (error) {}
 
-                    try{
+                        try{
+                            await mainPage.waitForNavigation();
+                        }catch (error) {}
+
                         if(!(mainPage.url()).includes('facebook.com/marketplace')){
                             //message the main script to get a new accounts
                             logChannel.send("Rotate Account: " + burnerUsername + " at " + mainPage.url());
@@ -422,11 +417,14 @@ const start = async () => {
                             mainBrowser = null;
                             //This might just be a ban
                             parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
+                        }else{
+                            //update burnerCookies
+                            burnerCookies = await mainPage.cookies();
+                            burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
                         }
-                    }catch (error) {
+                    } catch (error) {
                         await logChannel.send('error with re-login: ' + error);
                     }
-                    
                 }else{
                     //message the main script to get a new accounts
                     logChannel.send("Rotate Account: " + burnerUsername);
@@ -495,7 +493,7 @@ const start = async () => {
     
     //set distance
     if(startError == false){
-        if(workerData.distance != null && isCreate == true){
+        if(workerData.distance != null){
 
             try {
                 await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
@@ -601,15 +599,10 @@ const handleTime = async (intervalFunction) => {
     if(isRunning){
         try {
             isDormant = false;
+            isCreate = false;
             await start();
 
             if(startError == false){
-                //set the listing storage, only on the initial creation
-                if(isCreate == true){
-                    await setListingStorage();
-                    isCreate = false;
-                }
-    
                 accountRotation();
                 intervalFunction(); 
             }
