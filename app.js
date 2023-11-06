@@ -94,6 +94,7 @@ const facebookListener = async (message, task, user) => {
         await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: Date.now()}});
         if(message.cookies != null){
             await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.cookies}});
+            logChannel.send("cookies not null");
         }else{
             logChannel.send("cookies null");
         }

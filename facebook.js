@@ -420,7 +420,8 @@ const start = async () => {
                         }else{
                             //update burnerCookies
                             burnerCookies = await mainPage.cookies();
-                            burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+                            //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+                            console.log("Burner Cookies Update: " + burnerCookies);
                         }
                     } catch (error) {
                         await logChannel.send('error with re-login: ' + error);
@@ -471,7 +472,8 @@ const start = async () => {
 
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
-        burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+        //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+        console.log("Burner Cookies Update: " + burnerCookies);
 
         // Detect the current language
         const language = await mainPage.evaluate(() => document.documentElement.lang);
