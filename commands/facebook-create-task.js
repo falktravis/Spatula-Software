@@ -31,20 +31,20 @@ module.exports = {
                 .setRequired(true))
         .addNumberOption(option => 
             option.setName('distance')
-                .setDescription('Maximum item distance from location')
+                .setDescription('Maximum item distance from location in your standard unit of measurement(kilometers or miles)')
                 .setRequired(true)
                 .addChoices(				
                     { name: '1', value: 1 },
                     { name: '2', value: 2 },
-                    { name: '5', value: 3 },
-                    { name: '10', value: 4 },
-                    { name: '20', value: 5 },
-                    { name: '40', value: 6 },
-                    { name: '60', value: 7 },
-                    { name: '80', value: 8 },
-                    { name: '100', value: 9 },
-                    { name: '250', value: 10 },
-                    { name: '500', value: 11 },
+                    { name: '5', value: 5 },
+                    { name: '10', value: 10 },
+                    { name: '20', value: 20 },
+                    { name: '40', value: 40 },
+                    { name: '60', value: 60 },
+                    { name: '80', value: 80 },
+                    { name: '100', value: 100 },
+                    { name: '250', value: 250 },
+                    { name: '500', value: 500 },
                 ))
         .addStringOption(option => 
             option.setName('message')

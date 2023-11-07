@@ -135,11 +135,10 @@ const platformConverter = (platform) => {
 }
 
 // Function to simulate typing with randomized speed
-async function typeWithRandomSpeed(page, elementSelector, text) {
-    const element = await page.$(elementSelector);
+async function typeWithRandomSpeed(page, text) {
     for (const char of text) {
         // Type a character
-        await element.type(char, { delay: Math.floor(Math.random() * (100 - 50 + 1)) + 50 });
+        await page.keyboard.type(char, { delay: Math.floor(Math.random() * (100 - 50 + 1)) + 50 });
     }
 }
 
@@ -398,7 +397,7 @@ const start = async () => {
                         logChannel.send("Re-Login Required: " + burnerUsername);
                         await mainCursor.click('[name="email"]');
                         await pause();
-                        await mainPage.keyboard.type(burnerUsername);
+                        await typeWithRandomSpeed(mainPage, burnerUsername);
                         await pause();
                         await mainCursor.click('[name="pass"]');
                         await pause();
@@ -413,6 +412,7 @@ const start = async () => {
                         if(!(mainPage.url()).includes('facebook.com/marketplace')){
                             //message the main script to get a new accounts
                             logChannel.send("Rotate Account: " + burnerUsername + " at " + mainPage.url());
+                            await logPageContent(mainPage);
                             await mainBrowser.close();
                             mainBrowser = null;
                             //This might just be a ban
@@ -495,32 +495,52 @@ const start = async () => {
     
     //set distance
     if(startError == false){
-        if(workerData.distance != null){
+        try {
+            //apply a random element
+            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
+            await pause();
+            await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+            await pause();
+            await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
+            await pause();
+            //click a random element
+            await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${Math.floor(Math.random() * 11 + 1)})`);
+            await pause();
+            await mainCursor.click('[aria-label="Apply"]');
 
+            //long pause
+            await new Promise(r => setTimeout(r, Math.random() * 15000 + 5000));
+
+            //apply real distance
+            await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+            await pause();
+            await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
+            await pause();
+            await typeWithRandomSpeed(mainPage, "40");
+            await pause();
+            await mainPage.keyboard.press("Enter");
+            await pause();
+            await mainCursor.click('[aria-label="Apply"]');
+            //wait for the results to update, we aren't concerned about time
+            await new Promise(r => setTimeout(r, 10000));
+
+            /*
+            //Check for kilometers
             try {
-                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
-                await pause();
-                await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
-                await pause();
-                await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
-                await pause();
+                if((await mainPage.evaluate((distance) => {return document.querySelector(`[role="listbox"] div.x4k7w5x > :nth-child(${distance})`).innerText}, workerData.distance)).includes("kilo")){
+                    logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
+                }
+            } catch (error) {logChannel.send("checking for kilo error: " + error);}
 
-                //Check for kilometers
-                try {
-                    if((await mainPage.evaluate((distance) => {return document.querySelector(`[role="listbox"] div.x4k7w5x > :nth-child(${distance})`).innerText}, workerData.distance)).includes("kilo")){
-                        logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
-                    }
-                } catch (error) {logChannel.send("checking for kilo error: " + error);}
-
-                await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
-                await pause();
-                await mainCursor.click('[aria-label="Apply"]');
-                //wait for the results to update, we aren't concerned about time
-                await new Promise(r => setTimeout(r, 10000));
-            } catch (error) {
-                errorMessage('Error with setting distance', error);
-            }
+            await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
+            await pause();
+            await mainCursor.click('[aria-label="Apply"]');
+            //wait for the results to update, we aren't concerned about time
+            await new Promise(r => setTimeout(r, 10000));*/
+        } catch (error) {
+            errorMessage('Error with setting distance', error);
         }
     
         mainPageInitiate = false;
