@@ -533,12 +533,7 @@ const start = async () => {
                     logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
                 }
             } catch (error) {logChannel.send("checking for kilo error: " + error);}
-
-            await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${workerData.distance})`);
-            await pause();
-            await mainCursor.click('[aria-label="Apply"]');
-            //wait for the results to update, we aren't concerned about time
-            await new Promise(r => setTimeout(r, 10000));*/
+            */
         } catch (error) {
             errorMessage('Error with setting distance', error);
         }
