@@ -474,7 +474,9 @@ const start = async () => {
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
-        await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
+        try {
+            await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
+        } catch (error) {await logChannel.send("Timeout on going to link")}
 
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
