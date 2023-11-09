@@ -523,7 +523,7 @@ const start = async () => {
             await pause();
             await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
             await pause();
-            await typeWithRandomSpeed(mainPage, workerData.distance);
+            await typeWithRandomSpeed(mainPage, (workerData.distance).toString());
             await pause();
             await mainPage.keyboard.press("Enter");
             await pause();
