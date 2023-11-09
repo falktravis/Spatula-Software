@@ -94,8 +94,14 @@ const changeLanguage = async () => {
         //await logPageContent(languagePage);
         await languagePage.waitForSelector('.xdppsyt .x1i10hfl');
         await languagePage.click('.xdppsyt .x1i10hfl');
-        await languagePage.waitForSelector('.x1xmf6yo.xezivpi');
-        await languagePage.click('.x1xmf6yo.xezivpi');
+
+        try{
+            await languagePage.waitForSelector('.x1xmf6yo.xezivpi');
+        }catch(error){
+            await languagePage.click('[aria-label="OK"]');
+            await languagePage.waitForSelector('[aria-label="Редактировать"]');
+        }
+        await languagePage.click('[aria-label="Редактировать"]');
         await languagePage.waitForSelector('.xb57i2i .x4k7w5x');
         await languagePage.click('.xb57i2i .x4k7w5x > :nth-child(19)');
         await languagePage.click('.x1rdy4ex > :nth-child(2)');
