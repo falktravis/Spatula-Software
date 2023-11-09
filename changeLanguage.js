@@ -102,8 +102,9 @@ const changeLanguage = async () => {
         await languagePage.waitForNavigation();
         //await logPageContent(languagePage);
         await languageBrowser.close();
-        await mainChannel.send("Finish");
+        await mainChannel.send("Finish: " + workerData.username);
     }catch(error){
+        await mainChannel.send('language failure: ' + workerData.username);
         errorMessage('Error with page initiation', error);
         await logPageContent(languagePage);
         await languageBrowser.close();

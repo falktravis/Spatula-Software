@@ -184,7 +184,7 @@ const accountRotation = () => {
             }
 
             //send message to main
-            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, burnerCookies: burnerCookies});
+            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
             if(isRunning){
                 accountRotation();
             }
@@ -410,18 +410,24 @@ const start = async () => {
                         }catch (error) {}
 
                         if(!(mainPage.url()).includes('facebook.com/marketplace')){
-                            //message the main script to get a new accounts
-                            logChannel.send("Rotate Account: " + burnerUsername + " at " + mainPage.url());
-                            await logPageContent(mainPage);
-                            await mainBrowser.close();
-                            mainBrowser = null;
-                            //This might just be a ban
-                            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
+                            //check for invalid credentials
+                            if(mainPage.$('.uiBoxRed[role="alert"]') != null){
+                                let errorMsg = await mainPage.evaluate(() => document.querySelector('.uiBoxRed[role="alert"]').innerText);
+                                await logChannel.send("Ban on Re-login: " + errorMsg);
+                                parentPort.postMessage({action: 'ban', username: burnerUsername});
+                            }else{
+                                //message the main script to get a new accounts
+                                logChannel.send("Rotate Account: " + burnerUsername + " at " + mainPage.url());
+                                await logPageContent(mainPage);
+                                await mainBrowser.close();
+                                mainBrowser = null;
+                                //This might just be a ban
+                                parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
+                            }
                         }else{
                             //update burnerCookies
                             burnerCookies = await mainPage.cookies();
                             //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-                            console.log("Burner Cookies Update: " + burnerCookies);
                         }
                     } catch (error) {
                         await logChannel.send('error with re-login: ' + error);
@@ -473,7 +479,6 @@ const start = async () => {
         //update burnerCookies
         burnerCookies = await mainPage.cookies();
         //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-        console.log("Burner Cookies Update: " + burnerCookies);
 
         // Detect the current language
         const language = await mainPage.evaluate(() => document.documentElement.lang);
@@ -518,7 +523,7 @@ const start = async () => {
             await pause();
             await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
             await pause();
-            await typeWithRandomSpeed(mainPage, "40");
+            await typeWithRandomSpeed(mainPage, workerData.distance);
             await pause();
             await mainPage.keyboard.press("Enter");
             await pause();

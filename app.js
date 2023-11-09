@@ -221,7 +221,6 @@ const deleteTask = async (task, taskName, userId) => {
         //update account and proxy stats
         let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
         await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$set: {LastActive: Date.now()}});
-        await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, { $inc: { CurrentFacebookBurnerTasks: -1 } });
 
         //delete from server
         task.terminate();
@@ -262,6 +261,28 @@ const scanDatabase = async () => {
 
         scanDatabase();
     }, 86400000) //24 hours
+}
+
+const getDormantProxies = async () => {
+   //get all proxies
+    let proxyArr = await staticProxyDB.find().toArray()
+
+    //scan through burner accounts and delete each proxy from proxy list
+    let accountArr = await burnerAccountDB.find().toArray();
+    console.log(accountArr.length + " " + proxyArr.length);
+    for(let i = 0; i < proxyArr.length; i++){
+        for await(acc of accountArr){
+            if(acc.Proxy == proxyArr[i].Proxy){
+                proxyArr.splice(i, 1);
+            }
+        }
+    }
+
+    //print proxy list
+    for(let x = 0; x < 46; x++){
+        await staticProxyDB.deleteOne({Proxy: proxyArr[x].Proxy});
+        console.log(proxyArr[x].Proxy);
+    }
 }
 
 //pre populate this with data from supabase 
@@ -593,16 +614,7 @@ const executeCommand = async (interaction) => {
                     const proxyObj = await getStaticFacebookBurnerProxy();
 
                     //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform});
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 1, Platform: randomPlatform});
-
-                    const warmAccountWorker = new Worker('./changeLanguage.js', { workerData:{
-                        username: email,
-                        proxy: proxyObj.Proxy,
-                        cookies: cookieArray,
-                        platform: randomPlatform,
-                        channel: interaction.channelId,
-                    }});
-                    await new Promise(r => setTimeout(r, Math.random() * 30000 + 30000));
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform});
                 }
         
                 Channel.send('finish');
@@ -615,7 +627,7 @@ const executeCommand = async (interaction) => {
                 
                 //insert the new proxies
                 proxyList.forEach(async (proxy) => {
-                    await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, CurrentFacebookBurnerTasks: 0, TotalFacebookBurnerAccounts: 0})
+                    await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, TotalFacebookBurnerAccounts: 0})
                 })
         
                 Channel.send('finish');
