@@ -465,7 +465,24 @@ const executeCommand = async (interaction) => {
                 }
             }
             else if(interaction.commandName === "facebook-warm-account" && interaction.user.id === '456168609639694376'){
-                const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000});
+
+                const changeLanguage = async (acc) => {
+                    new Worker('./changeLanguage.js', { workerData:{
+                        username: acc.Username,
+                        proxy: acc.Proxy,
+                        cookies: acc.Cookies,
+                        platform: acc.Platform,
+                        channel: interaction.channelId,
+                    }});
+                    
+                    await new Promise(r => setTimeout(r, Math.random() * 30000 + 30000));
+                }
+
+                for await(const acc of newAccs){
+                    await changeLanguage(acc);
+                }
+                /*const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
     
                 //create a new worker
                 new Worker('./viewAccount.js', { workerData:{
@@ -474,7 +491,7 @@ const executeCommand = async (interaction) => {
                     cookies: accountObj.Cookies,
                     platform: accountObj.Platform,
                     channel: interaction.channelId,
-                }});
+                }});*/
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
                 const newAccs = await burnerAccountDB.find({LastActive: 10000000000000});
