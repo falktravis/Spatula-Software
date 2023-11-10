@@ -806,7 +806,6 @@ function interval() {
 
                                     //check for video
                                     if(await itemPage.$('.xcg96fm img') == null){
-                                        logChannel.send('video sequence');
                                         itemPageFullLoad = true;
                                         await itemPage.reload({ waitUntil: 'networkidle0' });
                                     }
