@@ -85,7 +85,7 @@ client.on('ready', async () => {
 const errorMessage = (message, error) => {
     console.log(workerData.name + ': ' + message + ': ' + error);
     logChannel.send(workerData.name + ': ' + message + ': ' + error);
-    mainChannel.send(workerData.name + ': ' + message + ': ' + error);
+    //mainChannel.send(workerData.name + ': ' + message + ': ' + error); .... :)
 }
 
 //randomize time till post check
@@ -928,11 +928,6 @@ function interval() {
                         } catch (error) {
                             errorMessage('Error re-setting new post', error);
                         }
-                    }
-    
-                    //Check for a post hard cap
-                    if(postNum > 20){
-                        mainChannel.send("Too many new posts to notify. Make your query more specific");
                     }
     
                     //ping the user
