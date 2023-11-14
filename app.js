@@ -190,17 +190,17 @@ const deleteTask = async (task, taskName, userId) => {
                     messageSuccess = true;
                     resolve(message);
                 });
+
+                //Message the worker to close browsers
+                task.postMessage({ action: 'closeBrowsers' });
             }),
             new Promise(resolve => {
                 setTimeout(() => {
                     messageSuccess = false;
                     resolve();
-                }, 90000); //90 seconds
+                }, 30000); //30 seconds
             })
         ]);
-
-        //Message the worker to close browsers
-        await task.postMessage({ action: 'closeBrowsers' });
 
         if(messageSuccess){
             //set cookies in db
