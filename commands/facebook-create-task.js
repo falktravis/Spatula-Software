@@ -22,14 +22,6 @@ module.exports = {
                     { name: 'No Messaging', value: 3 },
                 ))
         .addNumberOption(option => 
-            option.setName('start')
-                .setDescription('Start time, 24 hour time, no decimals, EST')
-                .setRequired(true))
-        .addNumberOption(option => 
-            option.setName('end')
-                .setDescription('End time, 24 hour time, no decimals, EST')
-                .setRequired(true))
-        .addNumberOption(option => 
             option.setName('distance')
                 .setDescription('Maximum item distance from location in your standard unit of measurement(kilometers or miles)')
                 .setRequired(true)

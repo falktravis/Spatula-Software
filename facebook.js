@@ -860,7 +860,7 @@ function interval() {
     if(startError == false){
         setListingStorage();
         accountRotation();
-        intervalFunction(); 
+        interval(); 
     }
 
     isDormant = true;
