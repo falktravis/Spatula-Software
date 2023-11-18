@@ -853,13 +853,15 @@ function interval() {
 } 
 
 //Start up
-isDormant = false;
-await start();
+(async () => {
+    isDormant = false;
+    await start();
+    
+    if(startError == false){
+        setListingStorage();
+        accountRotation();
+        intervalFunction(); 
+    }
 
-if(startError == false){
-    setListingStorage();
-    accountRotation();
-    intervalFunction(); 
-}
-
-isDormant = true;
+    isDormant = true;
+})();
