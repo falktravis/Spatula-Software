@@ -334,78 +334,59 @@ const executeCommand = async (interaction) => {
                 if(users.has(interaction.user.id)){
                     if(interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
                         if(interaction.options.getString("link").includes("maxPrice")){
-                            let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
-                            maxPrice = parseInt(maxPrice[1]);
-                            if(maxPrice.toString() <= 500000){
-                                //compare with db total task count
-                                const userObj = await userDB.findOne({UserId: interaction.user.id});
+                            //compare with db total task count
+                            const userObj = await userDB.findOne({UserId: interaction.user.id});
 
-                                if(users.get(interaction.user.id).taskCount < userObj.ConcurrentTasks){
-                                    //get user
-                                    const user = users.get(interaction.user.id);
+                            if(users.get(interaction.user.id).taskCount < userObj.ConcurrentTasks){
+                                //get user
+                                const user = users.get(interaction.user.id);
 
-                                    if(!user.facebook.has(interaction.options.getString("name"))){
-                                        if(userObj.MessageAccount != null || interaction.options.getNumber("message-type") == 3){
-                                            let start = interaction.options.getNumber("start");
-                                            let end = interaction.options.getNumber("end");
-                                    
-                                            //time difference
-                                            let timeDiff;
-                                            if(start < end){
-                                                timeDiff = end - start;
-                                            }else{
-                                                timeDiff = (24 - start) + end;
-                                            }
-                                        
-                                            //both times are between 1 and 25, the difference is less than or equal to 14
-                                            if(start <= 24 && start >= 1 && end <= 24 && end >= 1 && end !== start && timeDiff <= 16){
-                                                //increase the worker count
-                                                user.taskCount++;
+                                if(!user.facebook.has(interaction.options.getString("name"))){
+                                    if(userObj.MessageAccount != null || interaction.options.getNumber("message-type") == 3){
 
-                                                //burner account assignment
-                                                const burnerAccountObj = await getFacebookAccount();
+                                        //get max price from link 
+                                        let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
+                                        maxPrice = parseInt(maxPrice[1]);
 
-                                                //set the task in db
-                                                await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance"), Start: start, End: end});
+                                        //increase the worker count
+                                        user.taskCount++;
 
-                                                //create a new worker and add it to the map
-                                                user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
-                                                    name: interaction.options.getString("name"),
-                                                    link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
-                                                    messageType: interaction.options.getNumber("message-type"),
-                                                    message: interaction.options.getString("message"),
-                                                    burnerUsername: burnerAccountObj.Username,
-                                                    burnerPassword: burnerAccountObj.Password,
-                                                    burnerProxy: burnerAccountObj.Proxy,
-                                                    messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
-                                                    burnerCookies: burnerAccountObj.Cookies,
-                                                    messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
-                                                    burnerPlatform: burnerAccountObj.Platform,
-                                                    messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
-                                                    maxPrice: maxPrice,
-                                                    start: start * 60,
-                                                    end: end * 60,
-                                                    distance: interaction.options.getNumber("distance"),
-                                                    channel: interaction.channelId,
-                                                }}));
+                                        //burner account assignment
+                                        const burnerAccountObj = await getFacebookAccount();
 
-                                                user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id)); 
+                                        //set the task in db
+                                        await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance")});
 
-                                                Channel.send("Created " + interaction.options.getString("name"));
-                                            }else{
-                                                Channel.send("Error with times\nTimes must be between 1 and 24 with no decimals\nThe interval it runs on must be less than or equal to 16 hours");
-                                            }
-                                        } else{
-                                            Channel.send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
-                                        }
-                                    }else{
-                                        Channel.send("A task with this name already exists, restart the task with a new name.");
+                                        //create a new worker and add it to the map
+                                        user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
+                                            name: interaction.options.getString("name"),
+                                            link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
+                                            messageType: interaction.options.getNumber("message-type"),
+                                            message: interaction.options.getString("message"),
+                                            burnerUsername: burnerAccountObj.Username,
+                                            burnerPassword: burnerAccountObj.Password,
+                                            burnerProxy: burnerAccountObj.Proxy,
+                                            messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
+                                            burnerCookies: burnerAccountObj.Cookies,
+                                            messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
+                                            burnerPlatform: burnerAccountObj.Platform,
+                                            messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
+                                            maxPrice: maxPrice,
+                                            distance: interaction.options.getNumber("distance"),
+                                            channel: interaction.channelId,
+                                        }}));
+
+                                        user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id)); 
+
+                                        Channel.send("Created " + interaction.options.getString("name"));
+                                    } else{
+                                        Channel.send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
                                     }
                                 }else{
-                                    Channel.send("You have reached your task limit for your plan, upgrade to make more.");
+                                    Channel.send("A task with this name already exists, restart the task with a new name.");
                                 }
                             }else{
-                                Channel.send("Max price is to high, make your max price more realistic.");
+                                Channel.send("You have reached your task limit for your plan, upgrade to make more.");
                             }
                         }else{
                             Channel.send("Your link must include a max price");
@@ -517,9 +498,8 @@ const executeCommand = async (interaction) => {
 
                     await taskArray.forEach((task) => {
                         let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
-                        let distances = ['1', '2', '5', '10', '20', '40', '60', '80', '100', '250', '500'];
 
-                        list += '- name: ' + task.Name +  ' link: <' + task.Link +  '> message-type: ' + messagingTypes[task.MessageType - 1] +  ' distance: ' + distances[task.Distance - 1] +  ' start: ' + task.Start +  ' end: ' + task.End + '\n';
+                        list += '- name: ' + task.Name +  ' link: <' + task.Link +  '> message-type: ' + messagingTypes[task.MessageType - 1] +  ' distance: ' + task.Distance + '\n';
                     })
 
                     Channel.send(list);
@@ -739,8 +719,6 @@ const executeCommand = async (interaction) => {
                             burnerPlatform: burnerAccountObj.Platform,
                             messagePlatform: document.MessageType == 3 ? null : userObj.MessageAccount.Platform,
                             maxPrice: maxPrice,
-                            start: document.Start * 60,
-                            end: document.End * 60,
                             distance: document.Distance,
                             channel: document.ChannelId,
                         }}));
