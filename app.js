@@ -67,10 +67,10 @@ for (const file of commandFiles) {
 let logChannel;
 discordClient.on('ready', async () => {
     try {
-        logChannel = discordClient.channels.cache.get('1091532766522376243');
+        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
-        }
+        }*/
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
@@ -79,12 +79,12 @@ discordClient.on('ready', async () => {
 // Define a global error handler
 process.on('uncaughtException', async (error) => {
     console.error('Uncaught Exception:', error);
-    logChannel.send('Uncaught error: ' + error);
+    //logChannel.send('Uncaught error: ' + error);
 });
 
 process.on('unhandledRejection', async (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    logChannel.send('Uncaught rejection: ' + reason);
+    //logChannel.send('Uncaught rejection: ' + reason);
 });
 
 //worker login listening function
@@ -156,7 +156,7 @@ const getFacebookAccount = async () => {
     if(burnerAccountObj == null){
         //burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
         console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-        logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+        //logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
     }
 
     //change LastActive to null, signifing the account is being used
@@ -212,7 +212,7 @@ const deleteTask = async (task, taskName, userId) => {
             }
         }else{
             //console.log("Message failed");//!delete for production
-            logChannel.send("Message failed @everyone");
+            //logChannel.send("Message failed @everyone");
         }
 
         //update account and proxy stats
@@ -222,7 +222,7 @@ const deleteTask = async (task, taskName, userId) => {
         //delete from server
         task.terminate();
     } catch (error) {
-        logChannel.send("Error Deleting Task: " + error);
+        //logChannel.send("Error Deleting Task: " + error);
     }
 }
 
@@ -253,7 +253,7 @@ const scanDatabase = async () => {
             })
         } catch (error) {
             console.log("Error scaning Database: \n\t" + error);
-            logChannel.send("Error scaning Database: \n\t" + error);
+            //logChannel.send("Error scaning Database: \n\t" + error);
         }
 
         scanDatabase();
@@ -312,7 +312,7 @@ discordClient.on(Events.InteractionCreate, async interaction => {
 
 
 const executeCommand = async (interaction) => {
-    let Channel
+    let Channel;
     try {
         Channel = discordClient.channels.cache.get(interaction.channelId);
         if(Channel == null){
@@ -321,7 +321,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Error getting channel for command: " + error);
-        logChannel.send("Error getting channel for command: " + error);
+        //logChannel.send("Error getting channel for command: " + error);
     }
 
     try {
@@ -489,6 +489,9 @@ const executeCommand = async (interaction) => {
                 for await(const acc of newAccs){
                     await changeLanguage(acc);
                 }
+
+                await burnerAccountDB.updateMany({LastActive: 10000000000000}, {$set: {LastActive: Date.now()}});
+                await Channel.send('finish');
             }
             else if(interaction.commandName === "list"){
                 const taskArray = await taskDB.find({UserId: interaction.user.id});
@@ -679,7 +682,7 @@ const executeCommand = async (interaction) => {
                         if(burnerAccountObj == null){
                             //burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
                             console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-                            logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+                            //logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
                         }
 
                         //update task for new burnerAccount
@@ -740,7 +743,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        logChannel.send("Command Error: \n\t" + error);
+        //logChannel.send("Command Error: \n\t" + error);
         Channel.send("Command Error: \n\t" + error);
     }
 }

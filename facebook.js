@@ -18,7 +18,7 @@ parentPort.on('message', async (message) => {
                 console.log('task non dormant');
                 await new Promise(r => setTimeout(r, 10000));
             }
-    
+            burnerCookies = await mainPage.cookies();
             console.log('close browsers');
             if(mainBrowser != null){
                 await mainBrowser.close();
@@ -181,13 +181,15 @@ const accountRotation = () => {
                 await new Promise(r => setTimeout(r, 10000));
             }
 
+            burnerCookies = await mainPage.cookies();
+
             //send message to main
             parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
             accountRotation();
         } catch (error) {
             errorMessage("Error with account rotation: ", error);
         }
-    }, (Math.random() * 3600000) + 7200000);//2-3 hours
+    }, (Math.random() * 3600000) + 10800000);//3-4 hours
 }
 
 const sendMessage = async (link) => {
@@ -406,7 +408,7 @@ const start = async () => {
 
                         if(!(mainPage.url()).includes('facebook.com/marketplace')){
                             //check for invalid credentials
-                            if(mainPage.$('.uiBoxRed[role="alert"]') != null){
+                            if(await mainPage.$('.uiBoxRed[role="alert"]') != null){
                                 let errorMsg = await mainPage.evaluate(() => document.querySelector('.uiBoxRed[role="alert"]').innerText);
                                 await logChannel.send("Ban on Re-login: " + errorMsg);
                                 parentPort.postMessage({action: 'ban', username: burnerUsername});
@@ -414,6 +416,7 @@ const start = async () => {
                                 //message the main script to get a new accounts
                                 logChannel.send("Rotate Account: " + burnerUsername + " at " + mainPage.url());
                                 await logPageContent(mainPage);
+                                burnerCookies = await mainPage.cookies();
                                 await mainBrowser.close();
                                 mainBrowser = null;
                                 //This might just be a ban
@@ -430,6 +433,7 @@ const start = async () => {
                 }else{
                     //message the main script to get a new accounts
                     logChannel.send("Rotate Account: " + burnerUsername);
+                    burnerCookies = await mainPage.cookies();
                     await mainBrowser.close();
                     mainBrowser = null;
                     parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
@@ -588,6 +592,7 @@ function interval() {
                 //if the listings dont exist on the page, refresh
                 if(await mainPage.$('.xbbxn1n .xqui205 [aria-label="Reload Page"]') != null){
                     reloadBlock = true;
+                    burnerCookies = await mainPage.cookies();
                     parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
                     logChannel.send("Reload block: " + workerData.name);
                 }else if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){

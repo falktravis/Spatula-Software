@@ -65,7 +65,7 @@ const changeLanguage = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         languageBrowser = await puppeteer.launch({
-            headless: 'new',
+            headless: false,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]
         });
         let pages = await languageBrowser.pages();
@@ -92,8 +92,8 @@ const changeLanguage = async () => {
         //go to the search page
         await languagePage.goto('https://www.facebook.com/settings/?tab=language', {waitUntil: 'networkidle0'});
         //await logPageContent(languagePage);
-        await languagePage.waitForSelector('.xdppsyt .x1i10hfl');
-        await languagePage.click('.xdppsyt .x1i10hfl');
+        await languagePage.waitForSelector('[aria-label="Русский"]');//.xdppsyt .x1i10hfl =---= aria-label="Редактировать" - 'div[role="combobox"]' - '[aria-label="Сохранить изменения"]'
+        await languagePage.click('[aria-label="Русский"]');
 
         try{
             await languagePage.waitForSelector('.x1xmf6yo.xezivpi');
@@ -110,10 +110,10 @@ const changeLanguage = async () => {
         await languageBrowser.close();
         await mainChannel.send("Finish: " + workerData.username);
     }catch(error){
-        await mainChannel.send('language failure: ' + workerData.username);
         errorMessage('Error with page initiation', error);
-        await logPageContent(languagePage);
-        await languageBrowser.close();
+        await mainChannel.send('language failure: ' + workerData.username);
+        //await logPageContent(languagePage);
+        //await languageBrowser.close();
     }
 }
 changeLanguage();
