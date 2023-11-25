@@ -189,7 +189,7 @@ const accountRotation = () => {
         } catch (error) {
             errorMessage("Error with account rotation: ", error);
         }
-    }, (Math.random() * 3600000) + 10800000);//3-4 hours
+    }, (Math.random() * 7200000) + 10800000);//3-5 hours
 }
 
 const sendMessage = async (link) => {
@@ -398,7 +398,7 @@ const start = async () => {
                         await pause();
                         await mainCursor.click('[name="pass"]');
                         await pause();
-                        await mainPage.keyboard.type(burnerPassword);
+                        await typeWithRandomSpeed(mainPage, burnerPassword);
                         await pause();
                         await mainCursor.click('[name="login"]');
 
