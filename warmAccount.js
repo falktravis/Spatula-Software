@@ -5,16 +5,14 @@ const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
 
+const fetch = require('node-fetch');
+const fs = require('fs/promises');
+
 //discord.js
-/*const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
 const { log } = require('console');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-client.login(process.env.DISCORD_BOT_TOKEN);*/
-
-//error message send function
-const errorMessage = (message, error) => {
-    console.log(message + ': ' + error);
-}
+client.login(process.env.DISCORD_BOT_TOKEN);
 
 //convert platform string for a user agent
 const platformConverter = (platform) => {
@@ -27,23 +25,27 @@ const platformConverter = (platform) => {
     }
 }
 
-/*let mainChannel;
 let logChannel;
 client.on('ready', async () => {
     try {
-        mainChannel = client.channels.cache.get(workerData.channel);
-        if(mainChannel == null){
-            mainChannel = await client.channels.fetch(workerData.channel);
-        }
-
-        logChannel = discordClient.channels.cache.get('1091532766522376243');
+        /*logChannel = client.channels.cache.get('1091532766522376243');
         if(logChannel == null){
-            logChannel = await discordClient.channels.fetch('1091532766522376243');
+            logChannel = await client.channels.fetch('1091532766522376243');
+        }*/
+        logChannel = client.channels.cache.get(workerData.channel);
+        if(logChannel == null){
+            logChannel = await client.channels.fetch(workerData.channel);
         }
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
-});*/
+});
+
+//error message send function
+const errorMessage = async (message, error) => {
+    console.log(message + ': ' + error);
+    await logChannel.send(message + ": " + error);
+}
 
 //scrape the html content for testing
 const logPageContent = async (page) => {
@@ -73,14 +75,14 @@ const start = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         warmingBrowser = await puppeteer.launch({
-            headless: 'new',
+            headless: false,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
 
         //close the notif popup
-        const context = itemBrowser.defaultBrowserContext();
+        const context = warmingBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
         //change http headers
@@ -130,88 +132,136 @@ const randomChance = (chance) => {
 }
 
 const addFriend = async(chance) => {
-    //add a friend from suggested list, need somewhat of a strategy for this
-    if(randomChance(chance)){
-        console.log("add friend");
+    try {
+        //add a friend from suggested list, need somewhat of a strategy for this
+        if(randomChance(chance)){
+            console.log("add friend");
 
-        //navigate to friend suggestion page
-        await warmingCursor.click('a[href="https://www.facebook.com/friends/"]');
-        await warmingPage.waitForNavigation({waitUntil: 'networkidle0'});
-        await pause(1);
-
-        //check for incoming requests and accept them all
-        while(await warmingPage.$('[aria-label="Confirm"]') != null){
-            await warmingCursor.click('[aria-label="Confirm"]');
+            //navigate to friend suggestion page
+            await warmingCursor.click('a[href="https://www.facebook.com/friends/"]');
+            await warmingPage.waitForSelector('[href="/friends/suggestions/"]');
             await pause(1);
+
+            //check for incoming requests and accept them all
+            const requests = await warmingPage.$$('[aria-label="Confirm"]');
+            for (const request of requests) {
+                await warmingCursor.click(request);
+                await pause(1);
+            }
+
+            //send 1-3 additional requests
+            await warmingCursor.click('[href="/friends/suggestions/"]');
+            await warmingPage.waitForNavigation();
+            await pause(1);
+            for(let i = Math.floor(Math.random() * 3); i >= 0; i--){
+                const mutualArr = await warmingPage.$$('div.xu06os2 div.x150jy0e');
+                if(randomChance(0.90) && mutualArr.length > 0){
+                    //send request with mutuals
+                    await warmingCursor.click(mutualArr[Math.floor(Math.random() * Math.min(3, mutualArr.length))].parentNode.parentNode);
+                    await pause(2);
+                    await warmingPage.waitForSelector('[aria-label="Add friend"]');
+                    await warmingCursor.click('[aria-label="Add friend"]');
+                }else{
+                    //send request with no mutuals
+                    const accountArr = await warmingPage.$$('div.xb57i2i div.x1rg5ohu > svg');
+                    await warmingCursor.click(accountArr[Math.floor(Math.random() * Math.min(10, accountArr.length))].$('[aria-label="Add friend"]'));
+                }
+
+                await warmingPage.waitForSelector('[aria-label="Cancel request"]');
+            }
         }
-
-        //send additional requests
-
-
-        if(chance < .5){
-            addFriend(chance * 3);
-        }else if(chance < .9){
-            addFriend(chance * 2);
-        }
+    } catch (error) {
+        await errorMessage('Error adding friend', error);
     }
 }
 
+//**Works */
 const joinGroup = async() => {
-    //find a group to join/apply to, interact with the group a little once we join
-    if(randomChance(0.1)){
-        console.log("join group");
+    try {
+        //find a group to join/apply to, interact with the group a little once we join
+        if(randomChance(0.1)){
+            console.log("join group");
 
-        //navigate to group discovery page
-        await warmingCursor.click('a[href="https://www.facebook.com/groups/?ref=bookmarks"]');
-        await pause(1);
-        await warmingCursor.click('a[href="/groups/discover/"]');
+            //navigate to group discovery page
+            await warmingCursor.click('a[href="https://www.facebook.com/groups/?ref=bookmarks"]');
+            await pause(1);
+            await warmingCursor.click('a[href="/groups/discover/"]');
+            await pause(1);
 
-        //pick a random group to join out of suggested options
+            //get array of suggested groups
+            const groups = await warmingPage.$$('[aria-label="Join group"]');
 
-
-        //scroll the element into view with human like procedures
-        
-
-        //click on join group
-
-        
-        //detect if group is private, if it is, we need to answer the questions and join.
-        //Seems we need to test if it is private, if it is we need to assess if we can use chatgpt to apply for it, otherwise just click off
+            const pickGroup = async () => {
+                //scroll to random element and click on it
+                await warmingCursor.click(groups[Math.floor(Math.random() * Math.min(10, groups.length))]);
+                await pause(1);
+            
+                //detect if group is private, if it is, we need to answer the questions and join.
+                try {
+                    await warmingPage.waitForSelector('[aria-label="Cancel"]');
+                    await warmingCursor.click('[aria-label="Cancel"]');
+                    await pause(1);
+                    await warmingPage.waitForSelector('[aria-label="Exit"]');
+                    await warmingCursor.click('[aria-label="Exit"]');
+                    await pause(1);
+                    await pickGroup();
+                } catch (error) {
+                    if(await warmingPage.$('[aria-label="Visit group"]') == null && await warmingPage.$('[aria-label="Cancel request"]') == null){
+                        await errorMessage('Error clicking join group', error);
+                    }
+                }
+            }
+            await pickGroup();
+        }
+    } catch (error) {
+        await errorMessage('Error joining group', error);
     }
 }
 
 const scrollFeed = async() => {
-    //pick a feed and scroll through a random amount of post, interacting with a random amount of posts
-    if(randomChance(0.95)){
-        console.log("scroll feed");
+    try {
+        //pick a feed and scroll through a random amount of post, interacting with a random amount of posts
+        if(randomChance(0.95)){
+            console.log("scroll feed");
 
-        //navigate to feed page
+            //navigate to feed page
 
-        //scroll posts into feed as human like as possible
+            //scroll posts into feed as human like as possible
 
-        //for each post, randomize value to interact
+            //for each post, randomize value to interact
 
-        //If post is a fan page(Whatever it means to just be a public page), randomize value to follow it
+            //If post is a fan page(Whatever it means to just be a public page), randomize value to follow it
 
-        //If post is suggested friends, randomize value to add one
+            //If post is suggested friends, randomize value to add one
 
-        //If post is suggested group, randomize value to join
+            //If post is suggested group, randomize value to join
+        }
+    } catch (error) {
+        await errorMessage('Error scrolling feed', error);
     }
 }
 
 const scrollGroup = async(chance) => {
-    //pick a feed and scroll through a random amount of post, interacting with a random amount of posts
-    if(randomChance(chance)){
-        console.log("scroll group");
+    try {
+        //pick a feed and scroll through a random amount of post, interacting with a random amount of posts
+        if(randomChance(chance)){
+            console.log("scroll group");
 
 
-        scrollGroup(chance/3);
+            scrollGroup(chance/3);
+        }
+    } catch (error) {
+        await errorMessage('Error scrolling group', error);
     }
 }
 
 const interactWithPost = async() => {
-    //mix of comment, react to/like post, and liking other comments
-    //Use chatgpt on the post to generate an accurate comment.
+    try {
+        //mix of comment, react to/like post, and liking other comments
+        //Use chatgpt on the post to generate an accurate comment.
+    } catch (error) {
+        await errorMessage('Error interacting with post', error);
+    }
 }
 
 const createPost = async(chance) => {
@@ -223,40 +273,89 @@ const createPost = async(chance) => {
      *   +Make a large array of possible prompts, MUST BE VERY GOOD
      *      
      */
-
-    await warmingCursor.click('[aria-label="Create a post"] div.x6umtig');
-    await pause(1);
-
-    //set default audience if necessary
-    if(await warmingPage.$('[aria-label="Default audience"]') != null){
-        await warmingCursor.click('.x1a2a7pz.x1oo3vh0.x1rdy4ex div');
-        await pause(1);
-        await warmingCursor.click('[aria-label="Done"]');
-    }
-
-
-    //post
-    await warmingPage.click('[aria-label="Post"]');
-
-    if(randomChance(chance)){
+    try {
         console.log("create post");
-        createPost(chance/2.5);
+        await warmingCursor.click('[aria-label="Create a post"] div.x6umtig');
+        await pause(1);
+    
+        //set default audience if necessary
+        if(await warmingPage.$('[aria-label="Default audience"]') != null){
+            await warmingCursor.click('.x1a2a7pz.x1oo3vh0.x1rdy4ex div');
+            await pause(1);
+            await warmingCursor.click('[aria-label="Done"]');
+        }
+    
+        //post
+        await warmingPage.click('[aria-label="Post"]');
+    
+        if(randomChance(chance)){
+            createPost(chance/3);
+        }
+    } catch (error) {
+        await errorMessage('Error creating post', error);
     }
 }
 
+//**Works */
 const changeProfilePic = async() => {
-    //get a pic from some api with peoples faces and change pic
-    if(randomChance(0.05)){
-        console.log("change profile pic");
+    try {
+        //get a pic from some api with peoples faces and change pic
+        if(randomChance(0.02)){
+
+            // Navigate to the account settings page
+            await warmingCursor.click('[aria-label="Your profile"]');
+            await pause(1);
+            await warmingCursor.click('[href="/me/"]');
+            await warmingPage.waitForSelector('[aria-label="Update profile picture"]');
+            await pause(2);
+        
+            // Upload the photo (assuming there's an input field for it)
+            await warmingCursor.click('[aria-label="Update profile picture"]');
+            await warmingPage.waitForSelector('[role="dialog"] input[type="file"]');
+            await pause(1);
+            const fileInput = await warmingPage.$('[role="dialog"] input[type="file"]');
+
+            const response = await fetch('https://api.unsplash.com/photos/random', {
+                headers: {
+                    'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
+                }
+            });
+            const data = await response.json();
+            const photo = await fetch(data.urls.full);
+            const buffer = await photo.buffer();
+            const destination = `./${response.id}`;
+            await fs.writeFile(destination, buffer);
+            await fileInput.uploadFile(destination);
+
+            //await upload
+            await warmingPage.waitForSelector('[aria-label="Save"]'); // Adjust the timeout as needed
+            await warmingCursor.click('[aria-label="Save"]');
+
+            await fs.unlink(destination);
+        }
+    } catch (error) {
+        await errorMessage('Error changing profile pic', error);
     }
 }
 
 //main function
 (async () => {
-    //await start();
+    try {
+        await start();
+        await addFriend(1);
 
-    let taskArray = [addFriend(0.1), createPost(0.65), scrollGroup(0.75), joinGroup(), scrollFeed(), changeProfilePic()];
-    for await(const task of taskArray){
-        task;
+        /*let taskArray = [() => addFriend(0.1), () => createPost(0.60), () => scrollGroup(0.75), joinGroup, scrollFeed, changeProfilePic];
+        for (let i = taskArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [taskArray[i], taskArray[j]] = [taskArray[j], taskArray[i]];
+        }
+        for await(const task of taskArray){
+            await task();
+        }
+
+        await warmingBrowser.close();*/
+        console.log('finish');
+    } catch (error) {
+        await errorMessage('Error with main function', error);
     }
 })();
