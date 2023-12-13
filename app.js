@@ -455,8 +455,8 @@ const executeCommand = async (interaction) => {
                 }});
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
-                //const newAccs = await burnerAccountDB.find({LastActive: 10000000000000});
-                const newAccs = await burnerAccountDB.find({Username: 'gtkzagwd@znemail.com'});
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000});
+                //const newAccs = await burnerAccountDB.find({Username: 'gtkzagwd@znemail.com'});
 
                 const changeLanguage = async (acc) => {
                     new Worker('./changeLanguage.js', { workerData:{
@@ -474,7 +474,7 @@ const executeCommand = async (interaction) => {
                     await changeLanguage(acc);
                 }
 
-                await burnerAccountDB.updateMany({LastActive: 10000000000000}, {$set: {LastActive: Date.now()}});
+                //await burnerAccountDB.updateMany({LastActive: 10000000000000}, {$set: {LastActive: Date.now()}});
                 await Channel.send('finish');
             }
             else if(interaction.commandName === "list"){
@@ -536,11 +536,11 @@ const executeCommand = async (interaction) => {
                 }*/
                 
                 //**reset proxy tracking
-                /*await staticProxyDB.updateMany({}, {$set: {TotalFacebookBurnerAccounts: 0}});
+                await staticProxyDB.updateMany({}, {$set: {TotalFacebookBurnerAccounts: 0}});
                 let accounts = await burnerAccountDB.find({});
                 for await (const account of accounts){
                     await staticProxyDB.updateOne({Proxy: account.Proxy}, {$inc: {TotalFacebookBurnerAccounts: 1}});
-                }*/
+                }
 
                 //** Reset Cookies for null insertion
                 /* 
