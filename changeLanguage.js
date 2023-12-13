@@ -115,7 +115,7 @@ const changeLanguage = async () => {
             await languagePage.click('div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div.x1jx94hy.xh8yej3.x1hlgzme.xvcs8rp.x1bpvpm7.xefnots.x13xjmei.xv7j57z > div > div > div > div > div:nth-child(1) > div > div');
         }
         await languagePage.waitForNavigation();
-        await logPageContent(languagePage);
+        //await logPageContent(languagePage);
         await languageBrowser.close();
         await mainChannel.send("Finish: " + workerData.username);
     }catch(error){
