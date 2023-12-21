@@ -1,4 +1,5 @@
 //require
+require('dotenv').config();
 const { workerData } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
@@ -13,6 +14,12 @@ const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder
 const { log } = require('console');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
+
+//init chatgpt
+const OpenAI = require("openai");
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 //convert platform string for a user agent
 const platformConverter = (platform) => {
@@ -32,10 +39,10 @@ client.on('ready', async () => {
         if(logChannel == null){
             logChannel = await client.channels.fetch('1091532766522376243');
         }*/
-        logChannel = client.channels.cache.get(workerData.channel);
+        /*logChannel = client.channels.cache.get(workerData.channel);
         if(logChannel == null){
             logChannel = await client.channels.fetch(workerData.channel);
-        }
+        }*/
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -44,7 +51,15 @@ client.on('ready', async () => {
 //error message send function
 const errorMessage = async (message, error) => {
     console.log(message + ': ' + error);
-    await logChannel.send(message + ": " + error);
+    //await logChannel.send(message + ": " + error);
+}
+
+// Function to simulate typing with randomized speed
+async function typeWithRandomSpeed(page, text) {
+    for (const char of text) {
+        // Type a character
+        await page.keyboard.type(char, { delay: Math.floor(Math.random() * (100 - 50 + 1)) + 50 });
+    }
 }
 
 //scrape the html content for testing
@@ -275,6 +290,7 @@ const createPost = async(chance) => {
      */
     try {
         console.log("create post");
+
         await warmingCursor.click('[aria-label="Create a post"] div.x6umtig');
         await pause(1);
     
@@ -283,14 +299,33 @@ const createPost = async(chance) => {
             await warmingCursor.click('.x1a2a7pz.x1oo3vh0.x1rdy4ex div');
             await pause(1);
             await warmingCursor.click('[aria-label="Done"]');
+            await pause(1);
         }
-    
+
+        //fetch a random prompt from db
+        const prompt = 'test';
+
+        //ask chat gpt to write a prompt
+        const chat = await openai.chat.completions.create({
+            messages: [{ role: 'user', content: `Imagine you are a middle age person using Facebook to interact with your friends and family. Write a Facebook post about ${prompt}. Your post should be no more than 300 characters in length.` }],
+            model: 'gpt-3.5-turbo',
+        });
+
+        //click text box
+        await warmingPage.click('div.x1ed109x > div.xg7h5cd.x1pi30zi');
+        await pause(1);
+
+        //type 
+        await typeWithRandomSpeed(warmingPage, chat.choices[0].message.content);
+        await pause(2);
+
         //post
         await warmingPage.click('[aria-label="Post"]');
     
-        if(randomChance(chance)){
+        //!Where does the page redirect too after posting
+        /*if(randomChance(chance)){
             createPost(chance/3);
-        }
+        }*/
     } catch (error) {
         await errorMessage('Error creating post', error);
     }
@@ -341,8 +376,9 @@ const changeProfilePic = async() => {
 //main function
 (async () => {
     try {
-        await start();
-        await addFriend(1);
+        //await start();
+        await createPost();
+        //await addFriend(1);
 
         /*let taskArray = [() => addFriend(0.1), () => createPost(0.60), () => scrollGroup(0.75), joinGroup, scrollFeed, changeProfilePic];
         for (let i = taskArray.length - 1; i > 0; i--) {

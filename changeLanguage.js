@@ -1,7 +1,7 @@
 //require
 const { workerData } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
-const stealthPlugin = require('puppeteer-extra-plugin-stealth')
+const stealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(stealthPlugin());
 
 //discord.js
