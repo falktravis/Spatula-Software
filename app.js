@@ -443,7 +443,8 @@ const executeCommand = async (interaction) => {
                 }
             }
             else if(interaction.commandName === "facebook-warm-account" && interaction.user.id === '456168609639694376'){
-                const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
+                //const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
+                const accountObj = await burnerAccountDB.aggregate([{ $sample: { size: 1 } }]).next();
     
                 //create a new worker
                 new Worker('./warmAccount.js', { workerData:{

@@ -1,7 +1,7 @@
 //require
 const { workerData } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
-const stealthPlugin = require('puppeteer-extra-plugin-stealth');
+const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
 
 //discord.js
@@ -65,7 +65,7 @@ const changeLanguage = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         languageBrowser = await puppeteer.launch({
-            headless: 'new',
+            headless: false,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]
         });
         let pages = await languageBrowser.pages();
@@ -97,9 +97,18 @@ const changeLanguage = async () => {
             //click button drop down
             await languagePage.waitForSelector('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div > div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.xyamay9.x1l90r2v > div > div > div');
             await languagePage.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div > div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.xyamay9.x1l90r2v > div > div > div');
+
             //click english 
             await languagePage.waitForSelector('div.xu96u03.xm80bdy.x10l6tqk.x13vifvy > div.x1n2onr6 > div > div > div > div > div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6 > div');
-
+            const languageArr = await languagePage.$$('div.xu96u03.xm80bdy.x10l6tqk.x13vifvy > div.x1n2onr6 > div > div > div > div > div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6 > div > div');
+            for (const element of languageArr) {
+              const elementText = await languagePage.evaluate(el => el.textContent, element);
+          
+              if (elementText === 'English (US)') {
+                await element.click();
+                break;
+              }
+            }
 
             //click submit
             await languagePage.waitForSelector('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x6umtig.x1b1mbwd.xaqea5y.xav7gou.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3');
@@ -121,8 +130,8 @@ const changeLanguage = async () => {
     }catch(error){
         errorMessage('Error with page initiation', error);
         await mainChannel.send('language failure: ' + workerData.username);
-        await logPageContent(languagePage);
-        await languageBrowser.close();
+        //await logPageContent(languagePage);
+        //await languageBrowser.close();
     }
 }
 changeLanguage();
