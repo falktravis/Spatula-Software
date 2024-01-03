@@ -3,6 +3,7 @@ const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(stealthPlugin());
+const fs = require('fs/promises');
 
 //discord.js
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
@@ -88,22 +89,27 @@ const errorMessage = (message, error) => {
 
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 520000; //9 mins
-    const maxNumber = 720000; //12 mins
-    const power = 1.5;
-    const random = Math.random();
-    const range = maxNumber - minNumber;
-    const number = minNumber + Math.pow(random, power) * range;
-    return Math.round(number);
+    try {
+        const minNumber = 520000; //9 mins
+        const maxNumber = 720000; //12 mins
+        const power = 1.5;
+        const random = Math.random();
+        const range = maxNumber - minNumber;
+        const number = minNumber + Math.pow(random, power) * range;
+        return Math.round(number);
+    } catch (error) {
+        errorMessage('error getting random interval', error);
+    }
 }
 
-//scrape the html content for testing
+//send content of the page to discord
 const logPageContent = async (page) => {
     try{
+        //html
         const htmlContent = await page.content();
         const { Readable } = require('stream');
         const htmlStream = Readable.from([htmlContent]);
-        logChannel.send({
+        await logChannel.send({
             files: [
                 {
                     attachment: htmlStream,
@@ -111,6 +117,13 @@ const logPageContent = async (page) => {
                 },
             ],
         });
+
+        //png
+        await page.screenshot({ path: 'screenshot.png' });
+        await logChannel.send({
+            files: ['screenshot.png'],
+        });
+        await fs.unlinkSync('screenshot.png');
     }catch(error){
         errorMessage('error login content: ', error);
     }
@@ -315,7 +328,6 @@ let mainPage;
 let itemPage;
 let itemBrowser;
 let mainListingStorage;
-let networkData = 0;
 let isDormant = true; //true if task can be deleted
 let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
@@ -357,13 +369,6 @@ const start = async () => {
         //network shit
         await mainPage.setRequestInterception(true);
         mainPage.on('response', async response => {
-
-            //detect network stuff
-            const headers = response.headers();
-            const contentLength = headers['content-length'];
-            if(contentLength != undefined){
-                networkData += parseInt(contentLength);
-            }
 
             //detect redirection
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
@@ -493,9 +498,12 @@ const start = async () => {
     }
 
     //make sure the url is correct
-    if(mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
-        console.log("Link is wrong: " + mainPage.url());
-
+    if(await mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
+        await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
+        startError = true;
+    }
+    if(await mainPage.$('[name="login"]') != null){
+        await logChannel.send("Login page that went undetected: " + mainPage.url() + " at account: " + burnerUsername);
         startError = true;
     }
     
@@ -553,7 +561,7 @@ const setListingStorage = async () => {
     try{
         mainListingStorage = await mainPage.evaluate(() => {
             if(document.querySelector('div.xx6bls6') == null && document.querySelector('[aria-label="Browse Marketplace"]') == null){
-                let links = [document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(2) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(3) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(4) a")];
+                let links = [document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(2) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(3) a")];
                 return links.map((link) => {
                     if(link != null){
                         let href = link.href;
@@ -638,11 +646,11 @@ function interval() {
                 let postNum = 1;
                 let newPostExists = true;
                 //get the price of the post
-                let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
+                let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5 span.x193iq5w").innerText });
                 if(price == 'FREE' || price == 'Free'){
                     price = 0;
                 }else{
-                    price = parseInt(price.replace(/[$,AC]/g, ''));
+                    price = parseInt(price.replace(/[$,AC£]/g, ''));
                 }
 
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){
@@ -829,11 +837,11 @@ function interval() {
                                 return link.substring(0, link.indexOf("?"));
                             }, postNum);
 
-                            price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
+                            price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5 span.x193iq5w`).innerText}, postNum);
                             if(price == 'FREE' || price == 'Free'){
                                 price = 0;
                             }else{
-                                price = parseInt(price.replace(/[$,A]/g, ''));
+                                price = parseInt(price.replace(/[$,AC£]/g, ''));
                             }
                         }else{
                             newPostExists = false;
@@ -851,8 +859,8 @@ function interval() {
                 //set the main listing storage
                 await setListingStorage();
             }
-            interval();
         }
+        interval();
         isDormant = true;
     }, getRandomInterval());
 } 
@@ -866,6 +874,11 @@ function interval() {
         setListingStorage();
         accountRotation();
         interval(); 
+    }else{
+        await logChannel.send("Rotate Account for Start Error: " + burnerUsername);
+        await mainBrowser.close();
+        mainBrowser = null;
+        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
     }
 
     isDormant = true;

@@ -34,8 +34,8 @@ let taskDB;
         userDB = mongoClient.db('Spatula-Software').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
-        //start database scan
-        scanDatabase();
+        //start daily tasks
+        RunDailyTasks();
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -67,10 +67,10 @@ for (const file of commandFiles) {
 let logChannel;
 discordClient.on('ready', async () => {
     try {
-        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
+        logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
-        }*/
+        }
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
@@ -79,12 +79,12 @@ discordClient.on('ready', async () => {
 // Define a global error handler
 process.on('uncaughtException', async (error) => {
     console.error('Uncaught Exception:', error);
-    //logChannel.send('Uncaught error: ' + error);
+    logChannel.send('Uncaught error: ' + error);
 });
 
 process.on('unhandledRejection', async (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    //logChannel.send('Uncaught rejection: ' + reason);
+    logChannel.send('Uncaught rejection: ' + reason);
 });
 
 //worker login listening function
@@ -156,7 +156,7 @@ const getFacebookAccount = async () => {
     if(burnerAccountObj == null){
         //burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
         console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-        //logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+        logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
     }
 
     //change LastActive to null, signifing the account is being used
@@ -212,7 +212,7 @@ const deleteTask = async (task, taskName, userId) => {
             }
         }else{
             //console.log("Message failed");//!delete for production
-            //logChannel.send("Message failed @everyone");
+            logChannel.send("Message failed @everyone");
         }
 
         //update account and proxy stats
@@ -222,41 +222,67 @@ const deleteTask = async (task, taskName, userId) => {
         //delete from server
         task.terminate();
     } catch (error) {
-        //logChannel.send("Error Deleting Task: " + error);
+        logChannel.send("Error Deleting Task: " + error);
     }
 }
 
+//scan database for non-paying users
 const scanDatabase = async () => {
+    try {
+        usersToDelete = [];
 
-    setTimeout(async () => {
-        try {
-            usersToDelete = [];
-
-            //check map against db
-            for (const [key, value] of users) {
-                const userObj = await userDB.findOne({ UserId: key });
-                if (!userObj) {
-                    usersToDelete.push(key);
-                }
+        //check map against db
+        for (const [key, value] of users) {
+            const userObj = await userDB.findOne({ UserId: key });
+            if (!userObj) {
+                usersToDelete.push(key);
             }
-
-            //actually delete the users from map
-            usersToDelete.forEach(async (userId) => {
-                users.get(userId).facebook.forEach(async (task, key) => {
-                    await deleteTask(task, key, userId);
-                })
-                                
-                //delete from db
-                await taskDB.deleteMany({UserId: userId});
-
-                users.delete(userId);
-            })
-        } catch (error) {
-            console.log("Error scaning Database: \n\t" + error);
-            //logChannel.send("Error scaning Database: \n\t" + error);
         }
 
+        //actually delete the users from map
+        usersToDelete.forEach(async (userId) => {
+            users.get(userId).facebook.forEach(async (task, key) => {
+                await deleteTask(task, key, userId);
+            })
+                            
+            //delete from db
+            await taskDB.deleteMany({UserId: userId});
+
+            users.delete(userId);
+        })
+    } catch (error) {
+        console.log("Error scaning Database: \n\t" + error);
+        logChannel.send("Error scaning Database: \n\t" + error);
+    }
+}
+
+//start warming accs for the day
+const warmAccs = async() => {  
+    //**Over the next (almost) 24 hours calculate proper intervals and run warming script for all necessary accs */
+    try {
+        const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: Date.now()}});
+        for(let i = 0; i < warmingAccounts.length; i++){
+            //create a new worker
+            new Worker('./warmAccount.js', { workerData:{
+                username: warmingAccounts[i].Username,
+                proxy: warmingAccounts[i].Proxy,
+                cookies: warmingAccounts[i].Cookies,
+                platform: warmingAccounts[i].Platform,
+            }});
+
+            await new Promise(r => setTimeout(r, Math.random() * ((86000000/warmingAccounts.length)/0.35) + ((86000000/warmingAccounts.length)/0.65)));
+        }
+    } catch (error) {
+        logChannel.send("Error Warming Account: " + error);
+    }
+}
+
+//run daily tasks at the same time every day
+const RunDailyTasks = () => {
+    setTimeout(async () => {
         scanDatabase();
+        //warmAccs();
+        RunDailyTasks();
     }, 86400000) //24 hours
 }
 
@@ -321,7 +347,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Error getting channel for command: " + error);
-        //logChannel.send("Error getting channel for command: " + error);
+        logChannel.send("Error getting channel for command: " + error);
     }
 
     try {
@@ -432,7 +458,7 @@ const executeCommand = async (interaction) => {
                         user.taskCount--;
 
                         //delete from db
-                        await taskDB.deleteOne({UserId: interaction.user.id, Name: interaction.options.getString("task-name")});
+                        await taskDB.deleteOne({UserId: interaction.options.getString('user-id'), Name: interaction.options.getString("task-name")});
 
                         Channel.send("Deleted " + interaction.options.getString("task-name"));
                     }else{
@@ -444,11 +470,12 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === "facebook-warm-account" && interaction.user.id === '456168609639694376'){
                 //const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
-                const accountObj = await burnerAccountDB.aggregate([{ $sample: { size: 1 } }]).next();
+                const accountObj = await burnerAccountDB.aggregate([{ $match: { LastActive: { $ne: null } } }, { $sample: { size: 1 } }]).next();
+                console.log(accountObj.Username);
     
                 //create a new worker
                 new Worker('./warmAccount.js', { workerData:{
-                    username: interaction.options.getString("email-or-phone"),
+                    username: accountObj.Username,
                     proxy: accountObj.Proxy,
                     cookies: accountObj.Cookies,
                     platform: accountObj.Platform,
@@ -667,7 +694,7 @@ const executeCommand = async (interaction) => {
                         if(burnerAccountObj == null){
                             //burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
                             console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-                            //logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+                            logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
                         }
 
                         //update task for new burnerAccount
@@ -728,7 +755,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        //logChannel.send("Command Error: \n\t" + error);
+        logChannel.send("Command Error: \n\t" + error);
         Channel.send("Command Error: \n\t" + error);
     }
 }
