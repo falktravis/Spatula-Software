@@ -123,7 +123,7 @@ const logPageContent = async (page) => {
         await logChannel.send({
             files: ['screenshot.png'],
         });
-        await fs.unlinkSync('screenshot.png');
+        await fs.unlink('screenshot.png');
     }catch(error){
         errorMessage('error login content: ', error);
     }
@@ -344,7 +344,6 @@ let burnerProxy = workerData.burnerProxy;
 let burnerPlatform = workerData.burnerPlatform;
 
 const start = async () => {
-
     try{
         mainPageInitiate = true;
 
@@ -571,7 +570,7 @@ const setListingStorage = async () => {
                     }
                 })
             }else{
-                return [null, null, null, null];
+                return [null, null, null];
             }
         });
         console.log("Main Storage: " + mainListingStorage);

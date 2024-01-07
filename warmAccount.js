@@ -83,7 +83,7 @@ const logPageContent = async (page) => {
         await logChannel.send({
             files: ['screenshot.png'],
         });
-        await fs.unlinkSync('screenshot.png');
+        await fs.unlink('screenshot.png');
     }catch(error){
         errorMessage('error login content: ', error);
     }
@@ -172,11 +172,10 @@ const randomChance = (chance) => {
     }
 }
 
-//!I forget what the holdup is here...
 const addFriend = async(chance) => {
     try {
         //add a friend from suggested list, need somewhat of a strategy for this
-        //if(randomChance(chance)){
+        if(randomChance(chance)){
             console.log("add friend");
 
             //navigate to friend suggestion page
@@ -193,7 +192,7 @@ const addFriend = async(chance) => {
 
             //send 1-3 additional requests
             await warmingCursor.click('[href="/friends/suggestions/"]');
-            await warmingPage.waitForNavigation();
+            await warmingPage.waitForSelector();
             await pause(1);
             for(let i = Math.floor(Math.random() * 3); i >= 0; i--){
                 const mutualArr = await warmingPage.$$('div.xu06os2 div.x150jy0e');
@@ -214,13 +213,12 @@ const addFriend = async(chance) => {
 
             await pause(1);
             await warmingCursor.click('[href="/"]');
-        //}
+        }
     } catch (error) {
         await errorMessage('Error adding friend', error);
     }
 }
 
-//! Use ChatGPT to answer questions
 const joinGroup = async(chance) => {
     try {
         //find a group to join/apply to, interact with the group a little once we join
@@ -238,13 +236,18 @@ const joinGroup = async(chance) => {
 
             const pickGroup = async () => {
                 //scroll to random element and click on it
-                await warmingCursor.click(groups[Math.floor(Math.random() * Math.min(10, groups.length))]);
+                await warmingCursor.click(groups[Math.floor(Math.random() * Math.min(10, groups.length) + 1)]);
                 await pause(1);
             
                 //detect if group is private, if it is, we need to answer the questions and join.
                 try {
-                    await warmingPage.waitForSelector('[aria-label="Cancel"]');
-                    await warmingCursor.click('[aria-label="Cancel"]');
+                    
+                    await warmingPage.waitForSelector('[aria-label="Answer questions"]');
+                    if(await warmingPage.$('[aria-label="Cancel"]') != null){
+                        await warmingCursor.click('[aria-label="Cancel"]');
+                    }else{
+                        await warmingCursor.click('[aria-label="Not now"]');
+                    }
                     await pause(1);
                     await warmingPage.waitForSelector('[aria-label="Exit"]');
                     await warmingCursor.click('[aria-label="Exit"]');
@@ -273,7 +276,13 @@ const scrollFeed = async() => {
         if(randomChance(0.90)){
             console.log("scroll feed");
 
-            if(await warmingPage.$('[aria-label="Find friends"]') == null){//no components
+            await warmingPage.waitForSelector('div.x1hc1fzr.x1unhpq9 > div > div > div');
+            if(await warmingPage.$('[aria-label="Find friends"]') == null){
+                await pause(3);
+                await joinGroup(1);
+            }
+
+            if(await warmingPage.$('[aria-label="Find friends"]') == null){//!delete this if statement when join group officially works
                 //scroll a random number of posts 5-20
                 for(let i = 1; i < Math.floor(Math.random() * 15 + 8); i++){
                     await pause(3);
@@ -291,7 +300,7 @@ const scrollFeed = async() => {
                     //check what kind of container it is
                     if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="hide post"]`) != null){//post
                         console.log('post');
-                        if(randomChance(0.65)){
+                        if(randomChance(0.75)){
                             console.log('it hits');
                             await interactWithPost(i);
                         }
@@ -322,27 +331,10 @@ const scrollFeed = async() => {
 
                 await pause(2);
                 await warmingCursor.click('[href="/"]');
-            }else{
-                joinGroup(1);
             }
         }
     } catch (error) {
         await errorMessage('Error scrolling feed', error);
-    }
-}
-
-//** This is really the same as scrolling feed, less components to deal with */
-//?Is it even really necessary?
-const scrollGroup = async(chance) => {
-    try {
-        //pick a feed and scroll through a random amount of post, interacting with a random amount of posts
-        if(randomChance(chance)){
-            console.log("scroll group");
-
-            scrollGroup(chance/3);
-        }
-    } catch (error) {
-        await errorMessage('Error scrolling group', error);
     }
 }
 
@@ -452,9 +444,9 @@ const interactWithPost = async(childNum) => {
         }
 
         //If post is a fan page(Whatever it means to just be a public page), randomize value to follow it
-        /*if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) [aria-label="Voice Selector"]`) != null && randomChance(0.15)){
-
-        }*/
+        if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 span.x1n0sxbx`) != null && randomChance(0.20)){
+            await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 span.x1n0sxbx`);
+        }
         
         //If post is from a recommended group, randomize value to follow
         if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) span.x3nfvp2 .x1fey0fg`) != null && randomChance(0.05)){
@@ -487,7 +479,7 @@ const createPost = async(chance) => {
      *      
      */
     try {
-        //if(randomChance(chance)){
+        if(randomChance(chance)){
             console.log("create post");
 
             await warmingCursor.click('[aria-label="Create a post"] div.x6umtig');
@@ -501,7 +493,8 @@ const createPost = async(chance) => {
                 await pause(1);
             }
 
-            if(randomChance(0.0)){//post with picture//!0.6
+            let destination;
+            if(randomChance(0.6)){//post with picture
                 // Upload the photo (assuming there's an input field for it)
                 await warmingPage.waitForSelector('[aria-label="Photo/video"]');
                 await warmingCursor.click('[aria-label="Photo/video"]');
@@ -517,10 +510,9 @@ const createPost = async(chance) => {
                 const data = await response.json();
                 const photo = await fetch(data.urls.full);
                 const buffer = await photo.buffer();
-                const destination = `./${data.id}.jpg`;
+                destination = `./${data.id}.jpg`;
                 await fs.writeFile(destination, buffer);
-                await fileInput.uploadFile(destination);
-                await fs.unlink(destination);
+                await fileInput.uploadFile(destination);//!smth wrong with this
 
                 if(randomChance(0.7)){//include text in the flic
                     //ask chat gpt to write a prompt
@@ -532,7 +524,7 @@ const createPost = async(chance) => {
                     console.log((chat.choices[0].message.content).replace(/['"]/g, ''));
 
                     //click text box
-                    await warmingCursor.click("div.x1ed109x > .x9f619");
+                    await warmingCursor.click("div.x1ed109x > .x9f619");//!change this
                     await pause(1);
 
                     //type 
@@ -541,15 +533,15 @@ const createPost = async(chance) => {
                 }
             }else{//post without picture
                 //ask chat gpt to write a prompt
-                const promptArr = ['one of your hobbies', 'a sport you are playing recreationally', 'a specific sports team you like to watch', 'something going on with your wife/husband', 'one of your pets', 'one of your close friends', 'a problem you have', 'your job', 'a specific show you are watching and if you like it', 'a restaurant you went to', 'a vacation you went on', 'your favorite song/artist'];//! add to this
+                const promptArr = ['one of your hobbies', 'a sport you are playing recreationally', 'a real sports team you like to watch, including the name of the team', 'something going on with your wife/husband', 'one of your pets', 'one of your close friends', 'a problem you have', 'your job', 'a specific show you are watching, including the name of the show, and if you like it', 'a real restaurant you went to, with name and location', 'a vacation you went on', 'your favorite song/artist', 'a photograph you recently took', 'a good fun fact'];//! add to this
                 const chat = await openai.chat.completions.create({
-                    messages: [{ role: 'user', content: `Imagine you are a middle age person using Facebook to interact with your friends and family. Now write a post as if you were a human, about ${promptArr[Math.floor(Math.random() * (promptArr.length - 1))]}. Your post should be only 1 or 2 short sentences and no more than 300 characters in length. This should not cut off any words.` }],
+                    messages: [{ role: 'user', content: `Imagine you are an average, middle aged person using Facebook to interact with your friends and family. Here are some posts you saw on Facebook: "500 million monthly actives on WhatsApp Channels in the first 7 weeks! Great to see the community so engaged.", "Move from your comfort zone and impact your services to change others life. West Africa Child Fund received international volunteers across the world.", "Lebron James is undoubtedly the greatest basketball player of our generation. I would give almost anything to watch him play against Micheal Jordan...", "I love Chipotle", "Does anybody else just want to play Xbox 24/7?", "I want to loose weight but I'm having a hard time motivating myself to workout, any suggestions?". Write a post, similar to the ones you were given, about ${promptArr[Math.floor(Math.random() * (promptArr.length - 1))]}. Your post should be only 1 or 2 short sentences and no more than 300 characters in length. This should not cut off any words.` }],
                     model: 'gpt-3.5-turbo',
                 });
                 console.log((chat.choices[0].message.content).replace(/['"]/g, ''));
 
                 //click text box
-                await warmingCursor.click("div.x1ed109x > .x9f619");
+                await warmingCursor.click("div.x1ed109x > .x9f619");//!change this
                 await pause(1);
 
                 //type 
@@ -566,7 +558,12 @@ const createPost = async(chance) => {
             
             //post
             await warmingCursor.click('[aria-label="Post"]');
-        //}
+
+            //delete pic
+            if(destination != null){
+                await fs.unlink(destination);
+            }
+        }
     } catch (error) {
         await errorMessage('Error creating post', error);
     }
@@ -575,23 +572,27 @@ const createPost = async(chance) => {
 //**Works */
 const changeProfilePic = async() => {
     try {
+        console.log(await warmingPage.evaluate(() => {return document.querySelector('[aria-label="Your profile"] image').href.baseVal}));
         //get a pic from some api with peoples faces and change pic
-        if(randomChance(0.02)){
+        if(randomChance(0.02) || (await warmingPage.evaluate(() => {return document.querySelector('[aria-label="Your profile"] image').href.baseVal})).includes('143086968_2856368904622192_1959732218791162458')){
 
             // Navigate to the account settings page
             await warmingCursor.click('[aria-label="Your profile"]');
             await pause(1);
             await warmingCursor.click('[href="/me/"]');
-            await warmingPage.waitForSelector('[aria-label="Update profile picture"]');
+            await warmingPage.waitForSelector('[aria-label="Edit profile"]');
             await pause(2);
         
             // Upload the photo (assuming there's an input field for it)
-            await warmingCursor.click('[aria-label="Update profile picture"]');
+            await warmingCursor.click('[aria-label="Edit profile"]');
+            await warmingPage.waitForSelector('[aria-label="Add profile picture"]');
+            await pause(1);
+            await warmingCursor.click('[aria-label="Add profile picture"]');
             await warmingPage.waitForSelector('[role="dialog"] input[type="file"]');
             await pause(1);
             const fileInput = await warmingPage.$('[role="dialog"] input[type="file"]');
 
-            const response = await fetch('https://api.unsplash.com/photos/random', {
+            const response = await fetch('https://api.unsplash.com/photos/random?query=family', {
                 headers: {
                     'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
                 }
@@ -614,6 +615,7 @@ const changeProfilePic = async() => {
         }
     } catch (error) {
         await errorMessage('Error changing profile pic', error);
+        await logPageContent(warmingPage);
     }
 }
 
@@ -621,11 +623,7 @@ const changeProfilePic = async() => {
 (async () => {
     try {
         if(await start()){
-            await createPost();
-            //await addFriend(1);
-            //await joinGroup(1);
-
-            /*let taskArray = [() => addFriend(0.1), () => createPost(0.60), () => scrollGroup(0.75), () => joinGroup(0.1), scrollFeed, changeProfilePic];
+            let taskArray = [() => addFriend(0.1), () => createPost(0.60), () => joinGroup(0.1), scrollFeed, changeProfilePic];
             for (let i = taskArray.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [taskArray[i], taskArray[j]] = [taskArray[j], taskArray[i]];
@@ -634,7 +632,7 @@ const changeProfilePic = async() => {
                 await task();
             }
 
-            await warmingBrowser.close();*/
+            //await warmingBrowser.close();
         }
         console.log('finish');
     } catch (error) {
