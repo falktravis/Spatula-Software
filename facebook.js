@@ -90,10 +90,6 @@ const errorMessage = (message, error) => {
 
 const endTask = async () => {
     try {
-        while(isDormant == false){
-            console.log('task non dormant');
-            await new Promise(r => setTimeout(r, 10000));
-        }
         burnerCookies = await mainPage.cookies();
         console.log('close browsers');
         if(mainBrowser != null){
