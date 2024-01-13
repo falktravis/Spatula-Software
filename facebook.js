@@ -911,19 +911,23 @@ function interval() {
 
 //Start up
 (async () => {
-    isDormant = false;
-    await start();
+    try {
+        isDormant = false;
+        await start();
+        
+        if(startError == false){
+            setListingStorage();
+            accountRotation();
+            interval(); 
+        }else{
+            await logChannel.send("Rotate Account for Start Error: " + burnerUsername);
+            await mainBrowser.close();
+            mainBrowser = null;
+            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
+        }
     
-    if(startError == false){
-        setListingStorage();
-        accountRotation();
-        interval(); 
-    }else{
-        await logChannel.send("Rotate Account for Start Error: " + burnerUsername);
-        await mainBrowser.close();
-        mainBrowser = null;
-        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
+        isDormant = true;
+    } catch (error) {
+        errorMessage("Error starting up task", error);
     }
-
-    isDormant = true;
 })();
