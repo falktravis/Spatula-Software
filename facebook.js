@@ -13,26 +13,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 //Closes browsers before terminating the task with facebook-delete command
 parentPort.on('message', async (message) => {
     if(message.action === 'closeBrowsers') {
-        try {
-            while(isDormant == false){
-                console.log('task non dormant');
-                await new Promise(r => setTimeout(r, 10000));
-            }
-            burnerCookies = await mainPage.cookies();
-            console.log('close browsers');
-            if(mainBrowser != null){
-                await mainBrowser.close();
-                mainBrowser = null;
-            }
-            if(itemBrowser != null){
-                await itemBrowser.close();
-                itemBrowser = null;
-            }
-    
-            parentPort.postMessage({messageCookies: messageCookies, cookies: burnerCookies});
-        } catch (error) {
-            errorMessage("Error closing browser: ", error);
-        }
+        await endTask();
     }
     else if(message.action === 'newAccount'){
         try {
@@ -79,6 +60,26 @@ client.on('ready', async () => {
     }
 });
 
+//close up browser
+process.on('SIGTERM', async () => {
+    await endTask();
+    process.exit(0);
+});
+process.on('SIGINT', async () => {
+    await endTask();
+    process.exit(0);
+});
+
+// Define a global error handler
+process.on('uncaughtException', async (error) => {
+    console.error('Uncaught Exception:', error);
+    await logChannel.send('Uncaught error: ' + error);
+});
+process.on('unhandledRejection', async (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    await logChannel.send('Uncaught rejection: ' + reason);
+});
+
 //error message send function 
 const errorMessage = (message, error) => {
     console.log(workerData.name + ': ' + message + ': ' + error);
@@ -86,15 +87,42 @@ const errorMessage = (message, error) => {
     //mainChannel.send(workerData.name + ': ' + message + ': ' + error); .... :)
 }
 
+const endTask = async () => {
+    try {
+        while(isDormant == false){
+            console.log('task non dormant');
+            await new Promise(r => setTimeout(r, 10000));
+        }
+        burnerCookies = await mainPage.cookies();
+        console.log('close browsers');
+        if(mainBrowser != null){
+            await mainBrowser.close();
+            mainBrowser = null;
+        }
+        if(itemBrowser != null){
+            await itemBrowser.close();
+            itemBrowser = null;
+        }
+
+        parentPort.postMessage({messageCookies: messageCookies, cookies: burnerCookies});
+    } catch (error) {
+        errorMessage("Error closing browser: ", error);
+    }
+}
+
 //randomize time till post check
 const getRandomInterval = () => {
-    const minNumber = 520000; //9 mins
-    const maxNumber = 720000; //12 mins
-    const power = 1.5;
-    const random = Math.random();
-    const range = maxNumber - minNumber;
-    const number = minNumber + Math.pow(random, power) * range;
-    return Math.round(number);
+    try {
+        const minNumber = 520000; //9 mins
+        const maxNumber = 720000; //12 mins
+        const power = 1.5;
+        const random = Math.random();
+        const range = maxNumber - minNumber;
+        const number = minNumber + Math.pow(random, power) * range;
+        return Math.round(number);
+    } catch (error) {
+        errorMessage('error with getting random interval', error);
+    }
 }
 
 //scrape the html content for testing
@@ -118,25 +146,37 @@ const logPageContent = async (page) => {
 
 //pause for 0.5s-2s to humanize behavior
 const pause = async () => {
-    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (1200 - 500 + 1)) + 500));
+    try {
+        await new Promise(r => setTimeout(r, Math.floor(Math.random() * (1200 - 500 + 1)) + 500));
+    } catch (error) {
+        errorMessage('error with pause', error);
+    }
 }
 
 //convert platform string for a user agent
 const platformConverter = (platform) => {
-    if(platform === 'Windows'){
-        return 'Windows NT 10.0; Win64; x64';
-    }else if(platform === 'Linux'){
-        return 'X11; Linux x86_64';
-    }else if(platform === 'macOS'){
-        return 'Macintosh; Intel Mac OS X 10_15_7';
+    try {
+        if(platform === 'Windows'){
+            return 'Windows NT 10.0; Win64; x64';
+        }else if(platform === 'Linux'){
+            return 'X11; Linux x86_64';
+        }else if(platform === 'macOS'){
+            return 'Macintosh; Intel Mac OS X 10_15_7';
+        }
+    } catch (error) {
+        errorMessage('error with converting platform', error);
     }
 }
 
 // Function to simulate typing with randomized speed
 async function typeWithRandomSpeed(page, text) {
-    for (const char of text) {
-        // Type a character
-        await page.keyboard.type(char, { delay: Math.floor(Math.random() * (100 - 50 + 1)) + 50 });
+    try {
+        for (const char of text) {
+            // Type a character
+            await page.keyboard.type(char, { delay: Math.floor(Math.random() * (100 - 50 + 1)) + 50 });
+        }
+    } catch (error) {
+        errorMessage('error with typing random speed', error);
     }
 }
 
@@ -145,28 +185,32 @@ const getPrices = () => {
     let array = [];
     let arrayValue = workerData.maxPrice;
 
-    const generateArray = async (range, inc) => {
-        arrayValue = arrayValue + inc;
-        while(arrayValue <= workerData.maxPrice + range){
-            array.push(arrayValue);
+    try {
+        const generateArray = async (range, inc) => {
             arrayValue = arrayValue + inc;
+            while(arrayValue <= workerData.maxPrice + range){
+                array.push(arrayValue);
+                arrayValue = arrayValue + inc;
+            }
         }
-    }
 
-    if(workerData.maxPrice < 50){
-        generateArray(16, 2);
-    }else if(workerData.maxPrice < 100){
-        generateArray(40, 5);
-    }else if(workerData.maxPrice < 1000){
-        generateArray(80, 10);
-    }else if(workerData.maxPrice < 2500){
-        generateArray(160, 20);
-    }else if(workerData.maxPrice < 10000){
-        generateArray(400, 50);
-    }else if(workerData.maxPrice < 100000){
-        generateArray(1000, 100);
-    }else if(workerData.maxPrice < 500000){
-        generateArray(10000, 1000);
+        if(workerData.maxPrice < 50){
+            generateArray(16, 2);
+        }else if(workerData.maxPrice < 100){
+            generateArray(40, 5);
+        }else if(workerData.maxPrice < 1000){
+            generateArray(80, 10);
+        }else if(workerData.maxPrice < 2500){
+            generateArray(160, 20);
+        }else if(workerData.maxPrice < 10000){
+            generateArray(400, 50);
+        }else if(workerData.maxPrice < 100000){
+            generateArray(1000, 100);
+        }else if(workerData.maxPrice < 500000){
+            generateArray(10000, 1000);
+        }
+    } catch (error) {
+        errorMessage('error with getting price array', error);
     }
 
     return array;
@@ -488,15 +532,15 @@ const start = async () => {
             startError = true;
             parentPort.postMessage({action: 'languageWrong', username: burnerUsername});
         }
+
+        //make sure the url is correct
+        if(mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
+            console.log("Link is wrong: " + mainPage.url());
+
+            startError = true;
+        }
     }catch(error){
         errorMessage('Error with static main page initiation', error);
-    }
-
-    //make sure the url is correct
-    if(mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
-        console.log("Link is wrong: " + mainPage.url());
-
-        startError = true;
     }
     
     //set distance
@@ -579,8 +623,13 @@ function interval() {
         isDormant = false;
 
         //get a value from the start of the array
-        let value = prices.splice((Math.floor(Math.random() * (prices.length - 6))), 1);
-        prices.push(value[0]);
+        let value;
+        try {
+            value = prices.splice((Math.floor(Math.random() * (prices.length - 6))), 1);
+            prices.push(value[0]);
+        } catch (error) {
+            errorMessage('error with getting price value', error);
+        }
 
         let resultsRefreshMaxAttempts = 0;
         const resultsRefresh = async () => {
@@ -637,12 +686,16 @@ function interval() {
                 let isNotification = false;
                 let postNum = 1;
                 let newPostExists = true;
-                //get the price of the post
-                let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
-                if(price == 'FREE' || price == 'Free'){
-                    price = 0;
-                }else{
-                    price = parseInt(price.replace(/[$,AC]/g, ''));
+                let price;
+                try {
+                    price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
+                    if(price == 'FREE' || price == 'Free'){
+                        price = 0;
+                    }else{
+                        price = parseInt(price.replace(/[$,AC]/g, ''));
+                    }
+                } catch (error) {
+                    errorMessage('error with registering price', error);
                 }
 
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){
@@ -845,7 +898,7 @@ function interval() {
 
                 //ping the user
                 if(isNotification){
-                    mainChannel.send("New Notifications @everyone");
+                    await mainChannel.send("New Notifications @everyone");
                 }
 
                 //set the main listing storage
@@ -859,14 +912,18 @@ function interval() {
 
 //Start up
 (async () => {
-    isDormant = false;
-    await start();
+    try {
+        isDormant = false;
+        await start();
+        
+        if(startError == false){
+            setListingStorage();
+            accountRotation();
+            interval(); 
+        }
     
-    if(startError == false){
-        setListingStorage();
-        accountRotation();
-        interval(); 
+        isDormant = true;
+    } catch (error) {
+        errorMessage('error with script start up', error);
     }
-
-    isDormant = true;
 })();
