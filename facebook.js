@@ -3,6 +3,7 @@ const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(stealthPlugin());
+const fs = require('fs/promises');
 
 //discord.js
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
@@ -121,17 +122,18 @@ const getRandomInterval = () => {
         const number = minNumber + Math.pow(random, power) * range;
         return Math.round(number);
     } catch (error) {
-        errorMessage('error with getting random interval', error);
+        errorMessage('error getting random interval', error);
     }
 }
 
-//scrape the html content for testing
+//send content of the page to discord
 const logPageContent = async (page) => {
     try{
+        //html
         const htmlContent = await page.content();
         const { Readable } = require('stream');
         const htmlStream = Readable.from([htmlContent]);
-        logChannel.send({
+        await logChannel.send({
             files: [
                 {
                     attachment: htmlStream,
@@ -139,6 +141,13 @@ const logPageContent = async (page) => {
                 },
             ],
         });
+
+        //png
+        await page.screenshot({ path: 'screenshot.png' });
+        await logChannel.send({
+            files: ['screenshot.png'],
+        });
+        await fs.unlink('screenshot.png');
     }catch(error){
         errorMessage('error login content: ', error);
     }
@@ -359,7 +368,6 @@ let mainPage;
 let itemPage;
 let itemBrowser;
 let mainListingStorage;
-let networkData = 0;
 let isDormant = true; //true if task can be deleted
 let mainCursor;
 let prices = getPrices(); //array of all possible prices for max price
@@ -376,7 +384,6 @@ let burnerProxy = workerData.burnerProxy;
 let burnerPlatform = workerData.burnerPlatform;
 
 const start = async () => {
-
     try{
         mainPageInitiate = true;
 
@@ -401,13 +408,6 @@ const start = async () => {
         //network shit
         await mainPage.setRequestInterception(true);
         mainPage.on('response', async response => {
-
-            //detect network stuff
-            const headers = response.headers();
-            const contentLength = headers['content-length'];
-            if(contentLength != undefined){
-                networkData += parseInt(contentLength);
-            }
 
             //detect redirection
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
@@ -534,61 +534,64 @@ const start = async () => {
         }
 
         //make sure the url is correct
-        if(mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
-            console.log("Link is wrong: " + mainPage.url());
-
+        if(await mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
+            await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
             startError = true;
         }
-    }catch(error){
-        errorMessage('Error with static main page initiation', error);
-    }
-    
-    //set distance
-    if(startError == false){
-        try {
-            //apply a random element
-            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
-            await pause();
-            await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
-            await pause();
-            await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
-            await pause();
-            //click a random element
-            await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${Math.floor(Math.random() * 11 + 1)})`);
-            await pause();
-            await mainCursor.click('[aria-label="Apply"]');
-
-            //long pause
-            await new Promise(r => setTimeout(r, Math.random() * 15000 + 5000));
-
-            //apply real distance
-            await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
-            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
-            await pause();
-            await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
-            await pause();
-            await typeWithRandomSpeed(mainPage, (workerData.distance).toString());
-            await pause();
-            await mainPage.keyboard.press("Enter");
-            await pause();
-            await mainCursor.click('[aria-label="Apply"]');
-            //wait for the results to update, we aren't concerned about time
-            await new Promise(r => setTimeout(r, 10000));
-
-            /*
-            //Check for kilometers
-            try {
-                if((await mainPage.evaluate((distance) => {return document.querySelector(`[role="listbox"] div.x4k7w5x > :nth-child(${distance})`).innerText}, workerData.distance)).includes("kilo")){
-                    logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
-                }
-            } catch (error) {logChannel.send("checking for kilo error: " + error);}
-            */
-        } catch (error) {
-            errorMessage('Error with setting distance', error);
+        if(await mainPage.$('[name="login"]') != null){
+            await logChannel.send("Login page that went undetected: " + mainPage.url() + " at account: " + burnerUsername);
+            startError = true;
         }
     
-        mainPageInitiate = false;
+        //set distance
+        if(startError == false){
+            try {
+                //apply a random element
+                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
+                await pause();
+                await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+                await pause();
+                await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
+                await pause();
+                //click a random element
+                await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${Math.floor(Math.random() * 11 + 1)})`);
+                await pause();
+                await mainCursor.click('[aria-label="Apply"]');
+
+                //long pause
+                await new Promise(r => setTimeout(r, Math.random() * 15000 + 5000));
+
+                //apply real distance
+                await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+                await pause();
+                await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
+                await pause();
+                await typeWithRandomSpeed(mainPage, (workerData.distance).toString());
+                await pause();
+                await mainPage.keyboard.press("Enter");
+                await pause();
+                await mainCursor.click('[aria-label="Apply"]');
+                //wait for the results to update, we aren't concerned about time
+                await new Promise(r => setTimeout(r, 10000));
+
+                /*
+                //Check for kilometers
+                try {
+                    if((await mainPage.evaluate((distance) => {return document.querySelector(`[role="listbox"] div.x4k7w5x > :nth-child(${distance})`).innerText}, workerData.distance)).includes("kilo")){
+                        logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
+                    }
+                } catch (error) {logChannel.send("checking for kilo error: " + error);}
+                */
+            } catch (error) {
+                errorMessage('Error with setting distance', error);
+            }
+        
+            mainPageInitiate = false;
+        }
+    }catch(error){
+        errorMessage('error with start', error);
     }
 }
 
@@ -597,7 +600,7 @@ const setListingStorage = async () => {
     try{
         mainListingStorage = await mainPage.evaluate(() => {
             if(document.querySelector('div.xx6bls6') == null && document.querySelector('[aria-label="Browse Marketplace"]') == null){
-                let links = [document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(2) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(3) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(4) a")];
+                let links = [document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(2) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(3) a")];
                 return links.map((link) => {
                     if(link != null){
                         let href = link.href;
@@ -607,7 +610,7 @@ const setListingStorage = async () => {
                     }
                 })
             }else{
-                return [null, null, null, null];
+                return [null, null, null];
             }
         });
         console.log("Main Storage: " + mainListingStorage);
@@ -686,16 +689,12 @@ function interval() {
                 let isNotification = false;
                 let postNum = 1;
                 let newPostExists = true;
-                let price;
-                try {
-                    price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5").innerText });
-                    if(price == 'FREE' || price == 'Free'){
-                        price = 0;
-                    }else{
-                        price = parseInt(price.replace(/[$,AC]/g, ''));
-                    }
-                } catch (error) {
-                    errorMessage('error with registering price', error);
+                //get the price of the post
+                let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5 span.x193iq5w").innerText });
+                if(price == 'FREE' || price == 'Free'){
+                    price = 0;
+                }else{
+                    price = parseInt(price.replace(/[$,AC£]/g, ''));
                 }
 
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){
@@ -882,11 +881,11 @@ function interval() {
                                 return link.substring(0, link.indexOf("?"));
                             }, postNum);
 
-                            price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5`).innerText}, postNum);
+                            price = await mainPage.evaluate((num) => {return document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a span.x78zum5 span.x193iq5w`).innerText}, postNum);
                             if(price == 'FREE' || price == 'Free'){
                                 price = 0;
                             }else{
-                                price = parseInt(price.replace(/[$,A]/g, ''));
+                                price = parseInt(price.replace(/[$,AC£]/g, ''));
                             }
                         }else{
                             newPostExists = false;
@@ -904,26 +903,27 @@ function interval() {
                 //set the main listing storage
                 await setListingStorage();
             }
-            interval();
         }
+        interval();
         isDormant = true;
     }, getRandomInterval());
 } 
 
 //Start up
 (async () => {
-    try {
-        isDormant = false;
-        await start();
-        
-        if(startError == false){
-            setListingStorage();
-            accountRotation();
-            interval(); 
-        }
+    isDormant = false;
+    await start();
     
-        isDormant = true;
-    } catch (error) {
-        errorMessage('error with script start up', error);
+    if(startError == false){
+        setListingStorage();
+        accountRotation();
+        interval(); 
+    }else{
+        await logChannel.send("Rotate Account for Start Error: " + burnerUsername);
+        await mainBrowser.close();
+        mainBrowser = null;
+        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
     }
+
+    isDormant = true;
 })();
