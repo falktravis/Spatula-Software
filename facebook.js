@@ -61,15 +61,7 @@ client.on('ready', async () => {
     }
 });
 
-//close up browser
-process.on('SIGTERM', async () => {
-    await endTask();
-    process.exit(0);
-});
-process.on('SIGINT', async () => {
-    await endTask();
-    process.exit(0);
-});
+//!Sigint Sigterm
 
 // Define a global error handler
 process.on('uncaughtException', async (error) => {
