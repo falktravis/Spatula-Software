@@ -63,15 +63,7 @@ client.on('ready', async () => {
 
 //!Sigint Sigterm
 
-// Define a global error handler
-process.on('uncaughtException', async (error) => {
-    console.error('Uncaught Exception:', error);
-    await logChannel.send('Uncaught error: ' + error);
-});
-process.on('unhandledRejection', async (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    await logChannel.send('Uncaught rejection: ' + reason);
-});
+//!Define a global error handler
 
 //error message send function 
 const errorMessage = (message, error) => {
