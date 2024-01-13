@@ -392,8 +392,8 @@ const executeCommand = async (interaction) => {
                                         user.taskCount++;
 
                                         //burner account assignment
-                                        //const burnerAccountObj = await getFacebookAccount();
-                                        const burnerAccountObj = await burnerAccountDB.findOne({Username: ""});
+                                        const burnerAccountObj = await getFacebookAccount();
+                                        //const burnerAccountObj = await burnerAccountDB.findOne({Username: ""});
 
                                         //set the task in db
                                         await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance")});
