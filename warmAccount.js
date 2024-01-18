@@ -35,9 +35,9 @@ const platformConverter = (platform) => {
 let logChannel;
 client.on('ready', async () => {
     try {
-        /*logChannel = client.channels.cache.get('1091532766522376243');
+        /*logChannel = client.channels.cache.get('1196915422042259466');
         if(logChannel == null){
-            logChannel = await client.channels.fetch('1091532766522376243');
+            logChannel = await client.channels.fetch('1196915422042259466');
         }*/
     } catch (error) {
         errorMessage('Error fetching channel', error);
@@ -98,7 +98,7 @@ const start = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         warmingBrowser = await puppeteer.launch({
-            headless: false,
+            headless: 'new',
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]
         });
         let pages = await warmingBrowser.pages();
@@ -632,7 +632,7 @@ const changeProfilePic = async() => {
                 await task();
             }
 
-            //await warmingBrowser.close();
+            await warmingBrowser.close();
         }
         console.log('finish');
     } catch (error) {

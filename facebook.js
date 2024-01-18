@@ -225,6 +225,39 @@ const accountRotation = () => {
     }, (Math.random() * 7200000) + 10800000);//3-5 hours
 }
 
+const login = async () => {
+    try {
+        logChannel.send("Re-Login Required: " + burnerUsername);
+        await mainCursor.click('[name="email"]');
+        await pause();
+        await typeWithRandomSpeed(mainPage, burnerUsername);
+        await pause();
+        await mainCursor.click('[name="pass"]');
+        await pause();
+        await typeWithRandomSpeed(mainPage, burnerPassword);
+        await pause();
+        await mainCursor.click('[name="login"]');
+
+        try{
+            await mainPage.waitForNavigation();
+        }catch (error) {}
+
+        if(!(mainPage.url()).includes('facebook.com/marketplace')){
+            await logPageContent(mainPage);
+            startError = true;
+            await logChannel.send("Ban on Re-login: " + errorMsg);
+            parentPort.postMessage({action: 'ban', username: burnerUsername});
+        }else{
+            //update burnerCookies
+            burnerCookies = await mainPage.cookies();
+            //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+        }
+    } catch (error) {
+        startError = true;
+        await logChannel.send('error with re-login: ' + error);
+    }
+}
+
 const sendMessage = async (link) => {
     let messageCursor;
 
@@ -414,46 +447,7 @@ const start = async () => {
                         await mainPage.waitForSelector('[name="email"]');
                     }catch(error){}
 
-                    try {
-                        logChannel.send("Re-Login Required: " + burnerUsername);
-                        await mainCursor.click('[name="email"]');
-                        await pause();
-                        await typeWithRandomSpeed(mainPage, burnerUsername);
-                        await pause();
-                        await mainCursor.click('[name="pass"]');
-                        await pause();
-                        await typeWithRandomSpeed(mainPage, burnerPassword);
-                        await pause();
-                        await mainCursor.click('[name="login"]');
-
-                        try{
-                            await mainPage.waitForNavigation();
-                        }catch (error) {}
-
-                        if(!(mainPage.url()).includes('facebook.com/marketplace')){
-                            //check for invalid credentials
-                            if(await mainPage.$('.uiBoxRed[role="alert"]') != null){
-                                let errorMsg = await mainPage.evaluate(() => document.querySelector('.uiBoxRed[role="alert"]').innerText);
-                                await logChannel.send("Ban on Re-login: " + errorMsg);
-                                parentPort.postMessage({action: 'ban', username: burnerUsername});
-                            }else{
-                                //message the main script to get a new accounts
-                                logChannel.send("Rotate Account: " + burnerUsername + " at " + mainPage.url());
-                                await logPageContent(mainPage);
-                                burnerCookies = await mainPage.cookies();
-                                await mainBrowser.close();
-                                mainBrowser = null;
-                                //This might just be a ban
-                                parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
-                            }
-                        }else{
-                            //update burnerCookies
-                            burnerCookies = await mainPage.cookies();
-                            //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-                        }
-                    } catch (error) {
-                        await logChannel.send('error with re-login: ' + error);
-                    }
+                    await login();
                 }else{
                     //message the main script to get a new accounts
                     logChannel.send("Rotate Account: " + burnerUsername);
@@ -515,12 +509,21 @@ const start = async () => {
 
         //make sure the url is correct
         if(await mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
-            await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
-            startError = true;
-        }
-        if(await mainPage.$('[name="login"]') != null){
-            await logChannel.send("Login page that went undetected: " + mainPage.url() + " at account: " + burnerUsername);
-            startError = true;
+            if(await mainPage.$('[name="login"]') != null){
+                await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
+
+                if(await mainPage.$('[title="Allow all cookies"]') != null){
+                    await pause(1);
+                    await mainCursor.click('[title="Allow all cookies"]');
+                    try {
+                        await mainPage.waitForNavigation();
+                    } catch (error) {}
+                }
+
+                await login();
+            }else{
+                await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
+            }
         }
     
         //set distance

@@ -14,6 +14,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 
 //init chatgpt
 const OpenAI = require("openai");
+const { channel } = require('diagnostics_channel');
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
@@ -125,6 +126,8 @@ const start = async () => {
         //Set cookies in browser
         await languagePage.setCookie(...workerData.cookies);
 
+        console.log(workerData.username);
+
         await languagePage.goto('https://www.facebook.com', {waitUntil: 'load'});
 
         //detect accounts that need login
@@ -144,16 +147,24 @@ const changeLanguage = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         //go to the search page
-        await languageCursor.click('div.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.xzsf02u.x1rg5ohu > div > svg > g');
+        await languageCursor.click('div.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.xzsf02u.x1rg5ohu > div > svg > g > image');
         await languagePage.waitForSelector('.x1oo3vh0.x1rdy4ex');
         await pause(1);
         await languageCursor.click('.x1oo3vh0.x1rdy4ex > :nth-child(1)');
         await languagePage.waitForSelector('div.x1y1aw1k > div > div:nth-child(1) > a > div.x6s0dn4.x1q0q8m5 > div.x6s0dn4.xkh2ocl.x1q0q8m5 > div');
         await pause(1);
         await languageCursor.click('div.x1y1aw1k > div > div:nth-child(1) > a > div.x6s0dn4.x1q0q8m5 > div.x6s0dn4.xkh2ocl.x1q0q8m5 > div');
-        await languagePage.waitForSelector('div.xb57i2i > div.x78zum5 > div.x1e56ztr > div:nth-child(3) > div > div > div > div.x169t7cy.x19f6ikt > div:nth-child(3) > a > div > div > div');
+        await languagePage.waitForSelector('[href*="language"]');
         await pause(2);
-        await languageCursor.click('div.xb57i2i > div.x78zum5 > div.x1e56ztr > div:nth-child(3) > div > div > div > div.x169t7cy.x19f6ikt > div:nth-child(3) > a > div > div > div');
+
+        if(await languagePage.$('[aria-label="OK"]') != null){
+            console.log("click");
+            await languageCursor.click('[aria-label="OK"]');
+            await pause(2);
+        }
+
+        await languageCursor.click('[href*="language"]');
+        await pause(2);
 
         if(await languagePage.$('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div.xezivpi') != null){
             if(await languagePage.$('div.x1uvtmcs.x4k7w5x > div > div > div > div.xpvyfi4.xc9qbxq > div > div') != null){
@@ -266,7 +277,7 @@ const fillProfile = async() => {
         }
 
         //**Avatar */
-        if(await languagePage.evaluate(() => {return document.querySelector(`[aria-label="Create avatar"]`).innerText}) == 'Create'){
+        if(await languagePage.$(`[aria-label="Create avatar"]`) != null){
             await languageCursor.click('[aria-label="Create avatar"]');
             await languagePage.waitForSelector('[aria-label="Choice in Avatar Editor"] > .x1ypdohk');
             const avatars = await languagePage.$$('[aria-label="Choice in Avatar Editor"]');
@@ -277,7 +288,7 @@ const fillProfile = async() => {
             await languagePage.waitForSelector('.x6s0dn4.xwnonoy.x1npaq5j.x1c83p5e.x1enjb0b.x199158v.x14ctfv.x78zum5.x5yr21d.xl56j7k.x1199peq.xh8yej3.xbryuvx.x1mq3mr6');
             await pause(2);
             await languageCursor.click('[aria-label="Close avatar editor"] > svg');
-            await languagePage.waitForNavigation({waitUntil: 'networkidle0'});
+            await languagePage.waitForNavigation();
             await pause(1);
             await languageCursor.click('[aria-label="Edit profile"]');
             await languagePage.waitForSelector('[aria-label="Edit profile"] [aria-label="Add bio"]');
@@ -308,6 +319,7 @@ const fillProfile = async() => {
         await pause(3);
         await languageCursor.click('[aria-label="Edit your About info"]');
         const inputs = await languagePage.$$('.xqmdsaz > div > div > .x1hq5gj4');
+        console.log(inputs);
         
         //college
         let collegeButton = await inputs[2].$('.x2lah0s > i');
@@ -426,7 +438,6 @@ const fillProfile = async() => {
         if(await start()){
             //Change Language
             const language = await languagePage.evaluate(() => {return document.documentElement.lang});
-            console.log(language);
             if (language !== 'en') {
                 await changeLanguage();
             }
