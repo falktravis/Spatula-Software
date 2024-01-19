@@ -35,10 +35,10 @@ const platformConverter = (platform) => {
 let logChannel;
 client.on('ready', async () => {
     try {
-        /*logChannel = client.channels.cache.get('1196915422042259466');
+        logChannel = client.channels.cache.get('1196915422042259466');
         if(logChannel == null){
             logChannel = await client.channels.fetch('1196915422042259466');
-        }*/
+        }
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -47,7 +47,7 @@ client.on('ready', async () => {
 //error message send function
 const errorMessage = async (message, error) => {
     console.log(message + ': ' + error);
-    //await logChannel.send(message + ": " + error);
+    await logChannel.send(message + ": " + error);
 }
 
 // Function to simulate typing with randomized speed
