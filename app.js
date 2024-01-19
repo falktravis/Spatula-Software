@@ -68,11 +68,17 @@ for (const file of commandFiles) {
 
 //get log channel
 let logChannel;
+let warmingLogChannel;
 discordClient.on('ready', async () => {
     try {
         logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
+        }
+
+        warmingLogChannel = discordClient.channels.cache.get('1196915422042259466');
+        if(warmingLogChannel == null){
+            warmingLogChannel = await discordClient.channels.fetch('1196915422042259466');
         }
     } catch (error) {
         console.log('Error fetching channel: ' + error)
@@ -265,7 +271,7 @@ const warmAccs = async() => {
     try {
         const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: new Date()}, LastActive: {$ne: 10000000000000}}).toArray();
         for(let i = warmingAccounts.length - 1; i >= 0; i--){//(let i = 0; i < warmingAccounts.length; i++)
-            console.log('new worker');
+            warmingLogChannel.send('new warmer');
             //create a new worker
             new Worker('./warmAccount.js', { workerData:{
                 username: warmingAccounts[i].Username,
@@ -294,16 +300,17 @@ const warmAccs = async() => {
             await new Promise(r => setTimeout(r, randomInterval));
         }
     } catch (error) {
-        logChannel.send("Error Warming Account: " + error);
+        warmingLogChannel.send("Error Warming Account: " + error);
         console.log("Error Warming Account: " + error);
     }
 }
 
 //run daily tasks at the same time every day
 const RunDailyTasks = () => {
+    scanDatabase();
+    warmAccs();
+
     setTimeout(async () => {
-        scanDatabase();
-        warmAccs();
         RunDailyTasks();
     }, 86400000) //24 hours
 }

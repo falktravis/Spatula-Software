@@ -513,7 +513,7 @@ const start = async () => {
                 await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
 
                 if(await mainPage.$('[title="Allow all cookies"]') != null){
-                    await pause(1);
+                    await pause();
                     await mainCursor.click('[title="Allow all cookies"]');
                     try {
                         await mainPage.waitForNavigation();
@@ -568,6 +568,7 @@ const start = async () => {
                 } catch (error) {logChannel.send("checking for kilo error: " + error);}
                 */
             } catch (error) {
+                await logPageContent(mainPage);
                 errorMessage('Error with setting distance', error);
             }
         
@@ -677,7 +678,8 @@ function interval() {
                 if(price == 'FREE' || price == 'Free'){
                     price = 0;
                 }else{
-                    price = parseInt(price.replace(/[$,AC£]/g, ''));
+                    const numbersOnly = price.match(/\d+/g);
+                    price = parseInt(numbersOnly.join(''), 10);
                 }
 
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){
@@ -868,7 +870,8 @@ function interval() {
                             if(price == 'FREE' || price == 'Free'){
                                 price = 0;
                             }else{
-                                price = parseInt(price.replace(/[$,AC£]/g, ''));
+                                const numbersOnly = price.match(/\d+/g);
+                                price = parseInt(numbersOnly.join(''), 10);
                             }
                         }else{
                             newPostExists = false;
