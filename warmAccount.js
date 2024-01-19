@@ -635,7 +635,9 @@ const changeProfilePic = async() => {
             await warmingBrowser.close();
         }
         console.log('finish');
+        process.exit(0)
     } catch (error) {
         await errorMessage('Error with main function', error);
+        process.exit(0)
     }
 })();
