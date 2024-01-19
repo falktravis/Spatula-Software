@@ -35,7 +35,7 @@ let taskDB;
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
         //start daily tasks
-        RunDailyTasks();
+        //RunDailyTasks();
 
         //mess with database
         
