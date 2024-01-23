@@ -35,9 +35,9 @@ let taskDB;
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
         //start daily tasks
+        RunDailyTasks();
 
         //mess with database
-        
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -80,7 +80,6 @@ discordClient.on('ready', async () => {
             warmingLogChannel = await discordClient.channels.fetch('1196915422042259466');
         }
 
-        RunDailyTasks();
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
@@ -271,8 +270,8 @@ const warmAccs = async() => {
     //**Over the next (almost) 24 hours calculate proper intervals and run warming script for all necessary accs */
     try {
         const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: new Date()}, LastActive: {$ne: 10000000000000}}).toArray();
-        for(let i = warmingAccounts.length - 1; i >= 0; i--){//(let i = 0; i < warmingAccounts.length; i++)
-            warmingLogChannel.send('new warmer');
+        for(let i = 0; i < warmingAccounts.length; i++){
+            LogChannel.send('new warmer');
             //create a new worker
             new Worker('./warmAccount.js', { workerData:{
                 username: warmingAccounts[i].Username,
@@ -284,7 +283,7 @@ const warmAccs = async() => {
             //check for warming period
             if(warmingAccounts[i].WarmingPeriodEnd != null){
                 if(warmingAccounts[i].WarmingPeriodEnd > new Date()){
-                    await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$unset: "WarmingPeriodEnd"})
+                    await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$unset: {WarmingPeriodEnd: 1}});
                 }
             }
 
@@ -515,7 +514,10 @@ const executeCommand = async (interaction) => {
                 await warmAccs();
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
-                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000});
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000})
+                    .sort({ _id: -1 })
+                    .limit(10)
+                    .toArray();
                 //const newAccs = await burnerAccountDB.find({Username: '61555744042198'});
 
                 const initialAccountSetUp = async (acc) => {

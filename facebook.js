@@ -65,11 +65,11 @@ client.on('ready', async () => {
 
 //!Define a global error handler
 process.on('uncaughtException', async (err) => {
-    await logChannel.send('Uncaught Exception in worker:' + err);
+    await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
 });
   
 process.on('unhandledRejection', async (reason, promise) => {
-    await logChannel.send('Unhandled Rejection in worker:' + reason);
+    await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
 });
 
 //error message send function 
@@ -537,9 +537,9 @@ const start = async () => {
         if(startError == false){
             try {
                 //apply a random element
-                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k div.x1iyjqo2', {visible: true});
+                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k > div.x1iyjqo2', {visible: true});
                 await pause();
-                await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+                await mainCursor.click('div.x1y1aw1k.xl56j7k > div.x1iyjqo2');
                 await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
                 await pause();
                 await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
@@ -553,7 +553,7 @@ const start = async () => {
                 await new Promise(r => setTimeout(r, Math.random() * 15000 + 5000));
 
                 //apply real distance
-                await mainCursor.click('div.x1y1aw1k.xl56j7k div.x1iyjqo2');
+                await mainCursor.click('div.x1y1aw1k.xl56j7k > div.x1iyjqo2');
                 await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
                 await pause();
                 await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
@@ -681,12 +681,17 @@ function interval() {
                 let postNum = 1;
                 let newPostExists = true;
                 //get the price of the post
-                let price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5 span.x193iq5w").innerText });
-                if(price == 'FREE' || price == 'Free'){
-                    price = 0;
-                }else{
-                    const numbersOnly = price.match(/\d+/g);
-                    price = parseInt(numbersOnly.join(''), 10);
+                let price;
+                try {
+                    price = await mainPage.evaluate(() => { return document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a span.x78zum5 span.x193iq5w").innerText });
+                    if(price == 'FREE' || price == 'Free'){
+                        price = 0;
+                    }else{
+                        const numbersOnly = price.match(/\d+/g);
+                        price = parseInt(numbersOnly.join(''), 10);
+                    }
+                } catch (error) {
+                    errorMessage('Error with getting price', error);
                 }
 
                 while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){

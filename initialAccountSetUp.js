@@ -157,9 +157,9 @@ const changeLanguage = async () => {
         await languagePage.waitForSelector('[href*="language"]');
         await pause(2);
 
-        if(await languagePage.$('[aria-label="OK"]') != null){
+        if(await languagePage.$('div.xpvyfi4.xc9qbxq.xyamay9.x1pi30zi.x1l90r2v.x1swvt13.x1n2onr6.xq1dxzn > div > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div') != null){
             console.log("click");
-            await languageCursor.click('[aria-label="OK"]');
+            await languageCursor.click('div.xpvyfi4.xc9qbxq.xyamay9.x1pi30zi.x1l90r2v.x1swvt13.x1n2onr6.xq1dxzn > div > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div');
             await pause(2);
         }
 
@@ -232,6 +232,7 @@ const fillProfile = async() => {
                     'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
                 }
             });
+            console.log(response);
             let data = await response.json();
             let photo = await fetch(data.urls.full);
             let buffer = await photo.buffer();
