@@ -270,7 +270,7 @@ const warmAccs = async() => {
     try {
         const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: new Date()}, LastActive: {$ne: 10000000000000}}).toArray();
         for(let i = 0; i < warmingAccounts.length; i++){
-            LogChannel.send('new warmer');
+            await logChannel.send('new warmer: ' + warmingAccounts[i].Username);
             //create a new worker
             new Worker('./warmAccount.js', { workerData:{
                 username: warmingAccounts[i].Username,
