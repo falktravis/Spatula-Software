@@ -34,9 +34,6 @@ let taskDB;
         userDB = mongoClient.db('Spatula-Software').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
-        //start daily tasks
-        RunDailyTasks();
-
         //mess with database
     } catch(error){
         await mongoClient.close();
@@ -80,6 +77,8 @@ discordClient.on('ready', async () => {
             warmingLogChannel = await discordClient.channels.fetch('1196915422042259466');
         }
 
+        //start daily tasks
+        RunDailyTasks();
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
