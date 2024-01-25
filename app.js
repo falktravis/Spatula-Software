@@ -270,14 +270,19 @@ const warmAccs = async() => {
     try {
         const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: new Date()}, LastActive: {$ne: 10000000000000}}).toArray();
         for(let i = 0; i < warmingAccounts.length; i++){
-            await logChannel.send('new warmer: ' + warmingAccounts[i].Username);
+            await warmingLogChannel.send('new warmer: ' + warmingAccounts[i].Username);
             //create a new worker
-            new Worker('./warmAccount.js', { workerData:{
+            let warmer = new Worker('./warmAccount.js', { workerData:{
                 username: warmingAccounts[i].Username,
                 proxy: warmingAccounts[i].Proxy,
                 cookies: warmingAccounts[i].Cookies,
                 platform: warmingAccounts[i].Platform,
             }});
+
+            warmer.on('message', async (message) => {
+                await warmingLogChannel.send('updating cookies for: ' + warmingAccounts[i].Username);
+                await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {Cookies: message.cookies}});
+            }); 
 
             //check for warming period
             if(warmingAccounts[i].WarmingPeriodEnd != null){
@@ -513,10 +518,7 @@ const executeCommand = async (interaction) => {
                 await warmAccs();
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
-                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000})
-                    .sort({ _id: -1 })
-                    .limit(10)
-                    .toArray();
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000001});
                 //const newAccs = await burnerAccountDB.find({Username: '61555744042198'});
 
                 const initialAccountSetUp = async (acc) => {
@@ -528,7 +530,7 @@ const executeCommand = async (interaction) => {
                         channel: interaction.channelId,
                     }});
                     
-                    await new Promise(r => setTimeout(r, 300000));
+                    await new Promise(r => setTimeout(r, 500000));
 
                     //await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now()}});
                 }

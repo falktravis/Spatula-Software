@@ -12,6 +12,10 @@ const { Page } = require('puppeteer');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
+//for fetching pics from the database
+const fetch = require('node-fetch');
+const fs = require('fs/promises');
+
 //init chatgpt
 const OpenAI = require("openai");
 const { channel } = require('diagnostics_channel');
@@ -227,12 +231,11 @@ const fillProfile = async() => {
             await pause(1);
             let fileInput = await languagePage.$('[role="dialog"] input[type="file"]');
     
-            let response = await fetch('https://api.unsplash.com/photos/random', {
+            let response = await fetch('https://api.unsplash.com/photos/random?query=family', {
                 headers: {
                     'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
                 }
             });
-            console.log(response);
             let data = await response.json();
             let photo = await fetch(data.urls.full);
             let buffer = await photo.buffer();
@@ -241,24 +244,25 @@ const fillProfile = async() => {
             await fileInput.uploadFile(destination);
             
             await languagePage.waitForSelector('[aria-label="Save"]');
+            await pause(1);
             await languageCursor.click('[aria-label="Save"]');
-            await languagePage.waitForSelector('[aria-label="Edit profile"]');
+            await languagePage.waitForFunction(() => !document.querySelector('[aria-label="Save"]'));
 
             await fs.unlink(destination);
             await pause(1);
             await languageCursor.click('[aria-label="Edit profile"]');
-            await languagePage.waitForSelector('[aria-label="Add cover photo"]');
+            await languagePage.waitForSelector('div.x1q0g3np > [aria-label="Add cover photo"]');
             await pause(1);
         }
 
         //**Cover pic */
-        if(await languagePage.evaluate(() => {return document.querySelector(`[aria-label="Add cover photo"]`).innerText}) == 'Add'){
-            await languageCursor.click('[aria-label="Add cover photo"]');
+        if(await languagePage.evaluate(() => {return document.querySelector(`div.x1q0g3np > [aria-label="Add cover photo"]`).innerText}) == 'Add'){
+            await languageCursor.click('div.x1q0g3np > [aria-label="Add cover photo"]');
             await languagePage.waitForSelector('[role="dialog"] input[type="file"]');
             await pause(1);
             fileInput = await languagePage.$('[role="dialog"] input[type="file"]');
     
-            response = await fetch('https://api.unsplash.com/photos/random?query=family', {
+            response = await fetch('https://api.unsplash.com/photos/random?query=pet', {
                 headers: {
                     'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
                 }
@@ -274,7 +278,7 @@ const fillProfile = async() => {
             await languagePage.waitForSelector('[aria-label="Save"]'); // Adjust the timeout as needed
             await languageCursor.click('[aria-label="Save"]');
             await fs.unlink(destination);
-            await languagePage.waitForNavigation({waitUntil: 'networkidle0'});
+            await languagePage.waitForFunction(() => !document.querySelector('[aria-label="Save"]'));
         }
 
         //**Avatar */
@@ -289,7 +293,7 @@ const fillProfile = async() => {
             await languagePage.waitForSelector('.x6s0dn4.xwnonoy.x1npaq5j.x1c83p5e.x1enjb0b.x199158v.x14ctfv.x78zum5.x5yr21d.xl56j7k.x1199peq.xh8yej3.xbryuvx.x1mq3mr6');
             await pause(2);
             await languageCursor.click('[aria-label="Close avatar editor"] > svg');
-            await languagePage.waitForNavigation();
+            await languagePage.waitForSelector('[aria-label="Edit profile"]');
             await pause(1);
             await languageCursor.click('[aria-label="Edit profile"]');
             await languagePage.waitForSelector('[aria-label="Edit profile"] [aria-label="Add bio"]');
@@ -319,116 +323,114 @@ const fillProfile = async() => {
         //**Other Info */
         await pause(3);
         await languageCursor.click('[aria-label="Edit your About info"]');
-        const inputs = await languagePage.$$('.xqmdsaz > div > div > .x1hq5gj4');
-        console.log(inputs);
+        const inputs = await languagePage.$$('.xqmdsaz > div > div > .x1hq5gj4 span.x1qq9wsj');
         
-        //college
-        let collegeButton = await inputs[2].$('.x2lah0s > i');
-        if(collegeButton){
-            let college = await fetch(`http://universities.hipolabs.com/search?country=United%20States&limit=1&offset=${Math.floor(Math.random() * 2284 + 1)}`);
-            college = await college.json();
-            console.log(college);
-
-            await languagePage.evaluate(() => {
-                const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
-                element.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                    inline: 'center',
-                });
-            });
-
-            await languageCursor.click(collegeButton);
-            await languagePage.waitForSelector('[aria-label="School"]');
-            await pause(1);
-            await languageCursor.click('[aria-label="School"]');
-            await typeWithRandomSpeed(languagePage, college[0].name);
-            await pause(2);
-            await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
-            await pause(2);
-            await languageCursor.click('[aria-label="Save"]');
-        }
-
-        //current city
-        let cityButton = await inputs[3].$('.x2lah0s > i');
-        if(cityButton){
-            let currentTown = await fetch(`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/us-cities-demographics/records?limit=1&offset=${Math.floor(Math.random() * 2891 + 1)}`);
-            currentTown = await currentTown.json();
-            console.log(currentTown);
-
-            await languagePage.evaluate(() => {
-                const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
-                element.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                    inline: 'center',
-                });
-            });
-
-            await languageCursor.click(cityButton);
-            await languagePage.waitForSelector('[aria-label="Current city"]');
-            await pause(1);
-            await languageCursor.click('[aria-label="Current city"]');
-            await typeWithRandomSpeed(languagePage, currentTown.results[0].city + ", " + currentTown.results[0].state);
-            await pause(2);
-            await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
-            await pause(2);
-            await languageCursor.click('[aria-label="Save"]');
-        }
-
-        //hometown
-        let hometownButton = await inputs[4].$('.x2lah0s > i');
-        if(hometownButton){
-            let hometown = await fetch(`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/us-cities-demographics/records?limit=1&offset=${Math.floor(Math.random() * 2891 + 1)}`);
-            hometown = await hometown.json();
-            console.log(hometown);
-
-            await languagePage.evaluate(() => {
-                const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
-                element.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                    inline: 'center',
-                });
-            });
-
-            await languageCursor.click(hometownButton);
-            await languagePage.waitForSelector('[aria-label="Hometown"]');
-            await pause(1);
-            await languageCursor.click('[aria-label="Hometown"]');
-            await typeWithRandomSpeed(languagePage, hometown.results[0].city + ", " + hometown.results[0].state);
-            await languagePage.waitForSelector('[aria-label*="suggested searches"]');
-            await pause(2);
-            await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
-            await pause(2);
-            await languageCursor.click('[aria-label="Save"]');
-        }
-
-        //relationship status
-        let relationshipButton = await inputs[5].$('.x2lah0s > i');
-        if(relationshipButton){
-            await languagePage.evaluate(() => {
-                const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
-                element.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                    inline: 'center',
-                });
-            });
-
-            await languageCursor.click(relationshipButton);
-            await languagePage.waitForSelector('[aria-haspopup="listbox"][role="combobox"]');
-            await pause(1);
-            await languageCursor.click('[aria-haspopup="listbox"][role="combobox"]');
-            await languagePage.waitForSelector('.xdt5ytf.x1iyjqo2 > .x12ejxvf');
-            await pause(2);
-            await languageCursor.click(`.xdt5ytf.x1iyjqo2 > .x12ejxvf > :nth-child(${Math.floor(Math.random() * 4 + 1)})`);
-            await pause(3);
-            await languageCursor.click('[aria-label="Save"]');
-        }
+        for (const input of inputs) {
+            const option = await languagePage.evaluate(el => el.textContent, input);
         
+            //college
+            if(option.includes('college')){
+                let college = await fetch(`http://universities.hipolabs.com/search?country=United%20States&limit=1&offset=${Math.floor(Math.random() * 2284 + 1)}`);
+                college = await college.json();
+                console.log(college);
+
+                await languagePage.evaluate(() => {
+                    const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center',
+                    });
+                });
+
+                await languageCursor.click(input);
+                await languagePage.waitForSelector('[aria-label="School"]');
+                await pause(1);
+                await languageCursor.click('[aria-label="School"]');
+                await typeWithRandomSpeed(languagePage, college[0].name);
+                await pause(2);
+                await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
+                await pause(2);
+                await languageCursor.click('[aria-label="Save"]');
+            }
+
+            //current city
+            if(option.includes('current city')){
+                let currentTown = await fetch(`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/us-cities-demographics/records?limit=1&offset=${Math.floor(Math.random() * 2891 + 1)}`);
+                currentTown = await currentTown.json();
+                console.log(currentTown);
+
+                await languagePage.evaluate(() => {
+                    const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center',
+                    });
+                });
+
+                await languageCursor.click(input);
+                await languagePage.waitForSelector('[aria-label="Current city"]');
+                await pause(1);
+                await languageCursor.click('[aria-label="Current city"]');
+                await typeWithRandomSpeed(languagePage, currentTown.results[0].city + ", " + currentTown.results[0].state);
+                await pause(2);
+                await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
+                await pause(2);
+                await languageCursor.click('[aria-label="Save"]');
+            }
+
+            //hometown
+            if(option.includes('hometown')){
+                let hometown = await fetch(`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/us-cities-demographics/records?limit=1&offset=${Math.floor(Math.random() * 2891 + 1)}`);
+                hometown = await hometown.json();
+                console.log(hometown);
+
+                await languagePage.evaluate(() => {
+                    const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center',
+                    });
+                });
+
+                await languageCursor.click(input);
+                await languagePage.waitForSelector('[aria-label="Hometown"]');
+                await pause(1);
+                await languageCursor.click('[aria-label="Hometown"]');
+                await typeWithRandomSpeed(languagePage, hometown.results[0].city + ", " + hometown.results[0].state);
+                await languagePage.waitForSelector('[aria-label*="suggested searches"]');
+                await pause(2);
+                await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
+                await pause(2);
+                await languageCursor.click('[aria-label="Save"]');
+            }
+
+            //relationship status
+            if(option.includes('relationship')){
+                await languagePage.evaluate(() => {
+                    const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
+                    element.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center',
+                    });
+                });
+
+                await languageCursor.click(input);
+                await languagePage.waitForSelector('[aria-haspopup="listbox"][role="combobox"]');
+                await pause(1);
+                await languageCursor.click('[aria-haspopup="listbox"][role="combobox"]');
+                await languagePage.waitForSelector('.xdt5ytf.x1iyjqo2 > .x12ejxvf');
+                await pause(2);
+                await languageCursor.click(`.xdt5ytf.x1iyjqo2 > .x12ejxvf > :nth-child(${Math.floor(Math.random() * 4 + 1)})`);
+                await pause(3);
+                await languageCursor.click('[aria-label="Save"]');
+            }
+        }
     } catch (error) {
-        await errorMessage('Error filling in info', error);
+        errorMessage('Error filling in info', error);
         //await logPageContent(languagePage);
     }
 }

@@ -54,7 +54,7 @@ const warmAccount = async () => {
 
         //change http headers
         warmingPage.setExtraHTTPHeaders({
-            'Referer': 'https://www.facebook.com/login',
+            'Referer': 'https://www.google.com',//https://www.facebook.com/login
             'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
             'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
             'Sec-Ch-Ua-Platform': workerData.platform
@@ -64,10 +64,14 @@ const warmAccount = async () => {
         warmingPage.setViewport({ width: 1366, height: 768 });
 
         //Set cookies in browser
-        await warmingPage.setCookie(...workerData.cookies);
+        //await warmingPage.setCookie(...workerData.cookies);
 
         //go to the search page
-        await warmingPage.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
+        await warmingPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
+
+        await new Promise(r => setTimeout(r, 25000));
+
+        console.log(await warmingPage.cookies());
     }catch(error){
         errorMessage('Error with page initiation', error);
     }

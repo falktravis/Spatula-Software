@@ -1,6 +1,6 @@
 //require
 require('dotenv').config();
-const { workerData } = require('worker_threads');
+const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
@@ -143,6 +143,7 @@ const start = async () => {
             console.log("account is fucked");
             return false;
         }else{
+            parentPort.postMessage({cookies: await warmingPage.cookies()});
             return true;
         }
     }catch(error){
@@ -304,12 +305,12 @@ const scrollFeed = async() => {
                             console.log('it hits');
                             await interactWithPost(i);
                         }
-                    }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"]`) != null){//group suggestions
+                    }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"]`) != null){//!group suggestions
                         console.log('group suggestions');
-                        if(randomChance(0.10)){
+                        /*if(randomChance(0.10)){
                             console.log('it hits');
                             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"] > div > ul > :nth-child(${Math.floor(Math.random() + 1)}) [aria-label="Join group"]`);
-                        }
+                        }*/
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Create"]`) != null){//reels
                         console.log('reels');
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="People you may know"]`) != null){//Friend Suggestions
@@ -563,6 +564,8 @@ const createPost = async(chance) => {
             if(destination != null){
                 await fs.unlink(destination);
             }
+
+            await logChannel.send("Successful Post");
         }
     } catch (error) {
         await errorMessage('Error creating post', error);
@@ -623,7 +626,7 @@ const changeProfilePic = async() => {
 (async () => {
     try {
         if(await start()){
-            let taskArray = [() => addFriend(0.1), () => createPost(0.60), () => joinGroup(0.1), scrollFeed, changeProfilePic];
+            let taskArray = [() => addFriend(0.1), () => createPost(0.65), scrollFeed, changeProfilePic];// () => joinGroup(0.1),
             for (let i = taskArray.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [taskArray[i], taskArray[j]] = [taskArray[j], taskArray[i]];
@@ -632,6 +635,7 @@ const changeProfilePic = async() => {
                 await task();
             }
 
+            await logChannel.send("Warming Finish: " + workerData.username);
             await warmingBrowser.close();
         }
         console.log('finish');

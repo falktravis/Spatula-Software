@@ -441,9 +441,7 @@ const start = async () => {
                     //end the task and message myself containing the account name
                     logChannel.send('Account lgpd migrated: ' + burnerUsername);
                     console.log('Account lgpd migrated: ' + burnerUsername);
-                }
-                
-                if(redirectURL.includes('/checkpoint/')){
+                }else if(redirectURL.includes('/checkpoint/')){
                     logChannel.send('Account banned: ' + burnerUsername);
                     console.log('Account banned: ' + burnerUsername);
             
