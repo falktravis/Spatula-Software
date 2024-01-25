@@ -115,6 +115,11 @@ const start = async () => {
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
                 const redirectURL = response.headers()['location'];
                 console.log(`Redirected to: ${redirectURL}`);
+
+                if(await warmingPage.$('[aria-label="Dismiss"]') != null){
+                    await pause(2);
+                    await warmingCursor.click('[aria-label="Dismiss"]');
+                }
             }
         });
 

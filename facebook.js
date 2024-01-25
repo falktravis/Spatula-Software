@@ -262,6 +262,7 @@ const login = async () => {
     } catch (error) {
         startError = true;
         await logChannel.send('error with re-login: ' + error);
+        parentPort.postMessage({action: 'ban', username: burnerUsername});
     }
 }
 
@@ -915,12 +916,12 @@ function interval() {
             setListingStorage();
             accountRotation();
             interval(); 
-        }else{
+        }/*else{
             await logChannel.send("Rotate Account for Start Error: " + burnerUsername);
             await mainBrowser.close();
             mainBrowser = null;
             parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
-        }
+        }*/
     
         isDormant = true;
     } catch (error) {

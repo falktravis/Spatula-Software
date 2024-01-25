@@ -262,7 +262,7 @@ const fillProfile = async() => {
             await pause(1);
             fileInput = await languagePage.$('[role="dialog"] input[type="file"]');
     
-            response = await fetch('https://api.unsplash.com/photos/random?query=pet', {
+            response = await fetch('https://api.unsplash.com/photos/random?query=nature', {
                 headers: {
                     'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
                 }
@@ -276,9 +276,11 @@ const fillProfile = async() => {
     
             //await upload
             await languagePage.waitForSelector('[aria-label="Save"]'); // Adjust the timeout as needed
+            await pause(1);
             await languageCursor.click('[aria-label="Save"]');
             await fs.unlink(destination);
             await languagePage.waitForFunction(() => !document.querySelector('[aria-label="Save"]'));
+            await pause(2);
         }
 
         //**Avatar */
@@ -308,7 +310,7 @@ const fillProfile = async() => {
     
             //generate a bio, with chatbdt  Average guy trying to make an impact on the world.
             const chat = await openai.chat.completions.create({
-                messages: [{ role: 'user', content: `Imagine you are a middle age person using Facebook to interact with your friends and family. You are filling out your profile information and you want to write a bio. Here are some good examples of bios: "Make an impact on the world.", "Bringing the world closer together.", "Connect with what you love to make things happen. It's Your World.", "Co-chair, Bill and Melinda Gates Foundation Founder, Breakthrough Energy", "Just your average guy.". Write a bio similar to the ones you were provided. Your post should be no more then 100 charecters and should not cut off any words.` }],
+                messages: [{ role: 'user', content: `Imagine you are a middle age person using Facebook to interact with your friends and family. You are filling out your profile information and you want to write a bio. Here are some good examples of bios: "Make an impact on the world.", "Bringing the world closer together.", "Preserving nature.", "Co-chair, Bill and Melinda Gates Foundation Founder, Breakthrough Energy", "Just your average guy.". Write a bio similar to the ones you were provided. Your post should be no more then 100 charecters and should not cut off any words.` }],
                 model: 'gpt-3.5-turbo',
             });
             console.log((chat.choices[0].message.content).replace(/['"]/g, ''));
@@ -323,6 +325,8 @@ const fillProfile = async() => {
         //**Other Info */
         await pause(3);
         await languageCursor.click('[aria-label="Edit your About info"]');
+        await languagePage.waitForSelector('.xqmdsaz > div > div > .x1hq5gj4 span.x1qq9wsj');
+        await pause(1);
         const inputs = await languagePage.$$('.xqmdsaz > div > div > .x1hq5gj4 span.x1qq9wsj');
         
         for (const input of inputs) {
