@@ -261,7 +261,7 @@ const login = async () => {
         }
     } catch (error) {
         startError = true;
-        await logChannel.send('error with re-login: ' + error);
+        await logChannel.send('error with re-login + ban: ' + error);
         parentPort.postMessage({action: 'ban', username: burnerUsername});
     }
 }

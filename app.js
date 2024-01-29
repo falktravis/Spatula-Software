@@ -316,6 +316,7 @@ const RunDailyTasks = () => {
     warmAccs();
 
     setTimeout(async () => {
+        warmingLogChannel.send("Run Daily Tasks");
         RunDailyTasks();
     }, 86400000) //24 hours
 }
@@ -527,7 +528,7 @@ const executeCommand = async (interaction) => {
                 await warmAccs();
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
-                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).sort({ _id: -1 });
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000});
                 //const newAccs = await burnerAccountDB.find({Username: '61555744042198'});
 
                 const initialAccountSetUp = async (acc) => {
@@ -541,7 +542,7 @@ const executeCommand = async (interaction) => {
                     
                     await new Promise(r => setTimeout(r, 200000));
 
-                    //await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now()}});
+                    await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now()}});
                 }
 
                 for await(const acc of newAccs){
@@ -769,7 +770,7 @@ const executeCommand = async (interaction) => {
                         }
 
                         //update task for new burnerAccount
-                        await taskDB.updateOne({_id: document._id}, {$set: {Username: burnerAccountObj.Username}});
+                        await taskDB.updateOne({_id: document._id}, {$set: {burnerAccount: burnerAccountObj.Username}});
 
                         //set lastActive to null
                         await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$set: {LastActive: null}});

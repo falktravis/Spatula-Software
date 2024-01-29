@@ -121,6 +121,21 @@ const start = async () => {
             'Sec-Ch-Ua-Platform': workerData.platform
         });
 
+        await languagePage.setRequestInterception(true);
+        languagePage.on('response', async response => {
+            //detect redirection
+            if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
+                const redirectURL = response.headers()['location'];
+                console.log(`Redirected to: ${redirectURL}`);
+
+                if(await languagePage.$('[href="https://m.facebook.com/terms.php"]') != null && await languagePage.$('[aria-label="Dismiss"]') != null){
+                    console.log("checkpointed")
+                    await pause(1);
+                    await languageCursor.click('[aria-label="Dismiss"]');
+                }
+            }
+        });
+
         //create cursor
         languageCursor = createCursor(languagePage);
 
@@ -215,8 +230,10 @@ const changeLanguage = async () => {
 const fillProfile = async() => {
     try {
         // Navigate to the account settings page
+        await languagePage.waitForSelector('[aria-label="Your profile"]');
         await languageCursor.click('[aria-label="Your profile"]');
         await pause(1);
+        await languagePage.waitForSelector('[href="/me/"]');
         await languageCursor.click('[href="/me/"]');
         await languagePage.waitForSelector('[aria-label="Edit profile"]');
         await pause(2);
@@ -353,7 +370,7 @@ const fillProfile = async() => {
                 await languageCursor.click('[aria-label="School"]');
                 await typeWithRandomSpeed(languagePage, college[0].name);
                 await pause(2);
-                await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
+                await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
                 await pause(2);
                 await languageCursor.click('[aria-label="Save"]');
             }
@@ -373,13 +390,15 @@ const fillProfile = async() => {
                     });
                 });
 
+                console.log("1");
                 await languageCursor.click(input);
+                console.log("2");
                 await languagePage.waitForSelector('[aria-label="Current city"]');
                 await pause(1);
                 await languageCursor.click('[aria-label="Current city"]');
                 await typeWithRandomSpeed(languagePage, currentTown.results[0].city + ", " + currentTown.results[0].state);
                 await pause(2);
-                await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
+                await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
                 await pause(2);
                 await languageCursor.click('[aria-label="Save"]');
             }
@@ -404,9 +423,9 @@ const fillProfile = async() => {
                 await pause(1);
                 await languageCursor.click('[aria-label="Hometown"]');
                 await typeWithRandomSpeed(languagePage, hometown.results[0].city + ", " + hometown.results[0].state);
-                await languagePage.waitForSelector('[aria-label*="suggested searches"]');
+                await languagePage.waitForSelector('[aria-label*="suggested search"]');
                 await pause(2);
-                await languagePage.click('[aria-label*="suggested searches"] > :nth-child(1)');
+                await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
                 await pause(2);
                 await languageCursor.click('[aria-label="Save"]');
             }

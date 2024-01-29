@@ -144,8 +144,12 @@ const start = async () => {
         await warmingPage.goto('https://www.facebook.com/', {waitUntil: 'networkidle0'});
         
         //detect accounts that need login
-        if(await warmingPage.$('[name="login"]') != null){
-            console.log("account is fucked");
+        const language = await warmingPage.evaluate(() => {return document.documentElement.lang});
+        if (language !== 'en') {
+            logChannel.send("language wrong: " + workerData.username);
+            return false;
+        }else if(await warmingPage.$('[name="login"]') != null){
+            logChannel.send("account is fucked: " + workerData.username);
             return false;
         }else{
             parentPort.postMessage({cookies: await warmingPage.cookies()});
