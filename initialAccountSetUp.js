@@ -121,8 +121,8 @@ const start = async () => {
             'Sec-Ch-Ua-Platform': workerData.platform
         });
 
-        await languagePage.setRequestInterception(true);
-        languagePage.on('response', async response => {
+        //await languagePage.setRequestInterception(true);
+        /*languagePage.on('response', async response => {
             //detect redirection
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
                 const redirectURL = response.headers()['location'];
@@ -134,7 +134,7 @@ const start = async () => {
                     await languageCursor.click('[aria-label="Dismiss"]');
                 }
             }
-        });
+        });*/
 
         //create cursor
         languageCursor = createCursor(languagePage);
@@ -147,7 +147,7 @@ const start = async () => {
 
         console.log(workerData.username);
 
-        await languagePage.goto('https://www.facebook.com', {waitUntil: 'load'});
+        await languagePage.goto('https://www.facebook.com', {waitUntil: 'domcontentloaded'});
 
         //detect accounts that need login
         if(await languagePage.$('[name="login"]') != null){
@@ -192,10 +192,12 @@ const changeLanguage = async () => {
             await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div.xezivpi');
             //click button drop down
             await languagePage.waitForSelector('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div > div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.xyamay9.x1l90r2v > div > div > div');
+            await pause(1);
             await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div > div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.xyamay9.x1l90r2v > div > div > div');
 
             //click english 
             await languagePage.waitForSelector('div.xu96u03.xm80bdy.x10l6tqk.x13vifvy > div.x1n2onr6 > div > div > div > div > div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6 > div');
+            await pause(1);
             const languageArr = await languagePage.$$('div.xu96u03.xm80bdy.x10l6tqk.x13vifvy > div.x1n2onr6 > div > div > div > div > div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6 > div > div');
             for (const element of languageArr) {
               const elementText = await languagePage.evaluate(el => el.textContent, element);
@@ -208,15 +210,18 @@ const changeLanguage = async () => {
 
             //click submit
             await languagePage.waitForSelector('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x6umtig.x1b1mbwd.xaqea5y.xav7gou.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3');
+            await pause(1);
             await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x6umtig.x1b1mbwd.xaqea5y.xav7gou.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3');
 
         }else{
             await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x2lah0s.x193iq5w.xeuugli.x78zum5 > div > div');
             //click english
             await languagePage.waitForSelector('div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6.xaci4zi.x129vozr > div > div > div:nth-child(4) > div > div.x6s0dn4.x1q0q8m5.x1qhh985.xu3j5b3.xcfux6l.x26u7qi.xm0m39n.x13fuv20.x972fbf.x9f619.x78zum5.x1q0g3np.x1iyjqo2.xs83m0k.x1qughib.xat24cr.x11i5rnm.x1mh8g0r.xdj266r.xeuugli.x18d9i69.x1sxyh0.xurb0ha.xexx8yu.x1n2onr6.x1ja2u2z.x1gg8mnh > div');
+            await pause(1);
             await languageCursor.click('div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6.xaci4zi.x129vozr > div > div > div:nth-child(4) > div > div.x6s0dn4.x1q0q8m5.x1qhh985.xu3j5b3.xcfux6l.x26u7qi.xm0m39n.x13fuv20.x972fbf.x9f619.x78zum5.x1q0g3np.x1iyjqo2.xs83m0k.x1qughib.xat24cr.x11i5rnm.x1mh8g0r.xdj266r.xeuugli.x18d9i69.x1sxyh0.xurb0ha.xexx8yu.x1n2onr6.x1ja2u2z.x1gg8mnh > div');
             //submit
             await languagePage.waitForSelector('div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div.x1jx94hy.xh8yej3.x1hlgzme.xvcs8rp.x1bpvpm7.xefnots.x13xjmei.xv7j57z > div > div > div > div > div:nth-child(1) > div > div');
+            await pause(1);
             await languageCursor.click('div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div.x1jx94hy.xh8yej3.x1hlgzme.xvcs8rp.x1bpvpm7.xefnots.x13xjmei.xv7j57z > div > div > div > div > div:nth-child(1) > div > div');
         }
         await languagePage.waitForNavigation({ waitUntil: 'load' });
@@ -330,7 +335,6 @@ const fillProfile = async() => {
                 messages: [{ role: 'user', content: `Imagine you are a middle age person using Facebook to interact with your friends and family. You are filling out your profile information and you want to write a bio. Here are some good examples of bios: "Make an impact on the world.", "Bringing the world closer together.", "Preserving nature.", "Co-chair, Bill and Melinda Gates Foundation Founder, Breakthrough Energy", "Just your average guy.". Write a bio similar to the ones you were provided. Your post should be no more then 100 charecters and should not cut off any words.` }],
                 model: 'gpt-3.5-turbo',
             });
-            console.log((chat.choices[0].message.content).replace(/['"]/g, ''));
     
             await languageCursor.click('[aria-label="Enter bio text"]');
             await typeWithRandomSpeed(languagePage, (chat.choices[0].message.content).replace(/['"]/g, ''));
@@ -344,113 +348,121 @@ const fillProfile = async() => {
         await languageCursor.click('[aria-label="Edit your About info"]');
         await languagePage.waitForSelector('.xqmdsaz > div > div > .x1hq5gj4 span.x1qq9wsj');
         await pause(1);
-        const inputs = await languagePage.$$('.xqmdsaz > div > div > .x1hq5gj4 span.x1qq9wsj');
         
-        for (const input of inputs) {
-            const option = await languagePage.evaluate(el => el.textContent, input);
+        let i = 1;
+        while(i < 7){
+            console.log(i);
+            if(await languagePage.$(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`) != null){
+                const option = await languagePage.evaluate((i) => {return document.querySelector(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`).textContent}, i);
         
-            //college
-            if(option.includes('college')){
-                let college = await fetch(`http://universities.hipolabs.com/search?country=United%20States&limit=1&offset=${Math.floor(Math.random() * 2284 + 1)}`);
-                college = await college.json();
-                console.log(college);
+                //college
+                if(option.includes('college')){
+                    let college = await fetch(`http://universities.hipolabs.com/search?country=United%20States&limit=1&offset=${Math.floor(Math.random() * 2284 + 1)}`);
+                    college = await college.json();
+                    console.log(college);
 
-                await languagePage.evaluate(() => {
-                    const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
-                    element.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'center',
+                    await languagePage.evaluate(() => {
+                        const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
+                        element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'center',
+                        });
                     });
-                });
 
-                await languageCursor.click(input);
-                await languagePage.waitForSelector('[aria-label="School"]');
-                await pause(1);
-                await languageCursor.click('[aria-label="School"]');
-                await typeWithRandomSpeed(languagePage, college[0].name);
-                await pause(2);
-                await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
-                await pause(2);
-                await languageCursor.click('[aria-label="Save"]');
-            }
+                    await languageCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
+                    await languagePage.waitForSelector('[aria-label="School"]');
+                    await pause(1);
+                    await languageCursor.click('[aria-label="School"]');
+                    await typeWithRandomSpeed(languagePage, college[0].name);
+                    await pause(2);
+                    await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
+                    await pause(2);
+                    await languageCursor.click('[aria-label="Save"]');
+                    i = 0;
+                    break;
+                }
 
-            //current city
-            if(option.includes('current city')){
-                let currentTown = await fetch(`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/us-cities-demographics/records?limit=1&offset=${Math.floor(Math.random() * 2891 + 1)}`);
-                currentTown = await currentTown.json();
-                console.log(currentTown);
+                //current city
+                if(option.includes('current city')){
+                    console.log(option);
+                    let currentTown = await fetch(`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/us-cities-demographics/records?limit=1&offset=${Math.floor(Math.random() * 2891 + 1)}`);
+                    currentTown = await currentTown.json();
+                    console.log(currentTown);
 
-                await languagePage.evaluate(() => {
-                    const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
-                    element.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'center',
+                    await languagePage.evaluate(() => {
+                        const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
+                        element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'center',
+                        });
                     });
-                });
 
-                console.log("1");
-                await languageCursor.click(input);
-                console.log("2");
-                await languagePage.waitForSelector('[aria-label="Current city"]');
-                await pause(1);
-                await languageCursor.click('[aria-label="Current city"]');
-                await typeWithRandomSpeed(languagePage, currentTown.results[0].city + ", " + currentTown.results[0].state);
-                await pause(2);
-                await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
-                await pause(2);
-                await languageCursor.click('[aria-label="Save"]');
-            }
+                    await languageCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
+                    await languagePage.waitForSelector('[aria-label="Current city"]');
+                    await pause(1);
+                    await languageCursor.click('[aria-label="Current city"]');
+                    await typeWithRandomSpeed(languagePage, currentTown.results[0].city + ", " + currentTown.results[0].state);
+                    await pause(2);
+                    await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
+                    await pause(2);
+                    await languageCursor.click('[aria-label="Save"]');
+                    i = 0;
+                }
 
-            //hometown
-            if(option.includes('hometown')){
-                let hometown = await fetch(`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/us-cities-demographics/records?limit=1&offset=${Math.floor(Math.random() * 2891 + 1)}`);
-                hometown = await hometown.json();
-                console.log(hometown);
+                //hometown
+                if(option.includes('home')){
+                    let hometown = await fetch(`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/us-cities-demographics/records?limit=1&offset=${Math.floor(Math.random() * 2891 + 1)}`);
+                    hometown = await hometown.json();
+                    console.log(hometown);
 
-                await languagePage.evaluate(() => {
-                    const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
-                    element.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'center',
+                    await languagePage.evaluate(() => {
+                        const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
+                        element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'center',
+                        });
                     });
-                });
 
-                await languageCursor.click(input);
-                await languagePage.waitForSelector('[aria-label="Hometown"]');
-                await pause(1);
-                await languageCursor.click('[aria-label="Hometown"]');
-                await typeWithRandomSpeed(languagePage, hometown.results[0].city + ", " + hometown.results[0].state);
-                await languagePage.waitForSelector('[aria-label*="suggested search"]');
-                await pause(2);
-                await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
-                await pause(2);
-                await languageCursor.click('[aria-label="Save"]');
-            }
+                    await languageCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
+                    await languagePage.waitForSelector('[aria-label="Hometown"]');
+                    await pause(1);
+                    await languageCursor.click('[aria-label="Hometown"]');
+                    await typeWithRandomSpeed(languagePage, hometown.results[0].city + ", " + hometown.results[0].state);
+                    await languagePage.waitForSelector('[aria-label*="suggested search"]');
+                    await pause(2);
+                    await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
+                    await pause(2);
+                    await languageCursor.click('[aria-label="Save"]');
+                    i = 0;
+                }
 
-            //relationship status
-            if(option.includes('relationship')){
-                await languagePage.evaluate(() => {
-                    const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
-                    element.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'center',
+                //relationship status
+                if(option.includes('relationship')){
+                    await languagePage.evaluate(() => {
+                        const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
+                        element.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'center',
+                        });
                     });
-                });
 
-                await languageCursor.click(input);
-                await languagePage.waitForSelector('[aria-haspopup="listbox"][role="combobox"]');
-                await pause(1);
-                await languageCursor.click('[aria-haspopup="listbox"][role="combobox"]');
-                await languagePage.waitForSelector('.xdt5ytf.x1iyjqo2 > .x12ejxvf');
-                await pause(2);
-                await languageCursor.click(`.xdt5ytf.x1iyjqo2 > .x12ejxvf > :nth-child(${Math.floor(Math.random() * 4 + 1)})`);
-                await pause(3);
-                await languageCursor.click('[aria-label="Save"]');
+                    await languageCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
+                    await languagePage.waitForSelector('[aria-haspopup="listbox"][role="combobox"]');
+                    await pause(1);
+                    await languageCursor.click('[aria-haspopup="listbox"][role="combobox"]');
+                    await languagePage.waitForSelector('.xdt5ytf.x1iyjqo2 > .x12ejxvf');
+                    await pause(2);
+                    await languageCursor.click(`.xdt5ytf.x1iyjqo2 > .x12ejxvf > :nth-child(${Math.floor(Math.random() * 4 + 1)})`);
+                    await pause(3);
+                    await languageCursor.click('[aria-label="Save"]');
+                    i = 0;
+                }
             }
+            i++;
         }
     } catch (error) {
         errorMessage('Error filling in info', error);

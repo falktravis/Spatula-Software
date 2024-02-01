@@ -66,6 +66,24 @@ const warmAccount = async () => {
         //Set cookies in browser
         //await warmingPage.setCookie(...workerData.cookies);
 
+        await warmingPage.setRequestInterception(true);
+        warmingPage.on('request', async request => {
+            const resource = request.resourceType();
+            if(mainPageInitiate){
+                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
+            }else{
+                if(resource != 'document'){
+                    request.abort();
+                }else{
+                    request.continue();
+                }
+            }
+        });
+
         //go to the search page
         await warmingPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
 

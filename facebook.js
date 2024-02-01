@@ -59,18 +59,48 @@ client.on('ready', async () => {
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
+
+    //Start up
+    try {
+        isDormant = false;
+        await start();
+        
+        if(startError == false){
+            setListingStorage();
+            accountRotation();
+            interval(); 
+        }/*else{
+            await logChannel.send("Rotate Account for Start Error: " + burnerUsername);
+            await mainBrowser.close();
+            mainBrowser = null;
+            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
+        }*/
+
+        isDormant = true;
+    } catch (error) {
+        errorMessage("Error starting up task", error);
+    }
 });
 
-//!Sigint Sigterm
+// Add cleanup logic on worker exit
+process.on('exit', async () => {
+    await logChannel.send('Task Close: ' + workerData.name);
+    await mainBrowser.close();
+});
 
-//!Define a global error handler
-/*process.on('uncaughtException', async (err) => {
+// Add cleanup logic on uncaught exception
+process.on('uncaughtException', async (err) => {
     await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
+    await mainBrowser.close();
+    process.exit(1); // Terminate the process
 });
-  
+
+// Add cleanup logic on unhandled promise rejection
 process.on('unhandledRejection', async (reason, promise) => {
     await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
-});*/
+    await mainBrowser.close();
+    process.exit(1); // Terminate the process
+});
 
 //error message send function 
 const errorMessage = (message, error) => {
@@ -427,7 +457,6 @@ const start = async () => {
         mainCursor = createCursor(mainPage);
 
         //network shit
-        await mainPage.setRequestInterception(true);
         mainPage.on('response', async response => {
 
             //detect redirection
@@ -465,6 +494,7 @@ const start = async () => {
             }
         });
 
+        await mainPage.setRequestInterception(true);
         mainPage.on('request', async request => {
             const resource = request.resourceType();
             if(mainPageInitiate){
@@ -474,10 +504,18 @@ const start = async () => {
                     request.continue();
                 }
             }else{
-                if(resource != 'document'){
-                    request.abort();
+                if((workerData.link).includes('propertyrentals')){
+                    if(resource != 'document' && resource != 'script' && resource != 'stylesheet'){
+                        request.abort();
+                    }else{
+                        request.continue();
+                    }
                 }else{
-                    request.continue();
+                    if(resource != 'document'){
+                        request.abort();
+                    }else{
+                        request.continue();
+                    }
                 }
             }
         });
@@ -905,26 +943,3 @@ function interval() {
         isDormant = true;
     }, getRandomInterval());
 } 
-
-//Start up
-(async () => {
-    try {
-        isDormant = false;
-        await start();
-        
-        if(startError == false){
-            setListingStorage();
-            accountRotation();
-            interval(); 
-        }/*else{
-            await logChannel.send("Rotate Account for Start Error: " + burnerUsername);
-            await mainBrowser.close();
-            mainBrowser = null;
-            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
-        }*/
-    
-        isDormant = true;
-    } catch (error) {
-        errorMessage("Error starting up task", error);
-    }
-})();

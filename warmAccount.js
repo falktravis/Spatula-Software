@@ -635,7 +635,7 @@ const changeProfilePic = async() => {
 (async () => {
     try {
         if(await start()){
-            let taskArray = [() => addFriend(0.1), () => createPost(0.65), scrollFeed, changeProfilePic];// () => joinGroup(0.1),
+            let taskArray = [() => addFriend(0.1), () => createPost(0.75), scrollFeed, changeProfilePic];// () => joinGroup(0.1),
             for (let i = taskArray.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [taskArray[i], taskArray[j]] = [taskArray[j], taskArray[i]];
