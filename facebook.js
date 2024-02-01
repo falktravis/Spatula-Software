@@ -82,6 +82,7 @@ client.on('ready', async () => {
     }
 });
 
+//!Try sigterm and sigint instead of this
 // Add cleanup logic on worker exit
 process.on('exit', async () => {
     await logChannel.send('Task Close: ' + workerData.name);
@@ -505,7 +506,7 @@ const start = async () => {
                 }
             }else{
                 if((workerData.link).includes('propertyrentals')){
-                    if(resource != 'document' && resource != 'script' && resource != 'stylesheet'){
+                    if(resource != 'document' && resource != 'script' && resource != 'stylesheet' && resource != 'other'){
                         request.abort();
                     }else{
                         request.continue();
@@ -666,7 +667,7 @@ function interval() {
         const resultsRefresh = async () => {
             try {
                 //change link for results change
-                await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded'});
+                await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded', timeout: 60000});
                 console.log(mainPage.url());
         
                 //if the listings dont exist on the page, refresh

@@ -227,6 +227,7 @@ const addFriend = async(chance) => {
         }
     } catch (error) {
         await errorMessage('Error adding friend', error);
+        await logPageContent(warmingPage);
     }
 }
 
@@ -277,6 +278,7 @@ const joinGroup = async(chance) => {
         }
     } catch (error) {
         await errorMessage('Error joining group', error);
+        await logPageContent(warmingPage);
     }
 }
 
@@ -346,6 +348,7 @@ const scrollFeed = async() => {
         }
     } catch (error) {
         await errorMessage('Error scrolling feed', error);
+        await logPageContent(warmingPage);
     }
 }
 
@@ -477,6 +480,7 @@ const interactWithPost = async(childNum) => {
         }
     } catch (error) {
         await errorMessage('Error interacting with post', error);
+        await logPageContent(warmingPage);
     }
 }
 
@@ -579,6 +583,7 @@ const createPost = async(chance) => {
         }
     } catch (error) {
         await errorMessage('Error creating post', error);
+        await logPageContent(warmingPage);
     }
 }
 
@@ -649,7 +654,7 @@ const changeProfilePic = async() => {
             await warmingBrowser.close();
             warmingBrowser = null;
         }
-        console.log('finish');
+        logChannel.send('finish');
 
         if(warmingBrowser != null){
             await warmingBrowser.close();
