@@ -159,6 +159,7 @@ const start = async () => {
         errorMessage('Error with page initiation', error);
         await logPageContent(warmingPage);
         await warmingBrowser.close();
+        warmingBrowser = null;
     }
 }
 
@@ -646,11 +647,19 @@ const changeProfilePic = async() => {
 
             await logChannel.send("Warming Finish: " + workerData.username);
             await warmingBrowser.close();
+            warmingBrowser = null;
         }
         console.log('finish');
-        process.exit(0)
+
+        if(warmingBrowser != null){
+            await warmingBrowser.close();
+        }
+        process.exit(0);
     } catch (error) {
         await errorMessage('Error with main function', error);
-        process.exit(0)
+        if(warmingBrowser != null){
+            await warmingBrowser.close();
+        }
+        process.exit(0);
     }
 })();
