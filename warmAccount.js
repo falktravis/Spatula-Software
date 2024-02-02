@@ -228,6 +228,10 @@ const addFriend = async(chance) => {
     } catch (error) {
         await errorMessage('Error adding friend', error);
         await logPageContent(warmingPage);
+
+        //navigate back to the home page for the next tasks
+        await pause(2);
+        await warmingCursor.click('[href="/"]');
     }
 }
 
@@ -279,6 +283,10 @@ const joinGroup = async(chance) => {
     } catch (error) {
         await errorMessage('Error joining group', error);
         await logPageContent(warmingPage);
+        
+        //navigate back to the home page for the next tasks
+        await pause(2);
+        await warmingCursor.click('[href="/"]');
     }
 }
 
@@ -349,6 +357,10 @@ const scrollFeed = async() => {
     } catch (error) {
         await errorMessage('Error scrolling feed', error);
         await logPageContent(warmingPage);
+
+        //navigate back to the home page for the next tasks
+        await pause(2);
+        await warmingCursor.click('[href="/"]');
     }
 }
 
@@ -634,6 +646,10 @@ const changeProfilePic = async() => {
     } catch (error) {
         await errorMessage('Error changing profile pic', error);
         await logPageContent(warmingPage);
+
+        //navigate back to the home page for the next tasks
+        await pause(2);
+        await warmingCursor.click('[href="/"]');
     }
 }
 
