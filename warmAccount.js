@@ -312,33 +312,33 @@ const scrollFeed = async() => {
 
                     //check what kind of container it is
                     if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="hide post"]`) != null){//post
-                        console.log('post');
+                        await logChannel.send('post');
                         if(randomChance(0.75)){
-                            console.log('it hits');
+                            await logChannel.send('it hits');
                             await interactWithPost(i);
                         }
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"]`) != null){//!group suggestions
-                        console.log('group suggestions');
+                        await logChannel.send('group suggestions');
                         /*if(randomChance(0.10)){
-                            console.log('it hits');
+                            await logChannel.send('it hits');
                             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"] > div > ul > :nth-child(${Math.floor(Math.random() + 1)}) [aria-label="Join group"]`);
                         }*/
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Create"]`) != null){//reels
-                        console.log('reels');
+                        await logChannel.send('reels');
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="People you may know"]`) != null){//Friend Suggestions
-                        console.log('Friend Suggestions');
+                        await logChannel.send('Friend Suggestions');
                         if(randomChance(0.30)){
-                            console.log('it hits');
+                            await logChannel.send('it hits');
                             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="People you may know"] > div > div > :nth-child(${Math.floor(Math.random() * 2 + 2)}) [aria-label="Add friend"]`);
                         }
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Friend Requests"]`) != null){//Friend Requests
-                        console.log('Friend Requests');
+                        await logChannel.send('Friend Requests');
                         if(randomChance(0.70)){
-                            console.log('it hits');
+                            await logChannel.send('it hits');
                             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Friend Requests"] > div > div > :nth-child(${Math.floor(Math.random() * 2 + 2)}) [aria-label="Add friend"]`);//!Fix this (Nothing necessarily wrong I just can't find this component anymore)
                         }
                     }else{
-                        console.log("Non-Identified Container");
+                        await logChannel.send("Non-Identified Container");
                     }
                 }
 
@@ -357,7 +357,7 @@ const interactWithPost = async(childNum) => {
 
         //like
         if(randomChance(0.50)){
-            console.log('like');
+            await logChannel.send('like');
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) [aria-label="Like"]`);
             await pause(2);
         }
@@ -375,11 +375,11 @@ const interactWithPost = async(childNum) => {
         }else{
             numComments = 0;
         }
-        console.log(numComments);
+        await logChannel.send(numComments);
 
         //interact with comments, if there are more than two(only 1 gets rid of the comment popup)
         if(randomChance(0.20) && numComments > 2){
-            console.log('interact with comments');
+            await logChannel.send('interact with comments');
             //click comments button
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`);
             await warmingPage.waitForSelector(`.x1jxyteu [aria-label="Comment"]`);
@@ -395,7 +395,7 @@ const interactWithPost = async(childNum) => {
             for(let i = 1; i < Math.floor(Math.random() * 3 + 4); i++){
                 //for each comment randomize value to interact
                 if(await warmingPage.$(`${commentContainer} > :nth-child(${i}) [aria-label="Like"]`) == null){
-                    console.log("comments end");
+                    await logChannel.send("comments end");
                     break;//break if no more comments
                 }else if(randomChance(0.40)){
                     await warmingPage.waitForSelector(`${commentContainer} > :nth-child(${i}) [aria-label="Like"]`);
@@ -418,7 +418,7 @@ const interactWithPost = async(childNum) => {
         //comment
         //**Posts must have at least (5) comments, and readable text to be used
         if(randomChance(0.15) && numComments > 6 && await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x9f619 > div > div > div > div > div:nth-child(3) > :nth-child(1) .x78zum5`) != null){
-            console.log('comment');
+            await logChannel.send('comment');
             //Use chatgpt on the post to generate an accurate comment.
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`);
             await warmingPage.waitForSelector(`.x1jxyteu [aria-label="Comment"]`);
@@ -445,7 +445,7 @@ const interactWithPost = async(childNum) => {
                 messages: [{ role: 'user', content: `Imagine you are a middle age person using Facebook to interact with your friends and family. You are looking at a Facebook post that showed up on your feed, the post ${await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x9f619 > div > div > div > div > div > .x1n2onr6 [src*="https://scontent"]`) != null ? 'has' : 'does not have'} a picture, and the text in the post says, "${await warmingPage.evaluate((childNum) => {return document.querySelector(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x9f619 > div > div > div > div > div:nth-child(3) > :nth-child(1) .x78zum5`).innerText}, childNum)}". These are some comments that were left on the post: ${commentsString}. Write a comment for this post, your comment should be very similar to the other comments you were given, and no more than a sentence long.` }],
                 model: 'gpt-3.5-turbo',
             });
-            console.log((chat.choices[0].message.content).replace(/['"]/g, ''));
+            await logChannel.send((chat.choices[0].message.content).replace(/['"]/g, ''));
             
             await warmingCursor.click(`.x1jxyteu [aria-label="Comment"]`);
             await pause(1);
@@ -464,14 +464,14 @@ const interactWithPost = async(childNum) => {
         
         //If post is from a recommended group, randomize value to follow
         if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) span.x3nfvp2 .x1fey0fg`) != null && randomChance(0.05)){
-            console.log('join group');
+            await logChannel.send('join group');
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) span.x3nfvp2 .x1fey0fg`);
             await pause(2);
         }
 
         //Share opportunity
         if(randomChance(0.05)){
-            console.log('share');
+            await logChannel.send('share');
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) [aria-label="Send this to friends or post it on your timeline."]`);//share
             await warmingPage.waitForSelector(`div.x1qfuztq.xh8yej3 > div > div > :nth-child(1)`);
             await pause(1);
@@ -495,9 +495,9 @@ const createPost = async(chance) => {
      */
     try {
         if(randomChance(chance)){
-            console.log("create post");
+            await logChannel.send("create post");
 
-            await warmingCursor.click('[aria-label="Create a post"] div.x6umtig');
+            await warmingCursor.click('[aria-label="Create a post"] div > span');//('[aria-label="Create a post"] div.x6umtig')
             await pause(1);
         
             //set default audience if necessary
@@ -536,7 +536,7 @@ const createPost = async(chance) => {
                         model: 'gpt-3.5-turbo',
                     });
                     console.log(`Imagine you are a middle age person using Facebook to interact with your friends and family. You have a picture that you want to post, here is a description of the picture '${data.description}'. Write a short sentence to post along with the picture. Your sentence should be no more than 300 characters and it should not cut off any words.`);
-                    console.log((chat.choices[0].message.content).replace(/['"]/g, ''));
+                    await logChannel.send((chat.choices[0].message.content).replace(/['"]/g, ''));
 
                     //click text box
                     await warmingCursor.click("div.x1ed109x > .x9f619");//!change this
@@ -553,7 +553,7 @@ const createPost = async(chance) => {
                     messages: [{ role: 'user', content: `Imagine you are an average, middle aged person using Facebook to interact with your friends and family. Here are some posts you saw on Facebook: "500 million monthly actives on WhatsApp Channels in the first 7 weeks! Great to see the community so engaged.", "Move from your comfort zone and impact your services to change others life. West Africa Child Fund received international volunteers across the world.", "Lebron James is undoubtedly the greatest basketball player of our generation. I would give almost anything to watch him play against Micheal Jordan...", "I love Chipotle", "Does anybody else just want to play Xbox 24/7?", "I want to loose weight but I'm having a hard time motivating myself to workout, any suggestions?". Write a post, similar to the ones you were given, about ${promptArr[Math.floor(Math.random() * (promptArr.length - 1))]}. Your post should be only 1 or 2 short sentences and no more than 300 characters in length. This should not cut off any words.` }],
                     model: 'gpt-3.5-turbo',
                 });
-                console.log((chat.choices[0].message.content).replace(/['"]/g, ''));
+                await logChannel.send((chat.choices[0].message.content).replace(/['"]/g, ''));
 
                 //click text box
                 await warmingCursor.click("div.x1ed109x > .x9f619");//!change this
