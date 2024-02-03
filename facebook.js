@@ -92,14 +92,18 @@ process.on('exit', async () => {
 // Add cleanup logic on uncaught exception
 process.on('uncaughtException', async (err) => {
     await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
-    await mainBrowser.close();
+    if(mainBrowser != null){
+        await mainBrowser.close();
+    }
     process.exit(1); // Terminate the process
 });
 
 // Add cleanup logic on unhandled promise rejection
 process.on('unhandledRejection', async (reason, promise) => {
     await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
-    await mainBrowser.close();
+    if(mainBrowser != null){
+        await mainBrowser.close();
+    }
     process.exit(1); // Terminate the process
 });
 
