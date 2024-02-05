@@ -687,11 +687,9 @@ function interval() {
                 }
 
                 //check to make sure distance is correct
-                let actualDistance = await mainPage.evaluate(() => {return document.querySelector('#seo_filters > div > div > div > span').innerText});
+                let actualDistance = await mainPage.evaluate(() => {return document.querySelector('.x1xmf6yo > div.x78zum5 > div > span').innerText});
                 if(!actualDistance.includes(" " + workerData.distance + " ")){
                     await logChannel.send("Distance is WRONG at: " + workerData.name + " Actual value: " + actualDistance + " Expected value: " + workerData.distance);
-
-
                 }
             } catch(error) {
                 if(error.message.includes('TargetCloseError')){
