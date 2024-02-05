@@ -82,11 +82,21 @@ client.on('ready', async () => {
     }
 });
 
-//!Try sigterm and sigint instead of this
 // Add cleanup logic on worker exit
-process.on('exit', async () => {
-    await logChannel.send('Task Close: ' + workerData.name);
-    await mainBrowser.close();
+process.on('SIGTERM', async () => {
+    await logChannel.send('Task Close(SIGTERM): ' + workerData.name);
+    if(mainBrowser != null){
+        await mainBrowser.close();
+    }
+    process.exit(1); // Terminate the process
+});
+
+process.on('SIGINT', async () => {
+    await logChannel.send('Task Close(SIGINT): ' + workerData.name);
+    if(mainBrowser != null){
+        await mainBrowser.close();
+    }
+    process.exit(1); // Terminate the process
 });
 
 // Add cleanup logic on uncaught exception
@@ -116,8 +126,8 @@ const errorMessage = (message, error) => {
 
 const endTask = async () => {
     try {
+        await logChannel.send("Close Browsers");
         burnerCookies = await mainPage.cookies();
-        console.log('close browsers');
         if(mainBrowser != null){
             await mainBrowser.close();
             mainBrowser = null;
@@ -758,7 +768,7 @@ function interval() {
                                 postObj = await itemPage.evaluate(() => {
                                     return {
                                         img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
-                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
+                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span').innerText),
                                         description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                         shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                         price: ((document.querySelector('div.xyamay9 div.x1xmf6yo').innerText).match(/\d+/g)).join('')
@@ -826,7 +836,7 @@ function interval() {
                                     return {
                                         img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
                                         title: document.querySelector('div.xyamay9 h1').innerText,
-                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
+                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span').innerText),
                                         description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                                         shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
                                         price: ((document.querySelector('div.xyamay9 div.x1xmf6yo').innerText).match(/\d+/g)).join('')

@@ -287,7 +287,7 @@ const warmAccs = async() => {
  
             //check for warming period
             if(warmingAccounts[i].WarmingPeriodEnd != null){
-                if(warmingAccounts[i].WarmingPeriodEnd > new Date()){
+                if(warmingAccounts[i].WarmingPeriodEnd < new Date()){
                     await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$unset: {WarmingPeriodEnd: 1}});
                 }
             }

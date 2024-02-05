@@ -50,6 +50,41 @@ const errorMessage = async (message, error) => {
     await logChannel.send(message + ": " + error);
 }
 
+// Add cleanup logic on worker exit
+process.on('SIGTERM', async () => {
+    await logChannel.send('Task Close(SIGTERM): ' + workerData.name);
+    if(warmingBrowser != null){
+        await warmingBrowser.close();
+    }
+    process.exit(1); // Terminate the process
+});
+
+process.on('SIGINT', async () => {
+    await logChannel.send('Task Close(SIGINT): ' + workerData.name);
+    if(warmingBrowser != null){
+        await warmingBrowser.close();
+    }
+    process.exit(1); // Terminate the process
+});
+
+// Add cleanup logic on uncaught exception
+process.on('uncaughtException', async (err) => {
+    await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
+    if(warmingBrowser != null){
+        await warmingBrowser.close();
+    }
+    process.exit(1); // Terminate the process
+});
+
+// Add cleanup logic on unhandled promise rejection
+process.on('unhandledRejection', async (reason, promise) => {
+    await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
+    if(warmingBrowser != null){
+        await warmingBrowser.close();
+    }
+    process.exit(1); // Terminate the process
+});
+
 // Function to simulate typing with randomized speed
 async function typeWithRandomSpeed(page, text) {
     for (const char of text) {
