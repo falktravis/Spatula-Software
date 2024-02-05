@@ -313,7 +313,7 @@ const warmAccs = async() => {
 //run daily tasks at the same time every day
 const RunDailyTasks = () => {
     scanDatabase();
-    warmAccs();
+    //warmAccs();
 
     setTimeout(async () => {
         warmingLogChannel.send("Run Daily Tasks");

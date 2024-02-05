@@ -82,25 +82,8 @@ client.on('ready', async () => {
     }
 });
 
-// Add cleanup logic on worker exit
-process.on('SIGTERM', async () => {
-    await logChannel.send('Task Close(SIGTERM): ' + workerData.name);
-    if(mainBrowser != null){
-        await mainBrowser.close();
-    }
-    process.exit(1); // Terminate the process
-});
-
-process.on('SIGINT', async () => {
-    await logChannel.send('Task Close(SIGINT): ' + workerData.name);
-    if(mainBrowser != null){
-        await mainBrowser.close();
-    }
-    process.exit(1); // Terminate the process
-});
-
 // Add cleanup logic on uncaught exception
-process.on('uncaughtException', async (err) => {
+/*process.on('uncaughtException', async (err) => {
     await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
     if(mainBrowser != null){
         await mainBrowser.close();
@@ -115,7 +98,7 @@ process.on('unhandledRejection', async (reason, promise) => {
         await mainBrowser.close();
     }
     process.exit(1); // Terminate the process
-});
+});*/
 
 //error message send function 
 const errorMessage = (message, error) => {
@@ -568,6 +551,7 @@ const start = async () => {
 
         //make sure the url is correct
         if(await mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
+            startError = true;
             if(await mainPage.$('[name="login"]') != null){
                 await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
 
@@ -582,6 +566,10 @@ const start = async () => {
                 await login();
             }else{
                 await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
+                //!Gotta do something here
+                await mainBrowser.close();
+                mainBrowser = null;
+                parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
             }
         }
     
@@ -697,6 +685,8 @@ function interval() {
                 }
 
                 //check to make sure distance is correct
+                //!This still won't work :(
+                //!await logPageContent(mainPage);
                 let actualDistance = await mainPage.evaluate(() => {return document.querySelector('.x1xmf6yo > div.x78zum5 > div > span').innerText});
                 if(!actualDistance.includes(" " + workerData.distance + " ")){
                     await logChannel.send("Distance is WRONG at: " + workerData.name + " Actual value: " + actualDistance + " Expected value: " + workerData.distance);
