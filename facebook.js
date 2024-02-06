@@ -476,18 +476,21 @@ const start = async () => {
                     //message the main script to delete the burner account
                     parentPort.postMessage({action: 'ban', username: burnerUsername});
                 }else if(redirectURL.includes('/login/?next')){
-                    try{
+                    /*try{
                         await mainPage.waitForSelector('[name="email"]');
                     }catch(error){}
 
-                    await login();
+                    await login();*/
+                    logChannel.send("Rotate Account Instead Of Login: " + burnerUsername);
+                    await mainBrowser.close();
+                    mainBrowser = null;
+                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
                 }else{
                     //message the main script to get a new accounts
                     logChannel.send("Rotate Account: " + burnerUsername);
-                    burnerCookies = await mainPage.cookies();
                     await mainBrowser.close();
                     mainBrowser = null;
-                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
+                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
                 }
             }
         });
@@ -552,7 +555,7 @@ const start = async () => {
         //make sure the url is correct
         if(await mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
             startError = true;
-            if(await mainPage.$('[name="login"]') != null){
+            if(await mainPage.$('[name="login"]') != null || (mainPage.url()).includes('/login/?next')){
                 await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
 
                 if(await mainPage.$('[title="Allow all cookies"]') != null){
