@@ -505,19 +505,19 @@ const start = async () => {
                     request.continue();
                 }
             }else{
-                if((workerData.link).includes('propertyrentals')){
+                /*if((workerData.link).includes('propertyrentals')){
                     if(resource != 'document' && resource != 'script' && resource != 'stylesheet' && resource != 'other'){
                         request.abort();
                     }else{
                         request.continue();
                     }
-                }else{
+                }else{*/
                     if(resource != 'document'){
                         request.abort();
                     }else{
                         request.continue();
                     }
-                }
+                //}
             }
         });
 
