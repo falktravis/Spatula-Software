@@ -622,9 +622,8 @@ const start = async () => {
                 await logPageContent(mainPage);
                 errorMessage('Error with setting distance', error);
             }
-        
-            mainPageInitiate = false;
         }
+        mainPageInitiate = false;
     }catch(error){
         errorMessage('error with start', error);
         if(error.message.includes('Requesting main frame too early!')){

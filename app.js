@@ -35,7 +35,17 @@ let taskDB;
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
         //mess with database
+        /*await resetProxyTracking();
+        let accs = await burnerAccountDB.find({LastActive: 10000000000000}).toArray();
+        for(const acc of accs){
+            let proxy = await getStaticFacebookBurnerProxy();
+            await burnerAccountDB.updateOne({_id: acc._id}, {$set: {Proxy: proxy.Proxy}});
+        }
 
+        await resetProxyTracking();
+        await burnerAccountDB.updateMany({LastActive: 10000000000000}, {$set: {LastActive: 1}});
+        await burnerAccountDB.updateMany({LastActive: 1}, {$set: {Initiated: false}});
+        console.log('finish')*/
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -101,7 +111,7 @@ const facebookListener = async (message, task, user) => {
     if(message.action == 'rotateAccount'){
         //set lastActive to now, account is no longer in use
         await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: Date.now()}});
-        if(message.cookies != null){
+        if(message.cookies != null && message.cookies != []){
             await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.cookies}});
         }
     }else if(message.action == 'languageWrong'){
@@ -213,10 +223,10 @@ const deleteTask = async (task, taskName, userId) => {
 
         if(messageSuccess){
             //set cookies in db
-            if(message.burnerCookies != null){
+            if(message.burnerCookies != null && message.burnerCookies != []){
                 await burnerAccountDB.updateOne({Username: taskObj.burnerAccount}, {$set: {Cookies: message.burnerCookies}});
             }
-            if(message.messageCookies != null){
+            if(message.messageCookies != null && message.burnerCookies != []){
                 await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
             }
         }else{
@@ -282,7 +292,9 @@ const warmAccs = async() => {
 
             warmer.on('message', async (message) => {
                 await warmingLogChannel.send('updating cookies for: ' + warmingAccounts[i].Username);
-                await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {Cookies: message.cookies}});
+                if(message.cookies != null && message.cookies != []){
+                    await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {Cookies: message.cookies}});
+                }
             }); 
  
             //check for warming period
@@ -321,49 +333,17 @@ const RunDailyTasks = () => {
     }, 86400000) //24 hours
 }
 
-const getDormantProxies = async () => {
-   //get all proxies
-    let proxyArr = await staticProxyDB.find({TotalFacebookBurnerAccounts: 0}).toArray()
-
-    let account50Proxies = ['154.12.205.212:8800', '38.154.113.105:8800', '154.12.205.105:8800', '154.13.165.118:8800', '38.154.90.141:8800',  '154.12.205.189:8800', '38.154.95.96:8800',   '38.154.110.174:8800', '154.53.73.201:8800', '38.154.110.177:8800', '154.13.165.172:8800', '38.154.110.183:8800', '38.154.110.130:8800', '154.53.73.207:8800',  '38.154.90.180:8800', '154.53.73.27:8800',   '154.12.205.101:8800', '154.53.73.218:8800', '38.154.110.185:8800', '38.154.110.157:8800', '154.12.205.196:8800', '154.53.73.194:8800',  '38.154.113.100:8800', '38.154.113.79:8800', '154.12.205.102:8800', '38.154.113.76:8800',  '38.154.110.156:8800', '154.53.73.208:8800',  '154.53.73.50:8800',   '38.154.98.1:8800', '38.154.95.123:8800',  '154.12.205.161:8800', '154.12.205.89:8800', '154.53.73.211:8800',  '154.53.73.32:8800',   '154.12.205.208:8800', '154.13.165.87:8800',  '38.154.110.173:8800', '38.154.113.117:8800', '38.154.90.191:8800',  '38.154.110.175:8800', '38.154.98.5:8800', '154.53.73.152:8800',  '154.12.205.7:8800',   '38.154.110.135:8800', '154.53.73.13:8800',   '38.154.90.152:8800',  '38.154.113.90:8800', '38.154.113.85:8800',  '38.154.110.134:8800', '154.12.205.188:8800', '154.53.73.134:8800',  '38.154.113.72:8800',  '38.154.98.54:8800', '38.154.110.176:8800', '38.154.113.118:8800', '38.154.110.168:8800', '154.53.73.89:8800',   '154.53.73.48:8800',   '38.154.95.71:8800', '154.13.165.26:8800',  '38.154.110.164:8800', '38.154.113.75:8800', '38.154.110.148:8800', '154.12.205.23:8800',  '154.12.205.251:8800', '38.154.113.74:8800',  '154.53.73.133:8800',  '154.12.205.118:8800', '154.12.205.29:8800',  '38.154.110.170:8800', '38.154.98.41:8800', '38.154.90.128:8800',  '38.154.113.64:8800',  '38.154.113.125:8800'];
-    let account25Proxies = ['38.154.126.97:8800',  '154.22.38.134:8800', '38.154.126.180:8800', '154.22.38.106:8800', '154.22.43.20:8800',   '2.56.45.164:8800', '154.22.38.46:8800',   '154.22.38.22:8800', '38.154.126.70:8800',  '2.56.45.153:8800', '38.154.126.158:8800', '38.154.126.198:8800', '2.56.45.2:8800',      '2.56.45.44:8800', '38.154.126.238:8800', '154.22.38.64:8800', '38.154.126.199:8800', '38.153.35.121:8800', '154.22.38.52:8800',   '38.153.35.106:8800', '38.154.126.144:8800', '192.241.110.251:8800', '38.154.126.135:8800', '38.153.35.93:8800', '2.56.45.169:8800',    '38.154.126.54:8800', '38.154.126.185:8800', '2.56.45.131:8800', '2.56.45.7:8800',      '38.154.126.113:8800', '38.154.126.175:8800', '154.22.38.221:8800', '2.56.45.145:8800',    '154.22.38.67:8800', '154.22.38.119:8800',  '2.56.45.188:8800', '2.56.45.25:8800',     '154.22.43.3:8800'];
-    let account10Proxies = ['38.154.122.233:8800', '38.170.215.167:8800', '38.154.122.155:8800', '38.170.215.254:8800', '38.170.215.140:8800', '38.154.107.47:8800', '38.154.122.153:8800', '38.170.215.123:8800', '38.170.215.28:8800', '38.170.215.191:8800', '38.170.215.78:8800', '38.170.215.9:8800', '38.170.215.113:8800', '38.170.215.238:8800', '38.154.122.185:8800'];
-    let account50DormantProxies = [];
-    let account25DormantProxies = [];
-    let account10DormantProxies = [];
-
-    //print proxy list
-    for(let x = 0; x < proxyArr.length; x++){
-        if(account50Proxies.includes(proxyArr[x].Proxy)){
-            account50DormantProxies.push(proxyArr[x].Proxy);
-        }else if(account25Proxies.includes(proxyArr[x].Proxy)){
-            account25DormantProxies.push(proxyArr[x].Proxy);
-        }else if(account10Proxies.includes(proxyArr[x].Proxy)){
-            account10DormantProxies.push(proxyArr[x].Proxy);
-        }
-    }
-
-    console.log("50");
-    for(let i = 0; i < account50DormantProxies.length; i++){
-        console.log(account50DormantProxies[i]);
-    }
-
-    console.log("\n\n25")
-    for(let i = 0; i < account25DormantProxies.length; i++){
-        console.log(account25DormantProxies[i]);
-    }
-
-    console.log("\n\n10")
-    for(let i = 0; i < account10DormantProxies.length; i++){
-        console.log(account10DormantProxies[i]);
-    }
-}
-
 const resetProxyTracking = async () => {
     await staticProxyDB.updateMany({}, {$set: {TotalFacebookBurnerAccounts: 0}});
     let accounts = await burnerAccountDB.find({});
     for await (const account of accounts){
         await staticProxyDB.updateOne({Proxy: account.Proxy}, {$inc: {TotalFacebookBurnerAccounts: 1}});
+    }
+
+    await burnerAccountDB.updateMany({}, {$set: {ProxyRatio: 0}});
+    let proxies = await staticProxyDB.find({});
+    for await (const proxy of proxies){
+        await burnerAccountDB.updateMany({Proxy: proxy.Proxy}, {$set: {ProxyRatio: proxy.TotalFacebookBurnerAccounts}});
     }
 }
 
@@ -529,24 +509,25 @@ const executeCommand = async (interaction) => {
                 }
             }
             else if(interaction.commandName === "facebook-warm-account" && interaction.user.id === '456168609639694376'){
-                //const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
+                const accountObj = await burnerAccountDB.findOne({Username: interaction.options.getString("email-or-phone")});
                 //const accountObj = await burnerAccountDB.aggregate([{ $match: { LastActive: { $ne: null } } }, { $sample: { size: 1 } }]).next();
-                /*console.log(accountObj.Username);
+                console.log(accountObj.Username);
     
                 //create a new worker
-                new Worker('./warmAccount.js', { workerData:{
+                new Worker('./viewAccount.js', { workerData:{
                     username: accountObj.Username,
                     proxy: accountObj.Proxy,
                     cookies: accountObj.Cookies,
-                    platform: accountObj.Platform
-                }});*/
+                    platform: accountObj.Platform,
+                    channel: interaction.channelId
+                }});
                 
-                new Worker('./viewAccount.js');
+                //new Worker('./viewAccount.js');
 
                 //await warmAccs();
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
-                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000});
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).sort({_id: -1});
                 //const newAccs = await burnerAccountDB.find({Username: 'ocybhfve@znemail.com'});
 
                 const initialAccountSetUp = async (acc) => {
@@ -558,7 +539,7 @@ const executeCommand = async (interaction) => {
                         channel: interaction.channelId,
                     }});
                     
-                    await new Promise(r => setTimeout(r, 200000));
+                    await new Promise(r => setTimeout(r, 70000));
 
                     await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now()}});
                 }
@@ -569,6 +550,45 @@ const executeCommand = async (interaction) => {
 
                 //await burnerAccountDB.updateMany({LastActive: 10000000000000}, {$set: {LastActive: Date.now()}});
                 await Channel.send('finish');
+            }
+            else if(interaction.commandName === "get-dormant-proxies" && interaction.user.id === '456168609639694376'){
+                await resetProxyTracking();
+
+                //get all proxies
+                let proxyArr = await staticProxyDB.find({TotalFacebookBurnerAccounts: 0}).toArray()
+
+                let account50Proxies = (interaction.options.getString("50")).split(' ');
+                let account25Proxies = (interaction.options.getString("25")).split(' ');
+                let account10Proxies = (interaction.options.getString("10")).split(' ');
+                let account50DormantProxies = [];
+                let account25DormantProxies = [];
+                let account10DormantProxies = [];
+
+                //print proxy list
+                for(let x = 0; x < proxyArr.length; x++){
+                    if(account50Proxies.includes(proxyArr[x].Proxy)){
+                        account50DormantProxies.push(proxyArr[x].Proxy);
+                    }else if(account25Proxies.includes(proxyArr[x].Proxy)){
+                        account25DormantProxies.push(proxyArr[x].Proxy);
+                    }else if(account10Proxies.includes(proxyArr[x].Proxy)){
+                        account10DormantProxies.push(proxyArr[x].Proxy);
+                    }
+                }
+
+                console.log("50");
+                for(let i = 0; i < account50DormantProxies.length; i++){
+                    console.log(account50DormantProxies[i]);
+                }
+
+                console.log("\n\n25")
+                for(let i = 0; i < account25DormantProxies.length; i++){
+                    console.log(account25DormantProxies[i]);
+                }
+
+                console.log("\n\n10")
+                for(let i = 0; i < account10DormantProxies.length; i++){
+                    console.log(account10DormantProxies[i]);
+                }
             }
             else if(interaction.commandName === "list"){
                 const taskArray = await taskDB.find({UserId: interaction.user.id});
@@ -687,11 +707,11 @@ const executeCommand = async (interaction) => {
 
                 const accountArray = fileContents.split('\n');
 
-                for(let i = 60; i < accountArray.length; i++){
+                for(let i = 0; i < accountArray.length; i++){
                     const accountInfo = accountArray[i].split('|');
 
                     //collect the cookie array
-                    const decodedCookieString = Buffer.from(accountInfo[3], 'base64').toString('utf-8');
+                    const decodedCookieString = Buffer.from(accountInfo[accountInfo.length - 1], 'base64').toString('utf-8');
                     const cookieArray = JSON.parse(decodedCookieString);
 
                     //collect account user and password string
@@ -711,7 +731,7 @@ const executeCommand = async (interaction) => {
                     const randomMillisecondsWeek = randomWeeks * 7 * 24 * 60 * 60 * 1000;
 
                     //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek)});
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek), ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, TotalWarmingPeriod: randomWeeks});
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1});//, TotalWarmingPeriod: randomWeeks, WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek)
 
                     console.log(email);
                 }
@@ -726,8 +746,12 @@ const executeCommand = async (interaction) => {
                 
                 //insert the new proxies
                 await proxyList.forEach(async (proxy) => {
-                    await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, TotalFacebookBurnerAccounts: 0});
-                    console.log(proxy);
+                    if(await staticProxyDB.findOne({Proxy: proxy}) == null){
+                        await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, TotalFacebookBurnerAccounts: 0});
+                        console.log(proxy);
+                    }else{
+                        console.log("FUCKED");
+                    }
                 })
         
                 Channel.send('finish');
@@ -833,7 +857,7 @@ const executeCommand = async (interaction) => {
 
                         Channel.send("Created " + document.Name);
 
-                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 20000 + 20000)));
+                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 20000 + 40000)));
                     }else{
                         await taskDB.deleteOne({_id: document._id});
                     }
