@@ -563,10 +563,9 @@ const start = async () => {
                     } catch (error) {}
                 }
 
-                await login();
+                //await login();
             }else{
                 await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
-                //!Gotta do something here
                 await mainBrowser.close();
                 mainBrowser = null;
                 parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
@@ -687,10 +686,10 @@ function interval() {
                 //check to make sure distance is correct
                 //!This still won't work :(
                 //!await logPageContent(mainPage);
-                let actualDistance = await mainPage.evaluate(() => {return document.querySelector('.x1xmf6yo > div.x78zum5 > div > span').innerText});
+                /*let actualDistance = await mainPage.evaluate(() => {return document.querySelector('.x1xmf6yo > div.x78zum5 > div > span').innerText});
                 if(!actualDistance.includes(" " + workerData.distance + " ")){
                     await logChannel.send("Distance is WRONG at: " + workerData.name + " Actual value: " + actualDistance + " Expected value: " + workerData.distance);
-                }
+                }*/
             } catch(error) {
                 if(error.message.includes('TargetCloseError')){
                     logChannel.send("Page Closed");
