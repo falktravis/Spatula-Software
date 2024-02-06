@@ -537,23 +537,25 @@ const start = async () => {
 
         //go to the search page
         try {
-            await mainPage.goto(workerData.link, { waitUntil: 'networkidle2' });
+            await mainPage.goto(workerData.link, { waitUntil: 'networkidle2', timeout: 50000});
         } catch (error) {await logChannel.send("Timeout on going to link")}
 
         //update burnerCookies
-        burnerCookies = await mainPage.cookies();
-        //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
-
-        // Detect the current language
-        const language = await mainPage.evaluate(() => document.documentElement.lang);
-        if (language !== 'en') {
-            logChannel.send('Language Wrong: ' + language + " -> " + burnerUsername);
-            startError = true;
-            parentPort.postMessage({action: 'languageWrong', username: burnerUsername});
+        if(startError == false){
+            burnerCookies = await mainPage.cookies();
+            //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
+    
+            // Detect the current language
+            const language = await mainPage.evaluate(() => document.documentElement.lang);
+            if (language !== 'en') {
+                logChannel.send('Language Wrong: ' + language + " -> " + burnerUsername);
+                startError = true;
+                parentPort.postMessage({action: 'languageWrong', username: burnerUsername});
+            }
         }
 
         //make sure the url is correct
-        if(await mainPage.url().split('?')[0] != workerData.link.split('?')[0]){
+        if(await mainPage.url().split('?')[0] != workerData.link.split('?')[0] && startError == false){
             startError = true;
             if(await mainPage.$('[name="login"]') != null || (mainPage.url()).includes('/login/?next')){
                 await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
@@ -625,6 +627,10 @@ const start = async () => {
         }
     }catch(error){
         errorMessage('error with start', error);
+        if(error.includes('Requesting main frame too early!')){
+            await logChannel.send("@everyone the death error.....");
+            process.exit(0);
+        }
     }
 }
 
