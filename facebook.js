@@ -83,7 +83,7 @@ client.on('ready', async () => {
 });
 
 // Add cleanup logic on uncaught exception
-/*process.on('uncaughtException', async (err) => {
+process.on('uncaughtException', async (err) => {
     await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
     if(mainBrowser != null){
         await mainBrowser.close();
@@ -98,7 +98,7 @@ process.on('unhandledRejection', async (reason, promise) => {
         await mainBrowser.close();
     }
     process.exit(1); // Terminate the process
-});*/
+});
 
 //error message send function 
 const errorMessage = (message, error) => {
@@ -629,7 +629,7 @@ const start = async () => {
         errorMessage('error with start', error);
         if(error.includes('Requesting main frame too early!')){
             await logChannel.send("@everyone the death error.....");
-            process.exit(0);
+            process.exit(1);
         }
     }
 }
