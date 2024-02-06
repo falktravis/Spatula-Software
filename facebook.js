@@ -627,7 +627,7 @@ const start = async () => {
         }
     }catch(error){
         errorMessage('error with start', error);
-        if(error.includes('Requesting main frame too early!')){
+        if(error.message.includes('Requesting main frame too early!')){
             await logChannel.send("@everyone the death error.....");
             process.exit(1);
         }
