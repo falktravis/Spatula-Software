@@ -83,7 +83,7 @@ client.on('ready', async () => {
 });
 
 // Add cleanup logic on uncaught exception
-process.on('uncaughtException', async (err) => {
+/*process.on('uncaughtException', async (err) => {
     await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
     if(mainBrowser != null){
         await mainBrowser.close();
@@ -98,7 +98,7 @@ process.on('unhandledRejection', async (reason, promise) => {
         await mainBrowser.close();
     }
     process.exit(1); // Terminate the process
-});
+});*/
 
 //error message send function 
 const errorMessage = (message, error) => {
@@ -628,7 +628,7 @@ const start = async () => {
         errorMessage('error with start', error);
         if(error.message.includes('Requesting main frame too early!')){
             await logChannel.send("@everyone the death error.....");
-            process.exit(1);
+            //process.exit(1);
         }
     }
 }
@@ -676,7 +676,7 @@ function interval() {
         const resultsRefresh = async () => {
             try {
                 //change link for results change
-                await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'domcontentloaded', timeout: 60000});
+                await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'networkidle2', timeout: 60000});
                 console.log(mainPage.url());
         
                 //if the listings dont exist on the page, refresh
@@ -693,7 +693,6 @@ function interval() {
 
                 //check to make sure distance is correct
                 //!This still won't work :(
-                //!await logPageContent(mainPage);
                 /*let actualDistance = await mainPage.evaluate(() => {return document.querySelector('.x1xmf6yo > div.x78zum5 > div > span').innerText});
                 if(!actualDistance.includes(" " + workerData.distance + " ")){
                     await logChannel.send("Distance is WRONG at: " + workerData.name + " Actual value: " + actualDistance + " Expected value: " + workerData.distance);

@@ -35,17 +35,15 @@ let taskDB;
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
         //mess with database
-        /*await resetProxyTracking();
-        let accs = await burnerAccountDB.find({LastActive: 10000000000000}).toArray();
-        for(const acc of accs){
-            let proxy = await getStaticFacebookBurnerProxy();
-            await burnerAccountDB.updateOne({_id: acc._id}, {$set: {Proxy: proxy.Proxy}});
-        }
 
-        await resetProxyTracking();
-        await burnerAccountDB.updateMany({LastActive: 10000000000000}, {$set: {LastActive: 1}});
-        await burnerAccountDB.updateMany({LastActive: 1}, {$set: {Initiated: false}});
-        console.log('finish')*/
+        //**reset Next Warming
+        /*let accs = await burnerAccountDB.find({}).toArray();
+        const currentDate = new Date();
+        for(const acc of accs){
+            const randomMillisecondsDay = Math.floor(Math.random() * (4 * 24 * 60 * 60 * 1000) + 60 * 1000);
+            await burnerAccountDB.updateOne({_id: acc._id}, {NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay)});
+        }*/
+
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -279,7 +277,7 @@ const scanDatabase = async () => {
 const warmAccs = async() => {  
     //**Over the next (almost) 24 hours calculate proper intervals and run warming script for all necessary accs */
     try {
-        const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: new Date()}}).toArray();
+        const warmingAccounts = await burnerAccountDB.find({LastActive: {$nin: [10000000000000, 10000000000001]}, NextWarming: {$lte: new Date()}}).toArray();
         for(let i = 0; i < warmingAccounts.length; i++){
             await warmingLogChannel.send('new warmer: ' + warmingAccounts[i].Username);
             //create a new worker
@@ -297,23 +295,26 @@ const warmAccs = async() => {
                 }
             }); 
  
+            const currentDate = new Date();
+            let randomMilliseconds;
+
             //check for warming period
             if(warmingAccounts[i].WarmingPeriodEnd != null){
                 if(warmingAccounts[i].WarmingPeriodEnd < new Date()){
                     await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$unset: {WarmingPeriodEnd: 1}});
                 }
-            }
 
-            // Calculate a random number of milliseconds between 2 and 4 days
-            const currentDate = new Date();
-            const randomMilliseconds = Math.floor(Math.random() * (2 * 24 * 60 * 60 * 1000) + 2 * 24 * 60 * 60 * 1000);
-            console.log(randomMilliseconds);
+                // Random number of milliseconds between 5 and 7 days
+                randomMilliseconds = Math.floor(Math.random() * (2 * 24 * 60 * 60 * 1000) + 5 * 24 * 60 * 60 * 1000);
+            }else{
+                // Random number of milliseconds between 2 and 4 days
+                randomMilliseconds = Math.floor(Math.random() * (2 * 24 * 60 * 60 * 1000) + 2 * 24 * 60 * 60 * 1000);
+            }
 
             await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$set: {NextWarming: new Date(currentDate.getTime() + randomMilliseconds)}});
 
             //wait for a calculated interval
             const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
-            console.log(randomInterval);
             await new Promise(r => setTimeout(r, randomInterval));
         }
     } catch (error) {
@@ -707,6 +708,16 @@ const executeCommand = async (interaction) => {
 
                 const accountArray = fileContents.split('\n');
 
+                /**
+                 * 100 Accounts
+                 * 50 with no warming period
+                 * 30 with a 1 month warming period
+                 * 20 with a 2 month warming period
+                 * 
+                 * 
+                 * Please initiate all these....
+                 * 150 accs....
+                 */
                 for(let i = 0; i < accountArray.length; i++){
                     const accountInfo = accountArray[i].split('|');
 
@@ -727,15 +738,16 @@ const executeCommand = async (interaction) => {
                     //get warming date
                     const currentDate = new Date();
                     const randomMillisecondsDay = Math.floor(Math.random() * (2 * 24 * 60 * 60 * 1000) + 60 * 1000);
-                    const randomWeeks = Math.floor(Math.random() * 2 + 3);
+                    const randomWeeks = Math.floor(Math.random() * 2 + 7);
                     const randomMillisecondsWeek = randomWeeks * 7 * 24 * 60 * 60 * 1000;
 
                     //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek)});
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1});//, TotalWarmingPeriod: randomWeeks, WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek)
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, TotalWarmingPeriod: randomWeeks, WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek)});//
 
                     console.log(email);
                 }
         
+                //await resetProxyTracking();
                 Channel.send('finish');
             }else if(interaction.commandName === 'add-burner-proxies' && interaction.user.id === '456168609639694376'){
         
@@ -750,7 +762,7 @@ const executeCommand = async (interaction) => {
                         await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, TotalFacebookBurnerAccounts: 0});
                         console.log(proxy);
                     }else{
-                        console.log("FUCKED");
+                        console.log("PROXY ALREADY PRESENT");
                     }
                 })
         
@@ -857,7 +869,7 @@ const executeCommand = async (interaction) => {
 
                         Channel.send("Created " + document.Name);
 
-                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 20000 + 40000)));
+                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10000 + 55000)));
                     }else{
                         await taskDB.deleteOne({_id: document._id});
                     }

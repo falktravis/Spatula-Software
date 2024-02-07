@@ -29,10 +29,10 @@ const platformConverter = (platform) => {
 let mainChannel;
 client.on('ready', async () => {
     try {
-        mainChannel = client.channels.cache.get('1111129387669127191');
+        /*mainChannel = client.channels.cache.get(workerData.channel);
         if(mainChannel == null){
-            mainChannel = await client.channels.fetch('1111129387669127191');
-        }
+            mainChannel = await client.channels.fetch(workerData.channel);
+        }*/
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -64,28 +64,20 @@ const warmAccount = async () => {
         warmingPage.setViewport({ width: 1366, height: 768 });
 
         //Set cookies in browser
-        //await warmingPage.setCookie(...workerData.cookies);
+        await warmingPage.setCookie(...workerData.cookies);
 
         await warmingPage.setRequestInterception(true);
         warmingPage.on('request', async request => {
             const resource = request.resourceType();
-            if(mainPageInitiate){
-                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
+            if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
+                request.abort();
             }else{
-                if(resource != 'document'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
+                request.continue();
             }
         });
 
         //go to the search page
-        await warmingPage.goto('https://www.facebook.com/login', { waitUntil: 'domcontentloaded' });
+        await warmingPage.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
 
         await new Promise(r => setTimeout(r, 25000));
 
