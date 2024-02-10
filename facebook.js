@@ -82,8 +82,13 @@ client.on('ready', async () => {
     }
 });
 
+//Sigterm testing, idek
+process.on('SIGTERM', async (err) => {
+    await logChannel.send("sig term: " + workerData.name);
+});
+
 // Add cleanup logic on uncaught exception
-/*process.on('uncaughtException', async (err) => {
+process.on('uncaughtException', async (err) => {
     await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
     if(mainBrowser != null){
         await mainBrowser.close();
@@ -98,7 +103,7 @@ process.on('unhandledRejection', async (reason, promise) => {
         await mainBrowser.close();
     }
     process.exit(1); // Terminate the process
-});*/
+});
 
 //error message send function 
 const errorMessage = (message, error) => {
@@ -285,7 +290,6 @@ const login = async () => {
         }else{
             //update burnerCookies
             burnerCookies = await mainPage.cookies();
-            //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
         }
     } catch (error) {
         startError = true;
@@ -543,7 +547,6 @@ const start = async () => {
         //update burnerCookies
         if(startError == false){
             burnerCookies = await mainPage.cookies();
-            //burnerCookies = burnerCookies.filter(cookie => cookie.name === 'xs' || cookie.name === 'datr' || cookie.name === 'sb' || cookie.name === 'c_user');
     
             // Detect the current language
             const language = await mainPage.evaluate(() => document.documentElement.lang);
@@ -626,10 +629,6 @@ const start = async () => {
         mainPageInitiate = false;
     }catch(error){
         errorMessage('error with start', error);
-        if(error.message.includes('Requesting main frame too early!')){
-            await logChannel.send("@everyone the death error.....");
-            //process.exit(1);
-        }
     }
 }
 
