@@ -15,6 +15,10 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 //for fetching pics from the database
 const fetch = require('node-fetch');
 const fs = require('fs/promises');
+//manipulating metadata
+const exiftool = require('node-exiftool');
+const exiftoolBin = require('dist-exiftool');
+const ep = new exiftool.ExiftoolProcess(exiftoolBin);
 
 //init chatgpt
 const OpenAI = require("openai");
@@ -38,6 +42,140 @@ const platformConverter = (platform) => {
     }else if(platform === 'macOS'){
         return 'Macintosh; Intel Mac OS X 10_15_7';
     }
+}
+
+const generateMetaData = () => {
+    const date = new Date(Date.now() - Math.floor(Math.random() * 86400000 * 365));
+    const model = Math.floor(Math.random() * 2) + 13;
+    // Add more fields as needed
+    return{
+        'Make': 'Apple',
+        'Model': `iPhone ${model}`,
+        'Lens': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
+        'FocalLength': '5.7 mm',
+        'Aperture': (Math.random() * (2.8 - 1) + 1).toFixed(1),
+        'Exposure': `1/${Math.floor(Math.random() * (500 - 1) + 1)}`,
+        'ISO': 160,
+        'Flash': 'Auto, Did not fire',
+        'AccelerationVector': '-1.002320409 0.008560923856 0.04708275201',
+        'AuxiliaryImageType': 'urn:com:apple:photo:2020:aux:hdrgainmap',
+        'AverageFrameRate': 0,
+        'BitDepthChroma': 8,
+        'BitDepthLuma': 8,
+        'BlueMatrixColumn': '0.1571 0.06657 0.78407',
+        'BrightnessValue': Math.random() * 5,
+        'CMMFlags': 'Not Embedded, Independent',
+        'ChromaFormat': '4:2:0',
+        'ChromaticAdaptation': '1.04788 0.02292 -0.0502 0.02959 0.99048 -0.01706 -0.00923 0.01508 0.75168',
+        'CircleOfConfusion': '0.002 mm',
+        'ColorSpace': 'Uncalibrated',
+        'ColorSpaceData': 'RGB',
+        'CompatibleBrands': ['mif1', 'MiHE', 'MiPr', 'miaf', 'MiHB', 'heic'],
+        'CompositeImage': 'General Composite Image',
+        'ConnectionSpaceIlluminant': '0.9642 1 0.82491',
+        'ConstantFrameRate': 'Unknown',
+        'ConstraintIndicatorFlags': '176 0 0 0 0 0',
+        'CreateDate': date,
+        'DateTimeOriginal': date,
+        'DeviceAttributes': 'Reflective, Glossy, Positive, Color',
+        'DeviceManufacturer': 'Apple Computer Inc.',
+        'DigitalZoomRatio': 3.43246311,
+        'ExifByteOrder': 'Big-endian (Motorola, MM)',
+        'ExifImageHeight': 3024,
+        'ExifImageWidth': 4032,
+        'ExifVersion': '0232',
+        'ExposureCompensation': 0,
+        'ExposureMode': 'Auto',
+        'ExposureProgram': 'Program AE',
+        'FNumber': 1.5,
+        'FOV': '23.1 deg',
+        'FileAccessDate': '2024-02-13 19:25:23 +0000',
+        'FileInodeChangeDate': '2024-02-13 19:25:23 +0000',
+        'FileModifyDate': '2024-02-13 19:25:23 +0000',
+        'FilePermissions': 'prw-------',
+        'FileSize': '0 bytes',
+        'FileType': 'HEIC',
+        'FileTypeExtension': 'heic',
+        'FocalLength35efl': '5.7 mm (35 mm equivalent: 88.0 mm)',
+        'FocalLengthIn35mmFormat': '88 mm',
+        'FocusDistanceRange': '0.15 - 0.46 m',
+        'GenProfileCompatibilityFlags': 'Main Still Picture, Main 10, Main',
+        'GeneralLevelIDC': '90 (level 3.0)',
+        'GeneralProfileIDC': 'Main Still Picture',
+        'GeneralProfileSpace': 'Conforming',
+        'GeneralTierFlag': 'Main Tier',
+        'GreenMatrixColumn': '0.29198 0.69225 0.04189',
+        'HEVCConfigurationVersion': 1,
+        'HandlerType': 'Picture',
+        'HostComputer': `iPhone ${model}`,
+        'HyperfocalDistance': '11.13 m',
+        'ImageHeight': 3024,
+        'ImagePixelDepth': 8,
+        'ImageSize': '4032x3024',
+        'ImageSpatialExtent': '4032x3024',
+        'ImageWidth': 4032,
+        'LensID': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
+        'LensInfo': '1.539999962-5.7mm f/1.5-2.4',
+        'LensMake': 'Apple',
+        'LensModel': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
+        'LightValue': 6.1,
+        'MIMEType': 'image/heic',
+        'MajorBrand': 'High Efficiency Image Format HEVC still image (.HEIC)',
+        'MediaDataOffset': 3752,
+        'MediaDataSize': 884274,
+        'MediaGroupUUID': 'EE718457-727B-4B90-B1E9-5518B8CB8CBF',
+        'MediaWhitePoint': '0.96419 1 0.82489',
+        'Megapixels': 12.2,
+        'MetaImageSize': '4032x3024',
+        'MeteringMode': 'Multi-segment',
+        'MinSpatialSegmentationIDC': 0,
+        'MinorVersion': '0.0.0',
+        'ModifyDate': date,
+        'NumTemporalLayers': 1,
+        'OffsetTime': '-05:00',
+        'OffsetTimeDigitized': '-05:00',
+        'OffsetTimeOriginal': '-05:00',
+        'Orientation': 'Horizontal (normal)',
+        'ParallelismType': 0,
+        'PrimaryItemReference': 49,
+        'PrimaryPlatform': 'Apple Computer Inc.',
+        'ProfileCMMType': 'Apple Computer Inc.',
+        'ProfileClass': 'Display Device Profile',
+        'ProfileConnectionSpace': 'XYZ',
+        'ProfileCopyright': 'Copyright Apple Inc., 2022',
+        'ProfileCreator': 'Apple Computer Inc.',
+        'ProfileDateTime': '2022-01-01 00:00:00 +0000',
+        'ProfileDescription': 'Display P3',
+        'ProfileFileSignature': 'acsp',
+        'ProfileID': 'ecfda38e388547c36db4bd4f7ada182f',
+        'ProfileVersion': '4.0.0',
+        'RedMatrixColumn': '0.51512 0.2412 -0.00105',
+        'RenderingIntent': 'Perceptual',
+        'ResolutionUnit': 'inches',
+        'Rotation': 0,
+        'RunTimeEpoch': 0,
+        'RunTimeFlags': 'Valid',
+        'RunTimeScale': 1000000000,
+        'RunTimeSincePowerUp': '16 days 3:59:30',
+        'RunTimeValue': 1396770404182625,
+        'ScaleFactor35efl': 15.4,
+        'SceneType': 'Directly photographed',
+        'SensingMethod': 'One-chip color area',
+        'ShutterSpeed': '1/50',
+        'ShutterSpeedValue': '1/50',
+        'Software': '17.2.1',
+        'SubSecCreateDate': date,
+        'SubSecDateTimeOriginal': date,
+        'SubSecModifyDate': date,
+        'SubSecTimeDigitized': 572,
+        'SubSecTimeOriginal': 572,
+        'SubjectArea': '2009 1502 2321 1317',
+        'TemporalIDNested': 'No',
+        'WhiteBalance': 'Auto',
+        'XMPToolkit': 'XMP Core 6.0.0',
+        'XResolution': 72,
+        'YResolution': 72
+    };
 }
 
 let mainChannel;
@@ -249,6 +387,23 @@ const fillProfile = async() => {
         await languagePage.waitForSelector('[aria-label="Add profile picture"]');
         await pause(1);
 
+        /**
+         * get hair color, ethnicity from an array
+         * Store each choice together, ie: choice 1-4 are blonde, 5-7 dark hair, 8-10 dark skin
+         * 
+         * other randomizers
+         * eye color, hair length, curly/wavy/straight hair, 
+         * */
+        let ethnicity = ['Russian', 'French', 'Spanish', 'German', 'Swedish', 'Polish', 'American', 'French',  'Asian American', 'African American', 'Indian American'];
+        let hairColor = ['blonde', 'brunette', 'black hair'];
+        let charecterRandomizer = Math.floor(Math.random() * ethnicity.length);
+        if(charecterRandomizer > 7){
+            hairColor = hairColor[2];
+        }else{
+            hairColor = hairColor[Math.floor(Math.random() * hairColor.length)]
+        }
+        ethnicity = ethnicity[charecterRandomizer];
+
         //**Profile pic */
         if(await languagePage.evaluate(() => {return document.querySelector(`[aria-label="Add profile picture"]`).innerText}) == 'Add'){
             await languageCursor.click('[aria-label="Add profile picture"]');
@@ -256,6 +411,11 @@ const fillProfile = async() => {
             await pause(1);
             let fileInput = await languagePage.$('[role="dialog"] input[type="file"]');
     
+            //!Generate a prompt
+            //age = Math.floor(Math.random() * 10 + 25)
+
+            //!Rendernet.ai
+            //1:1 aspect ratio
             let response = await fetch('https://api.unsplash.com/photos/random?query=family', {
                 headers: {
                     'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
@@ -266,8 +426,15 @@ const fillProfile = async() => {
             let buffer = await photo.buffer();
             let destination = `./${data.id}.jpg`;
             await fs.writeFile(destination, buffer);
+
+            //Overwrite MetaData
+            await ep.open();
+            const metadata = generateMetaData();
+            await ep.writeMetadata(destination, metadata, ['overwrite_original']);
+            await ep.close();
+
+            //upload file and save
             await fileInput.uploadFile(destination);
-            
             await languagePage.waitForSelector('[aria-label="Save"]');
             await pause(1);
             await languageCursor.click('[aria-label="Save"]');
@@ -287,6 +454,7 @@ const fillProfile = async() => {
             await pause(1);
             fileInput = await languagePage.$('[role="dialog"] input[type="file"]');
     
+            //!We might have to find a different way to get this
             response = await fetch('https://api.unsplash.com/photos/random?query=nature', {
                 headers: {
                     'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
@@ -297,9 +465,15 @@ const fillProfile = async() => {
             buffer = await photo.buffer();
             destination = `./${data.id}.jpg`;
             await fs.writeFile(destination, buffer);
-            await fileInput.uploadFile(destination);
+
+            //Overwrite MetaData
+            await ep.open();
+            const metadata = generateMetaData();
+            await ep.writeMetadata(destination, metadata, ['overwrite_original']);
+            await ep.close();
     
-            //await upload
+            //upload and save file
+            await fileInput.uploadFile(destination);
             await languagePage.waitForSelector('[aria-label="Save"]'); // Adjust the timeout as needed
             await pause(1);
             await languageCursor.click('[aria-label="Save"]');
@@ -312,9 +486,21 @@ const fillProfile = async() => {
         if(await languagePage.$(`[aria-label="Create avatar"]`) != null){
             await languageCursor.click('[aria-label="Create avatar"]');
             await languagePage.waitForSelector('[aria-label="Choice in Avatar Editor"] > .x1ypdohk');
-            const avatars = await languagePage.$$('[aria-label="Choice in Avatar Editor"]');
             await pause(2);
-            await languageCursor.click(avatars[Math.floor(Math.random() * avatars.length)]);//!Who tf knows if this will work
+
+            //make avatar choice based on charecter design
+            let avatarChoice;
+            if(charecterRandomizer > 8){//dark skin
+                avatarChoice = '15';
+            }else{//base of hair color
+                if(hairColor == 'blonde'){
+                    avatarChoice = '7';
+                }else{
+                    avatarChoice = '29'
+                }
+            }
+
+            await languageCursor.click(`[aria-label="Choice in Avatar Editor"]:nth-child(${avatarChoice})`);
             await pause(2);
             await languageCursor.click('.xozqiw3.xcfux6l');
             await languagePage.waitForSelector('.x6s0dn4.xwnonoy.x1npaq5j.x1c83p5e.x1enjb0b.x199158v.x14ctfv.x78zum5.x5yr21d.xl56j7k.x1199peq.xh8yej3.xbryuvx.x1mq3mr6');

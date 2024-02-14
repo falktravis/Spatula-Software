@@ -288,6 +288,7 @@ const login = async () => {
             await logChannel.send("Ban on Re-login: " + errorMsg);
             parentPort.postMessage({action: 'ban', username: burnerUsername});
         }else{
+            await logChannel.send("@everyone login success???")
             //update burnerCookies
             burnerCookies = await mainPage.cookies();
         }
@@ -480,15 +481,15 @@ const start = async () => {
                     //message the main script to delete the burner account
                     parentPort.postMessage({action: 'ban', username: burnerUsername});
                 }else if(redirectURL.includes('/login/?next')){
-                    /*try{
+                    try{
                         await mainPage.waitForSelector('[name="email"]');
                     }catch(error){}
 
-                    await login();*/
-                    logChannel.send("Rotate Account Instead Of Login: " + burnerUsername);
+                    await login();
+                    /*logChannel.send("Rotate Account Instead Of Login: " + burnerUsername);
                     await mainBrowser.close();
                     mainBrowser = null;
-                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
+                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});*/
                 }else{
                     //message the main script to get a new accounts
                     logChannel.send("Rotate Account: " + burnerUsername);
@@ -509,18 +510,10 @@ const start = async () => {
                     request.continue();
                 }
             }else{
-                if((workerData.link).includes('propertyrentals')){
-                    if(resource != 'document' && resource != 'script' && resource != 'stylesheet' && resource != 'other'){
-                        request.abort();
-                    }else{
-                        request.continue();
-                    }
+                if(resource != 'document'){
+                    request.abort();
                 }else{
-                    if(resource != 'document'){
-                        request.abort();
-                    }else{
-                        request.continue();
-                    }
+                    request.continue();
                 }
             }
         });

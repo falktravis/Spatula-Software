@@ -44,6 +44,7 @@ let taskDB;
             await burnerAccountDB.updateOne({_id: acc._id}, {NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay)});
         }*/
 
+        await burnerAccountDB.updateMany({LastActive: 10000000000000}, {$set: {LastActive: Date.now()}});
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -400,60 +401,64 @@ const executeCommand = async (interaction) => {
                 if(users.has(interaction.user.id)){
                     if(interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
                         if(interaction.options.getString("link").includes("maxPrice")){
-                            //compare with db total task count
-                            const userObj = await userDB.findOne({UserId: interaction.user.id});
+                            if(interaction.options.getString("link").includes("propertyrentals")){
+                                //compare with db total task count
+                                const userObj = await userDB.findOne({UserId: interaction.user.id});
 
-                            if(users.get(interaction.user.id).taskCount < userObj.ConcurrentTasks){
-                                //get user
-                                const user = users.get(interaction.user.id);
+                                if(users.get(interaction.user.id).taskCount < userObj.ConcurrentTasks){
+                                    //get user
+                                    const user = users.get(interaction.user.id);
 
-                                if(!user.facebook.has(interaction.options.getString("name"))){
-                                    if(userObj.MessageAccount != null || interaction.options.getNumber("message-type") == 3){
+                                    if(!user.facebook.has(interaction.options.getString("name"))){
+                                        if(userObj.MessageAccount != null || interaction.options.getNumber("message-type") == 3){
 
-                                        //get max price from link 
-                                        let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
-                                        maxPrice = parseInt(maxPrice[1]);
+                                            //get max price from link 
+                                            let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
+                                            maxPrice = parseInt(maxPrice[1]);
 
-                                        //increase the worker count
-                                        user.taskCount++;
+                                            //increase the worker count
+                                            user.taskCount++;
 
-                                        //burner account assignment
-                                        const burnerAccountObj = await getFacebookAccount();
-                                        //const burnerAccountObj = await burnerAccountDB.findOne({Username: ""});
+                                            //burner account assignment
+                                            const burnerAccountObj = await getFacebookAccount();
+                                            //const burnerAccountObj = await burnerAccountDB.findOne({Username: ""});
 
-                                        //set the task in db
-                                        await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance")});
+                                            //set the task in db
+                                            await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance")});
 
-                                        //create a new worker and add it to the map
-                                        user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
-                                            name: interaction.options.getString("name"),
-                                            link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
-                                            messageType: interaction.options.getNumber("message-type"),
-                                            message: interaction.options.getString("message"),
-                                            burnerUsername: burnerAccountObj.Username,
-                                            burnerPassword: burnerAccountObj.Password,
-                                            burnerProxy: burnerAccountObj.Proxy,
-                                            messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
-                                            burnerCookies: burnerAccountObj.Cookies,
-                                            messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
-                                            burnerPlatform: burnerAccountObj.Platform,
-                                            messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
-                                            maxPrice: maxPrice,
-                                            distance: interaction.options.getNumber("distance"),
-                                            channel: interaction.channelId,
-                                        }}));
+                                            //create a new worker and add it to the map
+                                            user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
+                                                name: interaction.options.getString("name"),
+                                                link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
+                                                messageType: interaction.options.getNumber("message-type"),
+                                                message: interaction.options.getString("message"),
+                                                burnerUsername: burnerAccountObj.Username,
+                                                burnerPassword: burnerAccountObj.Password,
+                                                burnerProxy: burnerAccountObj.Proxy,
+                                                messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
+                                                burnerCookies: burnerAccountObj.Cookies,
+                                                messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
+                                                burnerPlatform: burnerAccountObj.Platform,
+                                                messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
+                                                maxPrice: maxPrice,
+                                                distance: interaction.options.getNumber("distance"),
+                                                channel: interaction.channelId,
+                                            }}));
 
-                                        user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id)); 
+                                            user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id)); 
 
-                                        Channel.send("Created " + interaction.options.getString("name"));
-                                    } else{
-                                        Channel.send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
+                                            Channel.send("Created " + interaction.options.getString("name"));
+                                        } else{
+                                            Channel.send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
+                                        }
+                                    }else{
+                                        Channel.send("A task with this name already exists, restart the task with a new name.");
                                     }
                                 }else{
-                                    Channel.send("A task with this name already exists, restart the task with a new name.");
+                                    Channel.send("You have reached your task limit for your plan, upgrade to make more.");
                                 }
                             }else{
-                                Channel.send("You have reached your task limit for your plan, upgrade to make more.");
+                                Channel.send("You may not use a link in the property rentals category. Open a ticket for an explanation.");
                             }
                         }else{
                             Channel.send("Your link must include a max price");
@@ -528,7 +533,8 @@ const executeCommand = async (interaction) => {
                 //await warmAccs();
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
-                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).sort({_id: -1});
+                const newAccs = await burnerAccountDB.find({Initiated: false, LastActive: {$ne: null}}).sort({_id: -1}).limit(10);
+                console.log(newAccs);
                 //const newAccs = await burnerAccountDB.find({Username: 'ocybhfve@znemail.com'});
 
                 const initialAccountSetUp = async (acc) => {
@@ -542,7 +548,8 @@ const executeCommand = async (interaction) => {
                     
                     await new Promise(r => setTimeout(r, 70000));
 
-                    await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now()}});
+                    //await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now()}});
+                    await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {Initiated: true}});
                 }
 
                 for await(const acc of newAccs){
@@ -742,7 +749,7 @@ const executeCommand = async (interaction) => {
                     const randomMillisecondsWeek = randomWeeks * 7 * 24 * 60 * 60 * 1000;
 
                     //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek)});
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, TotalWarmingPeriod: randomWeeks, WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek)});//
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: Date.now(), Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, AccGroup: 2});//
 
                     console.log(email);
                 }

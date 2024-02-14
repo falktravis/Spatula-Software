@@ -339,10 +339,7 @@ const scrollFeed = async() => {
                     //check what kind of container it is
                     if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="hide post"]`) != null){//post
                         await logChannel.send('post');
-                        if(randomChance(0.75)){
-                            await logChannel.send('it hits');
-                            await interactWithPost(i);
-                        }
+                        await interactWithPost(i);
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"]`) != null){//!group suggestions
                         await logChannel.send('group suggestions');
                         /*if(randomChance(0.10)){
@@ -353,16 +350,14 @@ const scrollFeed = async() => {
                         await logChannel.send('reels');
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="People you may know"]`) != null){//Friend Suggestions
                         await logChannel.send('Friend Suggestions');
-                        if(randomChance(0.30)){
+                        /*if(randomChance(0.30)){
                             await logChannel.send('it hits');
                             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="People you may know"] > div > div > :nth-child(${Math.floor(Math.random() * 2 + 2)}) [aria-label="Add friend"]`);
-                        }
+                        }*/
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Friend Requests"]`) != null){//Friend Requests
                         await logChannel.send('Friend Requests');
-                        if(randomChance(0.70)){
-                            await logChannel.send('it hits');
-                            await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Friend Requests"] > div > div > :nth-child(${Math.floor(Math.random() * 2 + 2)}) [aria-label="Add friend"]`);//!Fix this (Nothing necessarily wrong I just can't find this component anymore)
-                        }
+                        //TODO: Find this component and fix, loop through each request and very high random chance to add
+                        await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Friend Requests"] > div > div > :nth-child(${Math.floor(Math.random() * 2 + 2)}) [aria-label="Add friend"]`);
                     }else{
                         await logChannel.send("Non-Identified Container");
                     }
@@ -386,7 +381,7 @@ const interactWithPost = async(childNum) => {
     try {
 
         //like
-        if(randomChance(0.50)){
+        if(randomChance(0.15)){
             await logChannel.send('like');
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) [aria-label="Like"]`);
             await pause(2);
@@ -408,7 +403,7 @@ const interactWithPost = async(childNum) => {
         await logChannel.send(numComments);
 
         //interact with comments, if there are more than two(only 1 gets rid of the comment popup)
-        if(randomChance(0.20) && numComments > 2){
+        if(randomChance(0.15) && numComments > 2){
             await logChannel.send('interact with comments');
             //click comments button
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`);
@@ -447,7 +442,7 @@ const interactWithPost = async(childNum) => {
 
         //comment
         //**Posts must have at least (5) comments, and readable text to be used
-        if(randomChance(0.15) && numComments > 6 && await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x9f619 > div > div > div > div > div:nth-child(3) > :nth-child(1) .x78zum5`) != null){
+        if(randomChance(0.10) && numComments > 6 && await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x9f619 > div > div > div > div > div:nth-child(3) > :nth-child(1) .x78zum5`) != null){
             await logChannel.send('comment');
             //Use chatgpt on the post to generate an accurate comment.
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`);
@@ -488,16 +483,16 @@ const interactWithPost = async(childNum) => {
         }
 
         //If post is a fan page(Whatever it means to just be a public page), randomize value to follow it
-        if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 span.x1n0sxbx`) != null && randomChance(0.20)){
-            await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 span.x1n0sxbx`);
+        if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 > span > div > span`) != null && randomChance(0.15)){
+            await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 > span > div > span`);
         }
         
         //If post is from a recommended group, randomize value to follow
-        if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) span.x3nfvp2 .x1fey0fg`) != null && randomChance(0.05)){
+        /*if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) span.x3nfvp2 .x1fey0fg`) != null && randomChance(0.05)){
             await logChannel.send('join group');
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) span.x3nfvp2 .x1fey0fg`);
             await pause(2);
-        }
+        }*/
 
         //Share opportunity
         if(randomChance(0.05)){
@@ -675,7 +670,7 @@ const changeProfilePic = async() => {
 (async () => {
     try {
         if(await start()){
-            let taskArray = [() => addFriend(0.1), () => createPost(0.75), scrollFeed, changeProfilePic];// () => joinGroup(0.1),
+            let taskArray = [() => addFriend(0.1), () => createPost(0.75), scrollFeed];//, () => joinGroup(0.1), changeProfilePic
             for (let i = taskArray.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [taskArray[i], taskArray[j]] = [taskArray[j], taskArray[i]];
