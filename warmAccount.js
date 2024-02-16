@@ -612,65 +612,11 @@ const createPost = async(chance) => {
     }
 }
 
-//**Works */
-const changeProfilePic = async() => {
-    try {
-        console.log(await warmingPage.evaluate(() => {return document.querySelector('[aria-label="Your profile"] image').href.baseVal}));
-        //get a pic from some api with peoples faces and change pic
-        if(randomChance(0.02) || (await warmingPage.evaluate(() => {return document.querySelector('[aria-label="Your profile"] image').href.baseVal})).includes('143086968_2856368904622192_1959732218791162458')){
-
-            // Navigate to the account settings page
-            await warmingCursor.click('[aria-label="Your profile"]');
-            await pause(1);
-            await warmingCursor.click('[href="/me/"]');
-            await warmingPage.waitForSelector('[aria-label="Edit profile"]');
-            await pause(2);
-        
-            // Upload the photo (assuming there's an input field for it)
-            await warmingCursor.click('[aria-label="Edit profile"]');
-            await warmingPage.waitForSelector('[aria-label="Add profile picture"]');
-            await pause(1);
-            await warmingCursor.click('[aria-label="Add profile picture"]');
-            await warmingPage.waitForSelector('[role="dialog"] input[type="file"]');
-            await pause(1);
-            const fileInput = await warmingPage.$('[role="dialog"] input[type="file"]');
-
-            const response = await fetch('https://api.unsplash.com/photos/random?query=family', {
-                headers: {
-                    'Authorization': `Client-ID 7PvN13wlYr41F2_p7FAv_yGoCIdJzUKPNE2NDkoaApQ`
-                }
-            });
-            const data = await response.json();
-            const photo = await fetch(data.urls.full);
-            const buffer = await photo.buffer();
-            const destination = `./${data.id}.jpg`;
-            await fs.writeFile(destination, buffer);
-            await fileInput.uploadFile(destination);
-
-            //await upload
-            await warmingPage.waitForSelector('[aria-label="Save"]'); // Adjust the timeout as needed
-            await warmingCursor.click('[aria-label="Save"]');
-
-            await fs.unlink(destination);
-
-            await pause(1);
-            await warmingCursor.click('[href="/"]');
-        }
-    } catch (error) {
-        await errorMessage('Error changing profile pic', error);
-        await logPageContent(warmingPage);
-
-        //navigate back to the home page for the next tasks
-        await pause(2);
-        await warmingCursor.click('[href="/"]');
-    }
-}
-
 //main function
 (async () => {
     try {
         if(await start()){
-            let taskArray = [() => addFriend(0.1), () => createPost(0.75), scrollFeed];//, () => joinGroup(0.1), changeProfilePic
+            let taskArray = [() => addFriend(0.1), () => createPost(0.75), scrollFeed];//, () => joinGroup(0.1)
             for (let i = taskArray.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [taskArray[i], taskArray[j]] = [taskArray[j], taskArray[i]];

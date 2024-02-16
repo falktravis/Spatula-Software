@@ -47,26 +47,31 @@ const warmAccount = async () => {
     try{
         warmingBrowser = await puppeteer.launch({
             headless: false,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]//
+            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`]//, `--proxy-server=${workerData.proxy}`
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
+
+        //await warmingPage.authenticate({'username':'JSDBA', 'password':'71D18GYF'});
 
         //change http headers
         warmingPage.setExtraHTTPHeaders({
             'Referer': 'https://www.google.com',//https://www.facebook.com/login
             'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
+            //'SEC-CH-UA-ARCH': ,
+            //'SEC-CH-UA-FULL-VERSION': ,
             'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-            'Sec-Ch-Ua-Platform': workerData.platform
+            'Sec-Ch-Ua-Platform': workerData.platform,
+            //'SEC-CH-UA-PLATFORM-VERSION': '15.0.0'
         });
 
         //change the viewport
         warmingPage.setViewport({ width: 1366, height: 768 });
 
         //Set cookies in browser
-        await warmingPage.setCookie(...workerData.cookies);
+        //await warmingPage.setCookie(...workerData.cookies);
 
-        await warmingPage.setRequestInterception(true);
+        /*await warmingPage.setRequestInterception(true);
         warmingPage.on('request', async request => {
             const resource = request.resourceType();
             if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
@@ -74,14 +79,14 @@ const warmAccount = async () => {
             }else{
                 request.continue();
             }
-        });
+        });*/
 
         //go to the search page
-        await warmingPage.goto('https://www.facebook.com/', { waitUntil: 'domcontentloaded' });
+        await warmingPage.goto('https://www.whatismybrowser.com/detect/what-http-headers-is-my-browser-sending', { waitUntil: 'domcontentloaded' });
 
-        await new Promise(r => setTimeout(r, 25000));
+        //await new Promise(r => setTimeout(r, 25000));
 
-        console.log(await warmingPage.cookies());
+        //console.log(await warmingPage.cookies());
     }catch(error){
         errorMessage('Error with page initiation', error);
     }

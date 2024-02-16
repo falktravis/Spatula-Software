@@ -465,37 +465,38 @@ const start = async () => {
             //detect redirection
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
                 const redirectURL = response.headers()['location'];
-                console.log(`Redirected to: ${redirectURL}`);
-                logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
-
-                startError = true;
-
-                if(redirectURL.includes('privacy/consent/lgpd_migrated')){
-                    //end the task and message myself containing the account name
-                    logChannel.send('Account lgpd migrated: ' + burnerUsername);
-                    console.log('Account lgpd migrated: ' + burnerUsername);
-                }else if(redirectURL.includes('/checkpoint/')){
-                    logChannel.send('Account banned: ' + burnerUsername);
-                    console.log('Account banned: ' + burnerUsername);
-            
-                    //message the main script to delete the burner account
-                    parentPort.postMessage({action: 'ban', username: burnerUsername});
-                }else if(redirectURL.includes('/login/?next')){
-                    try{
-                        await mainPage.waitForSelector('[name="email"]');
-                    }catch(error){}
-
-                    await login();
-                    /*logChannel.send("Rotate Account Instead Of Login: " + burnerUsername);
-                    await mainBrowser.close();
-                    mainBrowser = null;
-                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});*/
-                }else{
-                    //message the main script to get a new accounts
-                    logChannel.send("Rotate Account: " + burnerUsername);
-                    await mainBrowser.close();
-                    mainBrowser = null;
-                    parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
+                if(await redirectURL.split('?')[0] != (workerData.link).split('?')[0]){
+                    console.log(`Redirected to: ${redirectURL}`);
+                    logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
+                    startError = true;
+    
+                    if(redirectURL.includes('privacy/consent/lgpd_migrated')){
+                        //end the task and message myself containing the account name
+                        logChannel.send('Account lgpd migrated: ' + burnerUsername);
+                        console.log('Account lgpd migrated: ' + burnerUsername);
+                    }else if(redirectURL.includes('/checkpoint/')){
+                        logChannel.send('Account banned: ' + burnerUsername);
+                        console.log('Account banned: ' + burnerUsername);
+                
+                        //message the main script to delete the burner account
+                        parentPort.postMessage({action: 'ban', username: burnerUsername});
+                    }else if(redirectURL.includes('/login/?next')){
+                        try{
+                            await mainPage.waitForSelector('[name="email"]');
+                        }catch(error){}
+    
+                        await login();
+                        /*logChannel.send("Rotate Account Instead Of Login: " + burnerUsername);
+                        await mainBrowser.close();
+                        mainBrowser = null;
+                        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});*/
+                    }else{
+                        //message the main script to get a new accounts
+                        logChannel.send("Rotate Account: " + burnerUsername);
+                        await mainBrowser.close();
+                        mainBrowser = null;
+                        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
+                    }
                 }
             }
         });
@@ -551,7 +552,7 @@ const start = async () => {
         }
 
         //make sure the url is correct
-        if(await mainPage.url().split('?')[0] != workerData.link.split('?')[0] && startError == false){
+        if(await mainPage.url().split('?')[0] != (workerData.link).split('?')[0] && startError == false){
             startError = true;
             if(await mainPage.$('[name="login"]') != null || (mainPage.url()).includes('/login/?next')){
                 await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
