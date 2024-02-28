@@ -2,7 +2,6 @@ const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth');
-const puppeteerAfp = require('puppeteer-afp');
 puppeteer.use(stealthPlugin());
 const fs = require('fs/promises');
 
@@ -316,8 +315,7 @@ const sendMessage = async (link) => {
             timeout: 60000
         });
         let pages = await itemBrowser.pages();
-        let tempPage = pages[0];
-        itemPage = puppeteerAfp(tempPage);
+        let itemPage = pages[0];
         
         //close the notif popup
         const context = itemBrowser.defaultBrowserContext();
@@ -461,9 +459,8 @@ const start = async () => {
             timeout: 60000
         });
         let pages = await mainBrowser.pages();
-        let tempPage = pages[0];
-        mainPage = puppeteerAfp(tempPage);
-        
+        let mainPage = pages[0];
+
         //close the notif popup
         const context = mainBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);

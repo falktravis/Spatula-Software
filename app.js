@@ -46,7 +46,8 @@ let taskDB;
 
         //new proxy accs - {Start: {$gte: 1708094011108}}
         //hq - {AccountType: "Hq"}
-        //non-hq {Start: {$gte: 1708094011108, $lt: 1708500000000}} 
+        //non-hq - {Start: {$gte: 1708094011108, $lt: 1708500000000}} 
+        //integration testing accs - {TotalWarmingPeriod: {$ne: null}, LastActive: 10000000000001}      First Warming: Feb 24       Second Warming: 
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);

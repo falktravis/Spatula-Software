@@ -4,7 +4,6 @@ const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
-const puppeteerAfp = require('puppeteer-afp');
 puppeteer.use(stealthPlugin());
 
 const fetch = require('node-fetch');
