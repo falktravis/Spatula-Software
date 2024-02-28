@@ -469,7 +469,7 @@ const start = async () => {
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
         //create a cursor
-        messageCursor = createCursor(mainPage);
+        mainCursor = createCursor(mainPage);
 
         //await warmingPage.authenticate({'username':'ESKKz1f02E', 'password':'7172'});
         mainPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
