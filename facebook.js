@@ -465,7 +465,7 @@ const start = async () => {
         mainPage = puppeteerAfp(tempPage);
         
         //close the notif popup
-        const context = itemBrowser.defaultBrowserContext();
+        const context = mainBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
         //create a cursor
