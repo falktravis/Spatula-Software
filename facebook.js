@@ -315,7 +315,7 @@ const sendMessage = async (link) => {
             timeout: 60000
         });
         let pages = await itemBrowser.pages();
-        let itemPage = pages[0];
+        itemPage = pages[0];
         
         //close the notif popup
         const context = itemBrowser.defaultBrowserContext();
@@ -459,7 +459,7 @@ const start = async () => {
             timeout: 60000
         });
         let pages = await mainBrowser.pages();
-        let mainPage = pages[0];
+        mainPage = pages[0];
 
         //close the notif popup
         const context = mainBrowser.defaultBrowserContext();
