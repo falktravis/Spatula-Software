@@ -4,6 +4,7 @@ const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
+const puppeteerAfp = require('puppeteer-afp');
 puppeteer.use(stealthPlugin());
 
 const fetch = require('node-fetch');
@@ -32,6 +33,149 @@ const platformConverter = (platform) => {
     }
 }
 
+//manipulating metadata
+const exiftool = require('node-exiftool');
+const exiftoolBin = require('dist-exiftool');
+const ep = new exiftool.ExiftoolProcess(exiftoolBin);
+const overWriteMetadata = async (destination) => {
+    const date = new Date(Date.now() - Math.floor(Math.random() * 86400000 * 365));
+    const model = Math.floor(Math.random() * 2) + 13;
+    // Add more fields as needed
+    const metadata = {
+        'Make': 'Apple',
+        'Model': `iPhone ${model}`,
+        'Lens': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
+        'FocalLength': '5.7 mm',
+        'Aperture': (Math.random() * (2.8 - 1) + 1).toFixed(1),
+        'Exposure': `1/${Math.floor(Math.random() * (500 - 1) + 1)}`,
+        'ISO': 160,
+        'Flash': 'Auto, Did not fire',
+        'AccelerationVector': '-1.002320409 0.008560923856 0.04708275201',
+        'AuxiliaryImageType': 'urn:com:apple:photo:2020:aux:hdrgainmap',
+        'AverageFrameRate': 0,
+        'BitDepthChroma': 8,
+        'BitDepthLuma': 8,
+        'BlueMatrixColumn': '0.1571 0.06657 0.78407',
+        'BrightnessValue': Math.random() * 5,
+        'CMMFlags': 'Not Embedded, Independent',
+        'ChromaFormat': '4:2:0',
+        'ChromaticAdaptation': '1.04788 0.02292 -0.0502 0.02959 0.99048 -0.01706 -0.00923 0.01508 0.75168',
+        'CircleOfConfusion': '0.002 mm',
+        'ColorSpace': 'Uncalibrated',
+        'ColorSpaceData': 'RGB',
+        'CompatibleBrands': ['mif1', 'MiHE', 'MiPr', 'miaf', 'MiHB', 'heic'],
+        'CompositeImage': 'General Composite Image',
+        'ConnectionSpaceIlluminant': '0.9642 1 0.82491',
+        'ConstantFrameRate': 'Unknown',
+        'ConstraintIndicatorFlags': '176 0 0 0 0 0',
+        'CreateDate': date,
+        'DateTimeOriginal': date,
+        'DeviceAttributes': 'Reflective, Glossy, Positive, Color',
+        'DeviceManufacturer': 'Apple Computer Inc.',
+        'DigitalZoomRatio': 3.43246311,
+        'ExifByteOrder': 'Big-endian (Motorola, MM)',
+        'ExifImageHeight': 3024,
+        'ExifImageWidth': 4032,
+        'ExifVersion': '0232',
+        'ExposureCompensation': 0,
+        'ExposureMode': 'Auto',
+        'ExposureProgram': 'Program AE',
+        'FNumber': 1.5,
+        'FOV': '23.1 deg',
+        'FileAccessDate': '2024-02-13 19:25:23 +0000',
+        'FileInodeChangeDate': '2024-02-13 19:25:23 +0000',
+        'FileModifyDate': '2024-02-13 19:25:23 +0000',
+        'FilePermissions': 'prw-------',
+        'FileSize': '0 bytes',
+        'FileType': 'HEIC',
+        'FileTypeExtension': 'heic',
+        'FocalLength35efl': '5.7 mm (35 mm equivalent: 88.0 mm)',
+        'FocalLengthIn35mmFormat': '88 mm',
+        'FocusDistanceRange': '0.15 - 0.46 m',
+        'GenProfileCompatibilityFlags': 'Main Still Picture, Main 10, Main',
+        'GeneralLevelIDC': '90 (level 3.0)',
+        'GeneralProfileIDC': 'Main Still Picture',
+        'GeneralProfileSpace': 'Conforming',
+        'GeneralTierFlag': 'Main Tier',
+        'GreenMatrixColumn': '0.29198 0.69225 0.04189',
+        'HEVCConfigurationVersion': 1,
+        'HandlerType': 'Picture',
+        'HostComputer': `iPhone ${model}`,
+        'HyperfocalDistance': '11.13 m',
+        'ImageHeight': 3024,
+        'ImagePixelDepth': 8,
+        'ImageSize': '4032x3024',
+        'ImageSpatialExtent': '4032x3024',
+        'ImageWidth': 4032,
+        'LensID': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
+        'LensInfo': '1.539999962-5.7mm f/1.5-2.4',
+        'LensMake': 'Apple',
+        'LensModel': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
+        'LightValue': 6.1,
+        'MIMEType': 'image/heic',
+        'MajorBrand': 'High Efficiency Image Format HEVC still image (.HEIC)',
+        'MediaDataOffset': 3752,
+        'MediaDataSize': 884274,
+        'MediaGroupUUID': 'EE718457-727B-4B90-B1E9-5518B8CB8CBF',
+        'MediaWhitePoint': '0.96419 1 0.82489',
+        'Megapixels': 12.2,
+        'MetaImageSize': '4032x3024',
+        'MeteringMode': 'Multi-segment',
+        'MinSpatialSegmentationIDC': 0,
+        'MinorVersion': '0.0.0',
+        'ModifyDate': date,
+        'NumTemporalLayers': 1,
+        'OffsetTime': '-05:00',
+        'OffsetTimeDigitized': '-05:00',
+        'OffsetTimeOriginal': '-05:00',
+        'Orientation': 'Horizontal (normal)',
+        'ParallelismType': 0,
+        'PrimaryItemReference': 49,
+        'PrimaryPlatform': 'Apple Computer Inc.',
+        'ProfileCMMType': 'Apple Computer Inc.',
+        'ProfileClass': 'Display Device Profile',
+        'ProfileConnectionSpace': 'XYZ',
+        'ProfileCopyright': 'Copyright Apple Inc., 2022',
+        'ProfileCreator': 'Apple Computer Inc.',
+        'ProfileDateTime': '2022-01-01 00:00:00 +0000',
+        'ProfileDescription': 'Display P3',
+        'ProfileFileSignature': 'acsp',
+        'ProfileID': 'ecfda38e388547c36db4bd4f7ada182f',
+        'ProfileVersion': '4.0.0',
+        'RedMatrixColumn': '0.51512 0.2412 -0.00105',
+        'RenderingIntent': 'Perceptual',
+        'ResolutionUnit': 'inches',
+        'Rotation': 0,
+        'RunTimeEpoch': 0,
+        'RunTimeFlags': 'Valid',
+        'RunTimeScale': 1000000000,
+        'RunTimeSincePowerUp': '16 days 3:59:30',
+        'RunTimeValue': 1396770404182625,
+        'ScaleFactor35efl': 15.4,
+        'SceneType': 'Directly photographed',
+        'SensingMethod': 'One-chip color area',
+        'ShutterSpeed': '1/50',
+        'ShutterSpeedValue': '1/50',
+        'Software': '17.2.1',
+        'SubSecCreateDate': date,
+        'SubSecDateTimeOriginal': date,
+        'SubSecModifyDate': date,
+        'SubSecTimeDigitized': 572,
+        'SubSecTimeOriginal': 572,
+        'SubjectArea': '2009 1502 2321 1317',
+        'TemporalIDNested': 'No',
+        'WhiteBalance': 'Auto',
+        'XMPToolkit': 'XMP Core 6.0.0',
+        'XResolution': 72,
+        'YResolution': 72
+    };
+
+    //change actual picture data
+    await ep.open();
+    await ep.writeMetadata(destination, metadata, ['overwrite_original']);
+    await ep.close();
+}
+
 let logChannel;
 client.on('ready', async () => {
     try {
@@ -54,6 +198,7 @@ const errorMessage = async (message, error) => {
 process.on('uncaughtException', async (err) => {
     await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
     if(warmingBrowser != null){
+        await warmingPage.close();
         await warmingBrowser.close();
     }
     process.exit(1); // Terminate the process
@@ -63,6 +208,7 @@ process.on('uncaughtException', async (err) => {
 process.on('unhandledRejection', async (reason, promise) => {
     await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
     if(warmingBrowser != null){
+        await warmingPage.close();
         await warmingBrowser.close();
     }
     process.exit(1); // Terminate the process
@@ -176,6 +322,7 @@ const start = async () => {
     }catch(error){
         errorMessage('Error with page initiation', error);
         await logPageContent(warmingPage);
+        await warmingPage.close();
         await warmingBrowser.close();
         warmingBrowser = null;
     }
@@ -312,7 +459,7 @@ const joinGroup = async(chance) => {
 const scrollFeed = async() => {
     try {
         //pick a feed and scroll through a random amount of post, interacting with a random amount of posts
-        if(randomChance(0.90)){
+        if(randomChance(1)){//?Maybe Change this to like 0.95 at some point if we start doing volume
             console.log("scroll feed");
 
             await warmingPage.waitForSelector('div.x1hc1fzr.x1unhpq9 > div > div > div');
@@ -552,9 +699,10 @@ const createPost = async(chance) => {
                 const buffer = await photo.buffer();
                 destination = `./${data.id}.jpg`;
                 await fs.writeFile(destination, buffer);
-                await fileInput.uploadFile(destination);//!smth wrong with this
+                await overWriteMetadata(destination);
+                await fileInput.uploadFile(destination);
 
-                if(randomChance(0.7)){//include text in the flic
+                if(randomChance(0.7) && data.description != null){//include text in the flic post
                     //ask chat gpt to write a prompt
                     const chat = await openai.chat.completions.create({
                         messages: [{ role: 'user', content: `Imagine you are a middle age person using Facebook to interact with your friends and family. You have a picture that you want to post, here is a description of the picture '${data.description}'. Write a short sentence to post along with the picture. Your sentence should be no more than 300 characters and it should not cut off any words.`}],
@@ -616,7 +764,7 @@ const createPost = async(chance) => {
 (async () => {
     try {
         if(await start()){
-            let taskArray = [() => addFriend(0.1), () => createPost(0.75), scrollFeed];//, () => joinGroup(0.1)
+            let taskArray = [() => createPost(0.70), scrollFeed];//, () => addFriend(0.1), () => joinGroup(0.1)
             for (let i = taskArray.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [taskArray[i], taskArray[j]] = [taskArray[j], taskArray[i]];
@@ -626,18 +774,21 @@ const createPost = async(chance) => {
             }
 
             await logChannel.send("Warming Finish: " + workerData.username);
+            await warmingPage.close();
             await warmingBrowser.close();
             warmingBrowser = null;
         }
         logChannel.send('finish');
 
         if(warmingBrowser != null){
+            await warmingPage.close();
             await warmingBrowser.close();
         }
         process.exit(0);
     } catch (error) {
         await errorMessage('Error with main function', error);
         if(warmingBrowser != null){
+            await warmingPage.close()
             await warmingBrowser.close();
         }
         process.exit(0);

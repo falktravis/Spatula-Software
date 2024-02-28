@@ -15,10 +15,6 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 //for fetching pics from the database
 const fetch = require('node-fetch');
 const fs = require('fs/promises');
-//manipulating metadata
-const exiftool = require('node-exiftool');
-const exiftoolBin = require('dist-exiftool');
-const ep = new exiftool.ExiftoolProcess(exiftoolBin);
 
 //init chatgpt
 const OpenAI = require("openai");
@@ -44,11 +40,15 @@ const platformConverter = (platform) => {
     }
 }
 
-const generateMetaData = () => {
+//manipulating metadata
+const exiftool = require('node-exiftool');
+const exiftoolBin = require('dist-exiftool');
+const ep = new exiftool.ExiftoolProcess(exiftoolBin);
+const overWriteMetadata = async (destination) => {
     const date = new Date(Date.now() - Math.floor(Math.random() * 86400000 * 365));
     const model = Math.floor(Math.random() * 2) + 13;
     // Add more fields as needed
-    return{
+    const metadata = {
         'Make': 'Apple',
         'Model': `iPhone ${model}`,
         'Lens': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
@@ -176,6 +176,11 @@ const generateMetaData = () => {
         'XResolution': 72,
         'YResolution': 72
     };
+
+    //change actual picture data
+    await ep.open();
+    await ep.writeMetadata(destination, metadata, ['overwrite_original']);
+    await ep.close();
 }
 
 let mainChannel;
@@ -428,10 +433,7 @@ const fillProfile = async() => {
             await fs.writeFile(destination, buffer);
 
             //Overwrite MetaData
-            await ep.open();
-            const metadata = generateMetaData();
-            await ep.writeMetadata(destination, metadata, ['overwrite_original']);
-            await ep.close();
+            overWriteMetadata(destination);
 
             //upload file and save
             await fileInput.uploadFile(destination);
@@ -467,10 +469,7 @@ const fillProfile = async() => {
             await fs.writeFile(destination, buffer);
 
             //Overwrite MetaData
-            await ep.open();
-            const metadata = generateMetaData();
-            await ep.writeMetadata(destination, metadata, ['overwrite_original']);
-            await ep.close();
+            overWriteMetadata(destination);
     
             //upload and save file
             await fileInput.uploadFile(destination);
@@ -667,7 +666,7 @@ const fillProfile = async() => {
             }
 
             //Change profile pic, cover photo, avatar, and bio
-            await fillProfile();
+            //await fillProfile();
 
         }
 

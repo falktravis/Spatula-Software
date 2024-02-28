@@ -2,6 +2,7 @@
 const { workerData } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
+const puppeteerAfp = require('puppeteer-afp');
 puppeteer.use(stealthPlugin());
 
 //discord.js
@@ -26,6 +27,7 @@ const platformConverter = (platform) => {
     }
 }
 
+
 let mainChannel;
 client.on('ready', async () => {
     try {
@@ -47,32 +49,34 @@ const warmAccount = async () => {
     try{
         warmingBrowser = await puppeteer.launch({
             headless: false,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`]//, `--proxy-server=${workerData.proxy}`
+            args: ['--no-sandbox', '--host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE myproxy"', `--proxy-server=${workerData.proxy}`]//  
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
+        const cloakedPage = puppeteerAfp(warmingPage);
 
-        //await warmingPage.authenticate({'username':'JSDBA', 'password':'71D18GYF'});
-
-        //change http headers
-        warmingPage.setExtraHTTPHeaders({
-            'Referer': 'https://www.google.com',//https://www.facebook.com/login
-            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-            //'SEC-CH-UA-ARCH': ,
-            //'SEC-CH-UA-FULL-VERSION': ,
-            'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-            'Sec-Ch-Ua-Platform': workerData.platform,
-            //'SEC-CH-UA-PLATFORM-VERSION': '15.0.0'
-        });
+        //await warmingPage.authenticate({'username':'ESKKz1f02E', 'password':'7172'});
+        await cloakedPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
 
         //change the viewport
-        warmingPage.setViewport({ width: 1366, height: 768 });
+        await cloakedPage.setViewport({ width: 1366, height: 768 });
+
+        //change http headers
+        await cloakedPage.setExtraHTTPHeaders({
+            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
+            'SEC-CH-UA-ARCH': '"x86"',
+            'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
+            'SEC-CH-UA-MOBILE':	'?0',
+            'Sec-Ch-Ua-Platform': `"${workerData.platform}"`,
+            'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
+            'Referer': 'https://www.facebook.com/login'
+        });
 
         //Set cookies in browser
-        //await warmingPage.setCookie(...workerData.cookies);
+        await cloakedPage.setCookie(...workerData.cookies);
 
-        /*await warmingPage.setRequestInterception(true);
-        warmingPage.on('request', async request => {
+        /*await cloakedPage.setRequestInterception(true);
+        cloakedPage.on('request', async request => {
             const resource = request.resourceType();
             if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
                 request.abort();
@@ -81,12 +85,13 @@ const warmAccount = async () => {
             }
         });*/
 
-        //go to the search page
-        await warmingPage.goto('https://www.whatismybrowser.com/detect/what-http-headers-is-my-browser-sending', { waitUntil: 'domcontentloaded' });
+        //testing pages
+        await cloakedPage.goto('https://facebook.com/', { waitUntil: 'domcontentloaded' });
+        //https://whoer.net/
+        //https://bot.sannysoft.com/
+        //https://gologin.com/check-browser
 
-        //await new Promise(r => setTimeout(r, 25000));
-
-        //console.log(await warmingPage.cookies());
+        //console.log(await cloakedPage.cookies());
     }catch(error){
         errorMessage('Error with page initiation', error);
     }

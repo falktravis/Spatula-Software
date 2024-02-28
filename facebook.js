@@ -2,6 +2,7 @@ const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth');
+const puppeteerAfp = require('puppeteer-afp');
 puppeteer.use(stealthPlugin());
 const fs = require('fs/promises');
 
@@ -29,6 +30,7 @@ parentPort.on('message', async (message) => {
     
             //close browser
             if(mainBrowser != null){
+                await mainPage.close();
                 await mainBrowser.close();
                 mainBrowser = null;
             }
@@ -91,6 +93,7 @@ process.on('SIGTERM', async (err) => {
 process.on('uncaughtException', async (err) => {
     await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
     if(mainBrowser != null){
+        await mainPage.close();
         await mainBrowser.close();
     }
     process.exit(1); // Terminate the process
@@ -100,6 +103,7 @@ process.on('uncaughtException', async (err) => {
 process.on('unhandledRejection', async (reason, promise) => {
     await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
     if(mainBrowser != null){
+        await mainPage.close();
         await mainBrowser.close();
     }
     process.exit(1); // Terminate the process
@@ -117,10 +121,12 @@ const endTask = async () => {
         await logChannel.send("Close Browsers");
         burnerCookies = await mainPage.cookies();
         if(mainBrowser != null){
+            await mainPage.close();
             await mainBrowser.close();
             mainBrowser = null;
         }
         if(itemBrowser != null){
+            await itemPage.close();
             await itemBrowser.close();
             itemBrowser = null;
         }
@@ -306,12 +312,13 @@ const sendMessage = async (link) => {
     try {
         itemBrowser = await puppeteer.launch({
             headless: 'new',
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.messagePlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.messageProxy}`],
+            args: ['--no-sandbox', `--proxy-server=${workerData.messageProxy}`],
             timeout: 60000
         });
         let pages = await itemBrowser.pages();
-        itemPage = pages[0];
-
+        let tempPage = pages[0];
+        itemPage = puppeteerAfp(tempPage);
+        
         //close the notif popup
         const context = itemBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
@@ -319,16 +326,22 @@ const sendMessage = async (link) => {
         //create a cursor
         messageCursor = createCursor(itemPage);
 
-        //change http headers
-        itemPage.setExtraHTTPHeaders({
-            'Referer': 'https://www.facebook.com/login',
-            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-            'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-            'Sec-Ch-Ua-Platform': workerData.messagePlatform
-        });
+        //await warmingPage.authenticate({'username':'ESKKz1f02E', 'password':'7172'});
+        itemPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
 
         //change the viewport
         itemPage.setViewport({ width: 1366, height: 768 });
+
+        //change http headers
+        itemPage.setExtraHTTPHeaders({
+            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
+            'SEC-CH-UA-ARCH': '"x86"',
+            'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
+            'SEC-CH-UA-MOBILE':	'?0',
+            'Sec-Ch-Ua-Platform': `"${workerData.platform}"`,
+            'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
+            'Referer': 'https://www.facebook.com/login'
+        });
 
         //set cookies/login if the login was a success
         await itemPage.setCookie(...messageCookies);
@@ -447,17 +460,33 @@ const start = async () => {
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${burnerProxy}`],
             timeout: 60000
         });
-
+        let pages = await mainBrowser.pages();
+        let tempPage = pages[0];
+        mainPage = puppeteerAfp(tempPage);
+        
         //close the notif popup
-        const context = mainBrowser.defaultBrowserContext();
+        const context = itemBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
-        //create the page
-        let pages = await mainBrowser.pages();
-        mainPage = pages[0];
-
         //create a cursor
-        mainCursor = createCursor(mainPage);
+        messageCursor = createCursor(mainPage);
+
+        //await warmingPage.authenticate({'username':'ESKKz1f02E', 'password':'7172'});
+        mainPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
+
+        //change the viewport
+        mainPage.setViewport({ width: 1366, height: 768 });
+
+        //change http headers
+        mainPage.setExtraHTTPHeaders({
+            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
+            'SEC-CH-UA-ARCH': '"x86"',
+            'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
+            'SEC-CH-UA-MOBILE':	'?0',
+            'Sec-Ch-Ua-Platform': `"${workerData.platform}"`,
+            'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
+            'Referer': 'https://www.facebook.com/login'
+        });
 
         //network shit
         mainPage.on('response', async response => {
@@ -493,6 +522,7 @@ const start = async () => {
                     }else{
                         //message the main script to get a new accounts
                         logChannel.send("Rotate Account: " + burnerUsername);
+                        await mainPage.close();
                         await mainBrowser.close();
                         mainBrowser = null;
                         parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
@@ -518,24 +548,13 @@ const start = async () => {
                 }
             }
         });
-
-        //change the viewport
-        mainPage.setViewport({ width: 1366, height: 768 });
-
-        //change http headers
-        mainPage.setExtraHTTPHeaders({
-            'Referer': 'https://www.facebook.com/login',
-            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-            'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-            'Sec-Ch-Ua-Platform': burnerPlatform
-        });
         
         //Set cookies in browser
         await mainPage.setCookie(...burnerCookies);
 
         //go to the search page
         try {
-            await mainPage.goto(workerData.link, { waitUntil: 'networkidle2', timeout: 50000});
+            await mainPage.goto(workerData.link, { waitUntil: 'load', timeout: 50000});//networkidle2
         } catch (error) {await logChannel.send("Timeout on going to link")}
 
         //update burnerCookies
@@ -568,6 +587,7 @@ const start = async () => {
                 //await login();
             }else{
                 await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
+                await mainPage.close();
                 await mainBrowser.close();
                 mainBrowser = null;
                 parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
@@ -693,6 +713,7 @@ function interval() {
             } catch(error) {
                 if(error.message.includes('TargetCloseError')){
                     logChannel.send("Page Closed");
+                    await mainPage.close();
                     await mainBrowser.close();
                     mainBrowser = null;
                     await start();

@@ -15,6 +15,10 @@ module.exports = {
         .addStringOption(option => 
             option.setName('10')
                 .setDescription('ten plan proxies')
+                .setRequired(true))
+        .addStringOption(option => 
+            option.setName('100')
+                .setDescription('hundred plan proxies')
                 .setRequired(true)),
 	async execute(interaction) {
 		await interaction.editReply(`warming account...`);
