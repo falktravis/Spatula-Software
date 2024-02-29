@@ -52,17 +52,21 @@ const warmAccount = async () => {
             args: ['--no-sandbox', '--host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE myproxy"', `--proxy-server=${workerData.proxy}`]//  
         });
         let pages = await warmingBrowser.pages();
-        warmingPage = pages[0];
-        const cloakedPage = puppeteerAfp(warmingPage);
+        let tempPage = pages[0];
+        warmingPage = puppeteerAfp(tempPage);
+
+        //close the notif popup
+        const context = warmingBrowser.defaultBrowserContext();
+        context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
         //await warmingPage.authenticate({'username':'ESKKz1f02E', 'password':'7172'});
-        await cloakedPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
+        await warmingPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
 
         //change the viewport
-        await cloakedPage.setViewport({ width: 1366, height: 768 });
+        await warmingPage.setViewport({ width: 1366, height: 768 });
 
         //change http headers
-        await cloakedPage.setExtraHTTPHeaders({
+        await warmingPage.setExtraHTTPHeaders({
             'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
             'SEC-CH-UA-ARCH': '"x86"',
             'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
@@ -73,10 +77,10 @@ const warmAccount = async () => {
         });
 
         //Set cookies in browser
-        await cloakedPage.setCookie(...workerData.cookies);
+        await warmingPage.setCookie(...workerData.cookies);
 
-        /*await cloakedPage.setRequestInterception(true);
-        cloakedPage.on('request', async request => {
+        /*await warmingPage.setRequestInterception(true);
+        warmingPage.on('request', async request => {
             const resource = request.resourceType();
             if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
                 request.abort();
@@ -86,12 +90,12 @@ const warmAccount = async () => {
         });*/
 
         //testing pages
-        await cloakedPage.goto('https://facebook.com/', { waitUntil: 'domcontentloaded' });
+        await warmingPage.goto('https://facebook.com/', { waitUntil: 'domcontentloaded' });
         //https://whoer.net/
         //https://bot.sannysoft.com/
         //https://gologin.com/check-browser
 
-        //console.log(await cloakedPage.cookies());
+        //console.log(await warmingPage.cookies());
     }catch(error){
         errorMessage('Error with page initiation', error);
     }
