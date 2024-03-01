@@ -238,62 +238,62 @@ async function typeWithRandomSpeed(page, text) {
 }
 
 //general instantiation
-let languageBrowser;
-let languagePage;
-let languageCursor;
+let initiationBrowser;
+let initiationPage;
+let initiationCursor;
 
 const start = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
-        languageBrowser = await puppeteer.launch({
+        initiationBrowser = await puppeteer.launch({
             headless: false,
             args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]
         });
-        let pages = await languageBrowser.pages();
-        languagePage = pages[0];
+        let pages = await initiationBrowser.pages();
+        initiationPage = pages[0];
 
         //close the notif popup
-        const context = languageBrowser.defaultBrowserContext();
+        const context = initiationBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
         //change http headers
-        languagePage.setExtraHTTPHeaders({
+        initiationPage.setExtraHTTPHeaders({
             'Referer': 'https://www.facebook.com/login',
             'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
             'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
             'Sec-Ch-Ua-Platform': workerData.platform
         });
 
-        //await languagePage.setRequestInterception(true);
-        /*languagePage.on('response', async response => {
+        //await initiationPage.setRequestInterception(true);
+        /*initiationPage.on('response', async response => {
             //detect redirection
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
                 const redirectURL = response.headers()['location'];
                 console.log(`Redirected to: ${redirectURL}`);
 
-                if(await languagePage.$('[href="https://m.facebook.com/terms.php"]') != null && await languagePage.$('[aria-label="Dismiss"]') != null){
+                if(await initiationPage.$('[href="https://m.facebook.com/terms.php"]') != null && await initiationPage.$('[aria-label="Dismiss"]') != null){
                     console.log("checkpointed")
                     await pause(1);
-                    await languageCursor.click('[aria-label="Dismiss"]');
+                    await initiationCursor.click('[aria-label="Dismiss"]');
                 }
             }
         });*/
 
         //create cursor
-        languageCursor = createCursor(languagePage);
+        initiationCursor = createCursor(initiationPage);
 
         //change the viewport
-        languagePage.setViewport({ width: 1366, height: 768 });
+        initiationPage.setViewport({ width: 1366, height: 768 });
 
         //Set cookies in browser
-        await languagePage.setCookie(...workerData.cookies);
+        await initiationPage.setCookie(...workerData.cookies);
 
         console.log(workerData.username);
 
-        await languagePage.goto('https://www.facebook.com', {waitUntil: 'domcontentloaded'});
+        await initiationPage.goto('https://www.facebook.com', {waitUntil: 'domcontentloaded'});
 
         //detect accounts that need login
-        if(await languagePage.$('[name="login"]') != null){
+        if(await initiationPage.$('[name="login"]') != null){
             console.log("account is fucked");
             return false;
         }else{
@@ -309,41 +309,41 @@ const changeLanguage = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         //go to the search page
-        await languageCursor.click('div.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.xzsf02u.x1rg5ohu > div > svg > g > image');
-        await languagePage.waitForSelector('.x1oo3vh0.x1rdy4ex');
+        await initiationCursor.click('div.x1i10hfl.x1qjc9v5.xjbqb8w.xjqpnuy.xa49m3k.xqeqjp1.x2hbi6w.x13fuv20.xu3j5b3.x1q0q8m5.x26u7qi.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xdl72j9.x2lah0s.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.x2lwn1j.xeuugli.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x1n2onr6.x16tdsg8.x1hl2dhg.xggy1nq.x1ja2u2z.x1t137rt.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x1q0g3np.x87ps6o.x1lku1pv.x1a2a7pz.xzsf02u.x1rg5ohu > div > svg > g > image');
+        await initiationPage.waitForSelector('.x1oo3vh0.x1rdy4ex');
         await pause(1);
-        await languageCursor.click('.x1oo3vh0.x1rdy4ex > :nth-child(1)');
-        await languagePage.waitForSelector('div.x1y1aw1k > div > div:nth-child(1) > a > div.x6s0dn4.x1q0q8m5 > div.x6s0dn4.xkh2ocl.x1q0q8m5 > div');
+        await initiationCursor.click('.x1oo3vh0.x1rdy4ex > :nth-child(1)');
+        await initiationPage.waitForSelector('div.x1y1aw1k > div > div:nth-child(1) > a > div.x6s0dn4.x1q0q8m5 > div.x6s0dn4.xkh2ocl.x1q0q8m5 > div');
         await pause(1);
-        await languageCursor.click('div.x1y1aw1k > div > div:nth-child(1) > a > div.x6s0dn4.x1q0q8m5 > div.x6s0dn4.xkh2ocl.x1q0q8m5 > div');
-        await languagePage.waitForSelector('[href*="language"]');
+        await initiationCursor.click('div.x1y1aw1k > div > div:nth-child(1) > a > div.x6s0dn4.x1q0q8m5 > div.x6s0dn4.xkh2ocl.x1q0q8m5 > div');
+        await initiationPage.waitForSelector('[href*="language"]');
         await pause(2);
 
-        if(await languagePage.$('div.xpvyfi4.xc9qbxq.xyamay9.x1pi30zi.x1l90r2v.x1swvt13.x1n2onr6.xq1dxzn > div > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div') != null){
+        if(await initiationPage.$('div.xpvyfi4.xc9qbxq.xyamay9.x1pi30zi.x1l90r2v.x1swvt13.x1n2onr6.xq1dxzn > div > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div') != null){
             console.log("click");
-            await languageCursor.click('div.xpvyfi4.xc9qbxq.xyamay9.x1pi30zi.x1l90r2v.x1swvt13.x1n2onr6.xq1dxzn > div > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div');
+            await initiationCursor.click('div.xpvyfi4.xc9qbxq.xyamay9.x1pi30zi.x1l90r2v.x1swvt13.x1n2onr6.xq1dxzn > div > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div');
             await pause(2);
         }
 
-        await languageCursor.click('[href*="language"]');
+        await initiationCursor.click('[href*="language"]');
         await pause(2);
 
-        if(await languagePage.$('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div.xezivpi') != null){
-            if(await languagePage.$('div.x1uvtmcs.x4k7w5x > div > div > div > div.xpvyfi4.xc9qbxq > div > div') != null){
-                await languageCursor.click('div.x1uvtmcs.x4k7w5x > div > div > div > div.xpvyfi4.xc9qbxq > div > div');
+        if(await initiationPage.$('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div.xezivpi') != null){
+            if(await initiationPage.$('div.x1uvtmcs.x4k7w5x > div > div > div > div.xpvyfi4.xc9qbxq > div > div') != null){
+                await initiationCursor.click('div.x1uvtmcs.x4k7w5x > div > div > div > div.xpvyfi4.xc9qbxq > div > div');
             }
-            await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div.xezivpi');
+            await initiationCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div.xezivpi');
             //click button drop down
-            await languagePage.waitForSelector('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div > div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.xyamay9.x1l90r2v > div > div > div');
+            await initiationPage.waitForSelector('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div > div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.xyamay9.x1l90r2v > div > div > div');
             await pause(1);
-            await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div > div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.xyamay9.x1l90r2v > div > div > div');
+            await initiationCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div > div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.xyamay9.x1l90r2v > div > div > div');
 
             //click english 
-            await languagePage.waitForSelector('div.xu96u03.xm80bdy.x10l6tqk.x13vifvy > div.x1n2onr6 > div > div > div > div > div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6 > div');
+            await initiationPage.waitForSelector('div.xu96u03.xm80bdy.x10l6tqk.x13vifvy > div.x1n2onr6 > div > div > div > div > div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6 > div');
             await pause(1);
-            const languageArr = await languagePage.$$('div.xu96u03.xm80bdy.x10l6tqk.x13vifvy > div.x1n2onr6 > div > div > div > div > div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6 > div > div');
+            const languageArr = await initiationPage.$$('div.xu96u03.xm80bdy.x10l6tqk.x13vifvy > div.x1n2onr6 > div > div > div > div > div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6 > div > div');
             for (const element of languageArr) {
-              const elementText = await languagePage.evaluate(el => el.textContent, element);
+              const elementText = await initiationPage.evaluate(el => el.textContent, element);
           
               if (elementText === 'English (US)') {
                 await element.click();
@@ -352,44 +352,167 @@ const changeLanguage = async () => {
             }
 
             //click submit
-            await languagePage.waitForSelector('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3 > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div > span > span');
+            await initiationPage.waitForSelector('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3 > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div > span > span');
             await pause(1);
-            await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3 > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div > span > span');
+            await initiationCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3 > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div > span > span');
 
-            //await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x6umtig.x1b1mbwd.xaqea5y.xav7gou.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3');
+            //await initiationCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.x78zum5.xdt5ytf.x2lah0s.x193iq5w.x1gryazu.xezivpi > div > div:nth-child(2) > div.x1i10hfl.xjbqb8w.x6umtig.x1b1mbwd.xaqea5y.xav7gou.x1ypdohk.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1o1ewxj.x3x9cwd.x1e5q0jg.x13rtm0m.x87ps6o.x1lku1pv.x1a2a7pz.x9f619.x3nfvp2.xdt5ytf.xl56j7k.x1n2onr6.xh8yej3');
 
 
         }else{
-            await languageCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x2lah0s.x193iq5w.xeuugli.x78zum5 > div > div');
+            await initiationCursor.click('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(2) > div > div > div > div > div > div > div > div > div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x2lah0s.x193iq5w.xeuugli.x78zum5 > div > div');
             //click english
-            await languagePage.waitForSelector('div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6.xaci4zi.x129vozr > div > div > div:nth-child(4) > div > div.x6s0dn4.x1q0q8m5.x1qhh985.xu3j5b3.xcfux6l.x26u7qi.xm0m39n.x13fuv20.x972fbf.x9f619.x78zum5.x1q0g3np.x1iyjqo2.xs83m0k.x1qughib.xat24cr.x11i5rnm.x1mh8g0r.xdj266r.xeuugli.x18d9i69.x1sxyh0.xurb0ha.xexx8yu.x1n2onr6.x1ja2u2z.x1gg8mnh > div');
+            await initiationPage.waitForSelector('div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6.xaci4zi.x129vozr > div > div > div:nth-child(4) > div > div.x6s0dn4.x1q0q8m5.x1qhh985.xu3j5b3.xcfux6l.x26u7qi.xm0m39n.x13fuv20.x972fbf.x9f619.x78zum5.x1q0g3np.x1iyjqo2.xs83m0k.x1qughib.xat24cr.x11i5rnm.x1mh8g0r.xdj266r.xeuugli.x18d9i69.x1sxyh0.xurb0ha.xexx8yu.x1n2onr6.x1ja2u2z.x1gg8mnh > div');
             await pause(1);
-            await languageCursor.click('div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6.xaci4zi.x129vozr > div > div > div:nth-child(4) > div > div.x6s0dn4.x1q0q8m5.x1qhh985.xu3j5b3.xcfux6l.x26u7qi.xm0m39n.x13fuv20.x972fbf.x9f619.x78zum5.x1q0g3np.x1iyjqo2.xs83m0k.x1qughib.xat24cr.x11i5rnm.x1mh8g0r.xdj266r.xeuugli.x18d9i69.x1sxyh0.xurb0ha.xexx8yu.x1n2onr6.x1ja2u2z.x1gg8mnh > div');
+            await initiationCursor.click('div.x78zum5.xdt5ytf.x1iyjqo2.x1n2onr6.xaci4zi.x129vozr > div > div > div:nth-child(4) > div > div.x6s0dn4.x1q0q8m5.x1qhh985.xu3j5b3.xcfux6l.x26u7qi.xm0m39n.x13fuv20.x972fbf.x9f619.x78zum5.x1q0g3np.x1iyjqo2.xs83m0k.x1qughib.xat24cr.x11i5rnm.x1mh8g0r.xdj266r.xeuugli.x18d9i69.x1sxyh0.xurb0ha.xexx8yu.x1n2onr6.x1ja2u2z.x1gg8mnh > div');
             //submit
-            await languagePage.waitForSelector('div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div.x1jx94hy.xh8yej3.x1hlgzme.xvcs8rp.x1bpvpm7.xefnots.x13xjmei.xv7j57z > div > div > div > div > div:nth-child(1) > div > div');
+            await initiationPage.waitForSelector('div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div.x1jx94hy.xh8yej3.x1hlgzme.xvcs8rp.x1bpvpm7.xefnots.x13xjmei.xv7j57z > div > div > div > div > div:nth-child(1) > div > div');
             await pause(1);
-            await languageCursor.click('div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div.x1jx94hy.xh8yej3.x1hlgzme.xvcs8rp.x1bpvpm7.xefnots.x13xjmei.xv7j57z > div > div > div > div > div:nth-child(1) > div > div');
+            await initiationCursor.click('div.x1uvtmcs.x4k7w5x.x1h91t0o.x1beo9mf.xaigb6o.x12ejxvf.x3igimt.xarpa2k.xedcshv.x1lytzrv.x1t2pt76.x7ja8zs.x1n2onr6.x1qrby5j.x1jfb8zj > div > div > div > div > div > div > div.x1jx94hy.xh8yej3.x1hlgzme.xvcs8rp.x1bpvpm7.xefnots.x13xjmei.xv7j57z > div > div > div > div > div:nth-child(1) > div > div');
         }
-        await languagePage.waitForNavigation({ waitUntil: 'load' });
+        try {
+            await initiationPage.waitForNavigation({ waitUntil: 'load' });
+        } catch (error) {}
+        await pause(2);
+        await initiationCursor.click('[href="/"]')
         await mainChannel.send("Finish: " + workerData.username);
     }catch(error){
         errorMessage('Error with page initiation', error);
-        //await logPageContent(languagePage);
+        //await logPageContent(initiationPage);
     }
 }
+
+//**Works for now */
+const scrollFeed = async() => {
+    try {
+        await initiationPage.waitForSelector('div.x1hc1fzr.x1unhpq9 > div > div > div');
+
+        //pick a feed and scroll through a random amount of post, interacting with a random amount of posts
+        //scroll a random number of posts 5-20
+        for(let i = 1; i < Math.floor(Math.random() * 8 + 5); i++){
+            await pause(3);
+            //scroll into view
+            await initiationPage.waitForSelector(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i})`);
+            await initiationPage.evaluate(i => {
+                const element = document.querySelector(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i})`);
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'center',
+                });
+            }, i);
+
+            //check what kind of container it is
+            if(await initiationPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="hide post"]`) != null){//post
+                await mainChannel.send('post');
+                await interactWithPost(i);
+            }else{
+                await mainChannel.send("Non-Identified Container");
+            }
+        }
+
+        await pause(2);
+    } catch (error) {
+        errorMessage('Error scrolling feed', error);
+        await logPageContent(initiationPage);
+    }
+}
+
+const randomChance = (chance) => {
+    if(Math.random() < chance){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+const interactWithPost = async(childNum) => {
+    try {
+        await pause(2);
+        //like
+        if(randomChance(0.12)){
+            await mainChannel.send('like');
+            await initiationCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) div.x5ve5x3 > div.x9f619.x1n2onr6 > div:nth-child(1)`);//Like
+            await pause(2);
+        }
+
+        //If post is a fan page(Whatever it means to just be a public page), randomize value to follow it
+        if(await initiationPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 > span > div > span`) != null && randomChance(0.15)){
+            await initiationCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 > span > div > span`);
+        }
+
+        //Share opportunity
+        if(randomChance(0.02)){
+            await mainChannel.send('share');
+            await initiationCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) div:nth-child(3) > div > div.xuxw1ft > div:nth-child(2)`);//share
+            await initiationPage.waitForSelector(`div.x1qfuztq.xh8yej3 > div > div > :nth-child(1)`);
+            await pause(1);
+            await initiationCursor.click(`div.x1qfuztq.xh8yej3 > div > div > :nth-child(1)`);//share public to feed
+            await pause(2);
+
+            try {
+                await initiationPage.waitForSelector('div.x6s0dn4.x9f619.x78zum5.x1qughib > div > div > div.x6s0dn4.x78zum5');
+                await pause(2);
+                await initiationCursor.click('div.x6s0dn4.x9f619.x78zum5.x1qughib > div > div > div.x6s0dn4.x78zum5');
+            } catch (error) {
+                await mainChannel.send("error clicning share thing: " + error);
+                await initiationCursor.click('div.x9f619.x71s49j div:nth-child(1) > div.x1n2onr6 > div > div.x78zum5 > div > div > i')
+            }
+        }
+    } catch (error) {
+        errorMessage('Error interacting with post', error);
+        await logPageContent(initiationPage);
+    }
+}
+
+//main function
+(async () => {
+    try {
+        if(await start()){
+            //Change Language
+            if(workerData.changeLanguage == true){
+                //start by "checking" notifs
+                await initiationPage.waitForSelector('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+                await pause(1);
+                await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+                await pause(3);
+                //TODO: Chance to click on one notif and click back to home
+                await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+                await pause(1);
+
+                await scrollFeed();
+
+                const initiation = await initiationPage.evaluate(() => {return document.documentElement.lang});
+                if (initiation !== 'en') {
+                    await changeLanguage();
+                }
+
+                await scrollFeed();
+                //await initiationPage.close();
+                //await initiationBrowser.close();
+                //process.exit(1);
+            }
+        }
+
+        console.log('finish');
+    } catch (error) {
+        errorMessage('Error with main function', error);
+    }
+})();
+
 
 const fillProfile = async() => {
     try {
         // Navigate to the account settings page
-        await languagePage.waitForSelector('[aria-label="Your profile"]');
-        await languageCursor.click('[aria-label="Your profile"]');
+        await initiationPage.waitForSelector('[aria-label="Your profile"]');
+        await initiationCursor.click('[aria-label="Your profile"]');
         await pause(1);
-        await languagePage.waitForSelector('[href="/me/"]');
-        await languageCursor.click('[href="/me/"]');
-        await languagePage.waitForSelector('[aria-label="Edit profile"]');
+        await initiationPage.waitForSelector('[href="/me/"]');
+        await initiationCursor.click('[href="/me/"]');
+        await initiationPage.waitForSelector('[aria-label="Edit profile"]');
         await pause(2);
-        await languageCursor.click('[aria-label="Edit profile"]');
-        await languagePage.waitForSelector('[aria-label="Add profile picture"]');
+        await initiationCursor.click('[aria-label="Edit profile"]');
+        await initiationPage.waitForSelector('[aria-label="Add profile picture"]');
         await pause(1);
 
         /**
@@ -410,11 +533,11 @@ const fillProfile = async() => {
         ethnicity = ethnicity[charecterRandomizer];
 
         //**Profile pic */
-        if(await languagePage.evaluate(() => {return document.querySelector(`[aria-label="Add profile picture"]`).innerText}) == 'Add'){
-            await languageCursor.click('[aria-label="Add profile picture"]');
-            await languagePage.waitForSelector('[role="dialog"] input[type="file"]');
+        if(await initiationPage.evaluate(() => {return document.querySelector(`[aria-label="Add profile picture"]`).innerText}) == 'Add'){
+            await initiationCursor.click('[aria-label="Add profile picture"]');
+            await initiationPage.waitForSelector('[role="dialog"] input[type="file"]');
             await pause(1);
-            let fileInput = await languagePage.$('[role="dialog"] input[type="file"]');
+            let fileInput = await initiationPage.$('[role="dialog"] input[type="file"]');
     
             //!Generate a prompt
             //age = Math.floor(Math.random() * 10 + 25)
@@ -437,24 +560,24 @@ const fillProfile = async() => {
 
             //upload file and save
             await fileInput.uploadFile(destination);
-            await languagePage.waitForSelector('[aria-label="Save"]');
+            await initiationPage.waitForSelector('[aria-label="Save"]');
             await pause(1);
-            await languageCursor.click('[aria-label="Save"]');
-            await languagePage.waitForFunction(() => !document.querySelector('[aria-label="Save"]'));
+            await initiationCursor.click('[aria-label="Save"]');
+            await initiationPage.waitForFunction(() => !document.querySelector('[aria-label="Save"]'));
 
             await fs.unlink(destination);
             await pause(1);
-            await languageCursor.click('[aria-label="Edit profile"]');
-            await languagePage.waitForSelector('div.x1q0g3np > [aria-label="Add cover photo"]');
+            await initiationCursor.click('[aria-label="Edit profile"]');
+            await initiationPage.waitForSelector('div.x1q0g3np > [aria-label="Add cover photo"]');
             await pause(1);
         }
 
         //**Cover pic */
-        if(await languagePage.evaluate(() => {return document.querySelector(`div.x1q0g3np > [aria-label="Add cover photo"]`).innerText}) == 'Add'){
-            await languageCursor.click('div.x1q0g3np > [aria-label="Add cover photo"]');
-            await languagePage.waitForSelector('[role="dialog"] input[type="file"]');
+        if(await initiationPage.evaluate(() => {return document.querySelector(`div.x1q0g3np > [aria-label="Add cover photo"]`).innerText}) == 'Add'){
+            await initiationCursor.click('div.x1q0g3np > [aria-label="Add cover photo"]');
+            await initiationPage.waitForSelector('[role="dialog"] input[type="file"]');
             await pause(1);
-            fileInput = await languagePage.$('[role="dialog"] input[type="file"]');
+            fileInput = await initiationPage.$('[role="dialog"] input[type="file"]');
     
             //!We might have to find a different way to get this
             response = await fetch('https://api.unsplash.com/photos/random?query=nature', {
@@ -473,18 +596,18 @@ const fillProfile = async() => {
     
             //upload and save file
             await fileInput.uploadFile(destination);
-            await languagePage.waitForSelector('[aria-label="Save"]'); // Adjust the timeout as needed
+            await initiationPage.waitForSelector('[aria-label="Save"]'); // Adjust the timeout as needed
             await pause(1);
-            await languageCursor.click('[aria-label="Save"]');
+            await initiationCursor.click('[aria-label="Save"]');
             await fs.unlink(destination);
-            await languagePage.waitForFunction(() => !document.querySelector('[aria-label="Save"]'));
+            await initiationPage.waitForFunction(() => !document.querySelector('[aria-label="Save"]'));
             await pause(2);
         }
 
         //**Avatar */
-        if(await languagePage.$(`[aria-label="Create avatar"]`) != null){
-            await languageCursor.click('[aria-label="Create avatar"]');
-            await languagePage.waitForSelector('[aria-label="Choice in Avatar Editor"] > .x1ypdohk');
+        if(await initiationPage.$(`[aria-label="Create avatar"]`) != null){
+            await initiationCursor.click('[aria-label="Create avatar"]');
+            await initiationPage.waitForSelector('[aria-label="Choice in Avatar Editor"] > .x1ypdohk');
             await pause(2);
 
             //make avatar choice based on charecter design
@@ -499,23 +622,23 @@ const fillProfile = async() => {
                 }
             }
 
-            await languageCursor.click(`[aria-label="Choice in Avatar Editor"]:nth-child(${avatarChoice})`);
+            await initiationCursor.click(`[aria-label="Choice in Avatar Editor"]:nth-child(${avatarChoice})`);
             await pause(2);
-            await languageCursor.click('.xozqiw3.xcfux6l');
-            await languagePage.waitForSelector('.x6s0dn4.xwnonoy.x1npaq5j.x1c83p5e.x1enjb0b.x199158v.x14ctfv.x78zum5.x5yr21d.xl56j7k.x1199peq.xh8yej3.xbryuvx.x1mq3mr6');
+            await initiationCursor.click('.xozqiw3.xcfux6l');
+            await initiationPage.waitForSelector('.x6s0dn4.xwnonoy.x1npaq5j.x1c83p5e.x1enjb0b.x199158v.x14ctfv.x78zum5.x5yr21d.xl56j7k.x1199peq.xh8yej3.xbryuvx.x1mq3mr6');
             await pause(2);
-            await languageCursor.click('[aria-label="Close avatar editor"] > svg');
-            await languagePage.waitForSelector('[aria-label="Edit profile"]');
+            await initiationCursor.click('[aria-label="Close avatar editor"] > svg');
+            await initiationPage.waitForSelector('[aria-label="Edit profile"]');
             await pause(1);
-            await languageCursor.click('[aria-label="Edit profile"]');
-            await languagePage.waitForSelector('[aria-label="Edit profile"] [aria-label="Add bio"]');
+            await initiationCursor.click('[aria-label="Edit profile"]');
+            await initiationPage.waitForSelector('[aria-label="Edit profile"] [aria-label="Add bio"]');
         }
 
         //**Bio */
-        if(await languagePage.evaluate(() => {return document.querySelector(`[aria-label="Edit profile"] [aria-label="Add bio"]`).innerText}) == 'Add'){
+        if(await initiationPage.evaluate(() => {return document.querySelector(`[aria-label="Edit profile"] [aria-label="Add bio"]`).innerText}) == 'Add'){
             await pause(2);
-            await languageCursor.click('[aria-label="Edit profile"] [aria-label="Add bio"]');
-            await languagePage.waitForSelector('[aria-label="Enter bio text"]');
+            await initiationCursor.click('[aria-label="Edit profile"] [aria-label="Add bio"]');
+            await initiationPage.waitForSelector('[aria-label="Enter bio text"]');
             await pause(1);
     
             //generate a bio, with chatbdt  Average guy trying to make an impact on the world.
@@ -524,24 +647,24 @@ const fillProfile = async() => {
                 model: 'gpt-3.5-turbo',
             });
     
-            await languageCursor.click('[aria-label="Enter bio text"]');
-            await typeWithRandomSpeed(languagePage, (chat.choices[0].message.content).replace(/['"]/g, ''));
+            await initiationCursor.click('[aria-label="Enter bio text"]');
+            await typeWithRandomSpeed(initiationPage, (chat.choices[0].message.content).replace(/['"]/g, ''));
             await pause(2);
-            await languageCursor.click('[aria-label="Save"]');
-            await languagePage.waitForSelector('[aria-label="Share now"]');
+            await initiationCursor.click('[aria-label="Save"]');
+            await initiationPage.waitForSelector('[aria-label="Share now"]');
         }
 
         //**Other Info */
         await pause(3);
-        await languageCursor.click('[aria-label="Edit your About info"]');
-        await languagePage.waitForSelector('.xqmdsaz > div > div > .x1hq5gj4 span.x1qq9wsj');
+        await initiationCursor.click('[aria-label="Edit your About info"]');
+        await initiationPage.waitForSelector('.xqmdsaz > div > div > .x1hq5gj4 span.x1qq9wsj');
         await pause(1);
         
         let i = 1;
         while(i < 7){
             console.log(i);
-            if(await languagePage.$(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`) != null){
-                const option = await languagePage.evaluate((i) => {return document.querySelector(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`).textContent}, i);
+            if(await initiationPage.$(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`) != null){
+                const option = await initiationPage.evaluate((i) => {return document.querySelector(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`).textContent}, i);
         
                 //college
                 if(option.includes('college')){
@@ -549,7 +672,7 @@ const fillProfile = async() => {
                     college = await college.json();
                     console.log(college);
 
-                    await languagePage.evaluate(() => {
+                    await initiationPage.evaluate(() => {
                         const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
                         element.scrollIntoView({
                             behavior: 'smooth',
@@ -558,15 +681,15 @@ const fillProfile = async() => {
                         });
                     });
 
-                    await languageCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
-                    await languagePage.waitForSelector('[aria-label="School"]');
+                    await initiationCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
+                    await initiationPage.waitForSelector('[aria-label="School"]');
                     await pause(1);
-                    await languageCursor.click('[aria-label="School"]');
-                    await typeWithRandomSpeed(languagePage, college[0].name);
+                    await initiationCursor.click('[aria-label="School"]');
+                    await typeWithRandomSpeed(initiationPage, college[0].name);
                     await pause(2);
-                    await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
+                    await initiationPage.click('[aria-label*="suggested search"] > :nth-child(1)');
                     await pause(2);
-                    await languageCursor.click('[aria-label="Save"]');
+                    await initiationCursor.click('[aria-label="Save"]');
                     i = 0;
                     await pause(3);
                 }else if(option.includes('current city')){//current city
@@ -575,7 +698,7 @@ const fillProfile = async() => {
                     currentTown = await currentTown.json();
                     console.log(currentTown);
 
-                    await languagePage.evaluate(() => {
+                    await initiationPage.evaluate(() => {
                         const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
                         element.scrollIntoView({
                             behavior: 'smooth',
@@ -584,15 +707,15 @@ const fillProfile = async() => {
                         });
                     });
 
-                    await languageCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
-                    await languagePage.waitForSelector('[aria-label="Current city"]');
+                    await initiationCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
+                    await initiationPage.waitForSelector('[aria-label="Current city"]');
                     await pause(1);
-                    await languageCursor.click('[aria-label="Current city"]');
-                    await typeWithRandomSpeed(languagePage, currentTown.results[0].city + ", " + currentTown.results[0].state);
+                    await initiationCursor.click('[aria-label="Current city"]');
+                    await typeWithRandomSpeed(initiationPage, currentTown.results[0].city + ", " + currentTown.results[0].state);
                     await pause(2);
-                    await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
+                    await initiationPage.click('[aria-label*="suggested search"] > :nth-child(1)');
                     await pause(2);
-                    await languageCursor.click('[aria-label="Save"]');
+                    await initiationCursor.click('[aria-label="Save"]');
                     i = 0;
                     await pause(3);
                 }else if(option.includes('home')){//hometown
@@ -600,7 +723,7 @@ const fillProfile = async() => {
                     hometown = await hometown.json();
                     console.log(hometown);
 
-                    await languagePage.evaluate(() => {
+                    await initiationPage.evaluate(() => {
                         const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
                         element.scrollIntoView({
                             behavior: 'smooth',
@@ -609,20 +732,20 @@ const fillProfile = async() => {
                         });
                     });
 
-                    await languageCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
-                    await languagePage.waitForSelector('[aria-label="Hometown"]');
+                    await initiationCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
+                    await initiationPage.waitForSelector('[aria-label="Hometown"]');
                     await pause(1);
-                    await languageCursor.click('[aria-label="Hometown"]');
-                    await typeWithRandomSpeed(languagePage, hometown.results[0].city + ", " + hometown.results[0].state);
-                    await languagePage.waitForSelector('[aria-label*="suggested search"]');
+                    await initiationCursor.click('[aria-label="Hometown"]');
+                    await typeWithRandomSpeed(initiationPage, hometown.results[0].city + ", " + hometown.results[0].state);
+                    await initiationPage.waitForSelector('[aria-label*="suggested search"]');
                     await pause(2);
-                    await languagePage.click('[aria-label*="suggested search"] > :nth-child(1)');
+                    await initiationPage.click('[aria-label*="suggested search"] > :nth-child(1)');
                     await pause(2);
-                    await languageCursor.click('[aria-label="Save"]');
+                    await initiationCursor.click('[aria-label="Save"]');
                     i = 0;
                     await pause(3);
                 }else if(option.includes('relationship')){//relationship status
-                    await languagePage.evaluate(() => {
+                    await initiationPage.evaluate(() => {
                         const element = document.querySelector('div.x6s0dn4 > div > div > div > div:nth-child(1) > div > div > div > div > div.x1iyjqo2 > div > div');
                         element.scrollIntoView({
                             behavior: 'smooth',
@@ -631,15 +754,15 @@ const fillProfile = async() => {
                         });
                     });
 
-                    await languageCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
-                    await languagePage.waitForSelector('[aria-haspopup="listbox"][role="combobox"]');
+                    await initiationCursor.click(`.xqmdsaz > div > div :nth-child(${i}) div.x13faqbe span.x1qq9wsj`);
+                    await initiationPage.waitForSelector('[aria-haspopup="listbox"][role="combobox"]');
                     await pause(1);
-                    await languageCursor.click('[aria-haspopup="listbox"][role="combobox"]');
-                    await languagePage.waitForSelector('.xdt5ytf.x1iyjqo2 > .x12ejxvf');
+                    await initiationCursor.click('[aria-haspopup="listbox"][role="combobox"]');
+                    await initiationPage.waitForSelector('.xdt5ytf.x1iyjqo2 > .x12ejxvf');
                     await pause(2);
-                    await languageCursor.click(`.xdt5ytf.x1iyjqo2 > .x12ejxvf > :nth-child(${Math.floor(Math.random() * 4 + 1)})`);
+                    await initiationCursor.click(`.xdt5ytf.x1iyjqo2 > .x12ejxvf > :nth-child(${Math.floor(Math.random() * 4 + 1)})`);
                     await pause(3);
-                    await languageCursor.click('[aria-label="Save"]');
+                    await initiationCursor.click('[aria-label="Save"]');
                     i = 0;
                     await pause(3);
                 }else{
@@ -651,27 +774,6 @@ const fillProfile = async() => {
         }
     } catch (error) {
         errorMessage('Error filling in info', error);
-        //await logPageContent(languagePage);
+        //await logPageContent(initiationPage);
     }
 }
-
-//main function
-(async () => {
-    try {
-        if(await start()){
-            //Change Language
-            const language = await languagePage.evaluate(() => {return document.documentElement.lang});
-            if (language !== 'en') {
-                await changeLanguage();
-            }
-
-            //Change profile pic, cover photo, avatar, and bio
-            //await fillProfile();
-
-        }
-
-        console.log('finish');
-    } catch (error) {
-        errorMessage('Error with main function', error);
-    }
-})();

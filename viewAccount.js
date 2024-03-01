@@ -2,7 +2,6 @@
 const { workerData } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
-const puppeteerAfp = require('puppeteer-afp');
 puppeteer.use(stealthPlugin());
 
 //discord.js
@@ -52,8 +51,7 @@ const warmAccount = async () => {
             args: ['--no-sandbox', '--host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE myproxy"', `--proxy-server=${workerData.proxy}`]//  
         });
         let pages = await warmingBrowser.pages();
-        let tempPage = pages[0];
-        warmingPage = puppeteerAfp(tempPage);
+        warmingPage = pages[0];
 
         //close the notif popup
         const context = warmingBrowser.defaultBrowserContext();

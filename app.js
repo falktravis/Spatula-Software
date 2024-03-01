@@ -34,8 +34,6 @@ let taskDB;
         userDB = mongoClient.db('Spatula-Software').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
-        //mess with database
-
         //**reset Next Warming
         /*let accs = await burnerAccountDB.find({}).toArray();
         const currentDate = new Date();
@@ -47,7 +45,7 @@ let taskDB;
         //new proxy accs - {Start: {$gte: 1708094011108}}
         //hq - {AccountType: "Hq"}
         //non-hq - {Start: {$gte: 1708094011108, $lt: 1708500000000}} 
-        //integration testing accs - {TotalWarmingPeriod: {$ne: null}, LastActive: 10000000000001}      First Warming: Feb 24       Second Warming: 
+        //integration testing accs - {TotalWarmingPeriod: {$ne: null}, LastActive: 10000000000001}      First Warming: Feb 24       Second Warming: Feb 28
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -156,7 +154,7 @@ const getStaticFacebookMessageProxy = async () => {
 
 const getStaticFacebookBurnerProxy = async () => {
     //get the proxy
-    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}, ISP: true, Fresh: true}, {sort: {TotalFacebookBurnerAccounts: 1}});//!change
+    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}, Fresh: true}, {sort: {TotalFacebookBurnerAccounts: 1}});//!change
     if(staticProxyObj == null){
         staticProxyObj = await staticProxyDB.findOne({}, {sort: { TotalFacebookBurnerAccounts: 1}});
     }
@@ -539,21 +537,22 @@ const executeCommand = async (interaction) => {
                 //await warmAccs();
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
-                const newAccs = await burnerAccountDB.find({TotalWarmingPeriod: {$ne: null}, LastActive: 10000000000001});
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).limit(20).sort({_id: -1});
                 //const newAccs = await burnerAccountDB.find({Username: 'ocybhfve@znemail.com'});
 
                 const initialAccountSetUp = async (acc) => {
-                    new Worker('./viewAccount.js', { workerData:{//!change script for initiation
+                    new Worker('./initialAccountSetUp.js', { workerData:{
                         username: acc.Username,
                         proxy: acc.Proxy,
                         cookies: acc.Cookies,
                         platform: acc.Platform,
                         channel: interaction.channelId,
+                        changeLanguage: true
                     }});
                     
                     await new Promise(r => setTimeout(r, 70000));
 
-                    //await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now(), Initiated: true}});
+                    await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now(), Initiated: true}});
                     //await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {Initiated: true}});
                 }
 
@@ -561,14 +560,13 @@ const executeCommand = async (interaction) => {
                     await initialAccountSetUp(acc);
                 }
 
-                //await burnerAccountDB.updateMany({LastActive: 10000000000000}, {$set: {LastActive: Date.now()}});
                 await Channel.send('finish');
             }
             else if(interaction.commandName === "get-dormant-proxies" && interaction.user.id === '456168609639694376'){
-                await resetProxyTracking();
+                //await resetProxyTracking();
 
                 //get all proxies
-                let proxyArr = await staticProxyDB.find({TotalFacebookBurnerAccounts: {$ne: 0}}).toArray()
+                let proxyArr = await staticProxyDB.find({ISP: null}).toArray()
 
                 let account50Proxies = (interaction.options.getString("50")).split(' ');
                 let account25Proxies = (interaction.options.getString("25")).split(' ');
@@ -580,6 +578,7 @@ const executeCommand = async (interaction) => {
                 let account100DormantProxies = [];
 
                 //print proxy list
+                let i = 0;
                 for(let x = 0; x < proxyArr.length; x++){
                     if(account50Proxies.includes(proxyArr[x].Proxy)){
                         account50DormantProxies.push(proxyArr[x].Proxy);
@@ -589,25 +588,27 @@ const executeCommand = async (interaction) => {
                         account10DormantProxies.push(proxyArr[x].Proxy);
                     }else if(account100Proxies.includes(proxyArr[x].Proxy)){
                         account100DormantProxies.push(proxyArr[x].Proxy);
+                    }else{
+                        await staticProxyDB.deleteOne({Proxy: proxyArr[x].Proxy});
                     }
                 }
 
-                console.log("50");
+                console.log("50 - " + account50DormantProxies.length);
                 for(let i = 0; i < account50DormantProxies.length; i++){
                     console.log(account50DormantProxies[i]);
                 }
 
-                console.log("\n\n25")
+                console.log("\n\n25 - " + account25DormantProxies.length)
                 for(let i = 0; i < account25DormantProxies.length; i++){
                     console.log(account25DormantProxies[i]);
                 }
 
-                console.log("\n\n10")
+                console.log("\n\n10 - " + account10DormantProxies.length)
                 for(let i = 0; i < account10DormantProxies.length; i++){
                     console.log(account10DormantProxies[i]);
                 }
 
-                console.log("\n\n100")
+                console.log("\n\n100 - " + account100DormantProxies.length)
                 for(let i = 0; i < account100DormantProxies.length; i++){
                     console.log(account100DormantProxies[i]);
                 }
@@ -712,15 +713,16 @@ const executeCommand = async (interaction) => {
                     //const randomMillisecondsWeek = randomWeeks * 7 * 24 * 60 * 60 * 1000;
 
                     //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), LastActive: Date.now(), Platform: randomPlatform, Initiated: false, Start: startTime, AccountType: "Hq"});
-                    if(i < 10){
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, Start: startTime, AccountType: "Hq"});
+                    /*if(i < 10){
                         const randomMillisecondsWeek = 1 * 7 * 24 * 60 * 60 * 1000;
                         await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek), TotalWarmingPeriod: 1, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, Start: startTime, AccountType: "Hq"});
                     }else if(i < 15){
                         const randomMillisecondsWeek = 2 * 7 * 24 * 60 * 60 * 1000;
                         await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek), TotalWarmingPeriod: 2, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, Start: startTime, AccountType: "Hq"});
                     }else{
-                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, Start: startTime, AccountType: "Hq"});
-                    }
+                        
+                    }*/
 
                     console.log(email);
                 }
@@ -776,7 +778,7 @@ const executeCommand = async (interaction) => {
                 //insert the new proxies
                 await proxyList.forEach(async (proxy) => {
                     if(await staticProxyDB.findOne({Proxy: proxy}) == null){
-                        await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, TotalFacebookBurnerAccounts: 0, Fresh: true, ISP: true});//!ISP
+                        await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, TotalFacebookBurnerAccounts: 0, Fresh: true});
                         console.log(proxy);
                     }else{
                         console.log("PROXY ALREADY PRESENT");

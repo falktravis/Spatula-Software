@@ -2,7 +2,6 @@ const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const { createCursor } = require("ghost-cursor");
 const stealthPlugin = require('puppeteer-extra-plugin-stealth');
-const puppeteerAfp = require('puppeteer-afp');
 puppeteer.use(stealthPlugin());
 const fs = require('fs/promises');
 
@@ -316,8 +315,7 @@ const sendMessage = async (link) => {
             timeout: 60000
         });
         let pages = await itemBrowser.pages();
-        let tempPage = pages[0];
-        itemPage = puppeteerAfp(tempPage);
+        itemPage = pages[0];
         
         //close the notif popup
         const context = itemBrowser.defaultBrowserContext();
@@ -461,8 +459,7 @@ const start = async () => {
             timeout: 60000
         });
         let pages = await mainBrowser.pages();
-        let tempPage = pages[0];
-        mainPage = puppeteerAfp(tempPage);
+        mainPage = pages[0];
 
         //close the notif popup
         const context = mainBrowser.defaultBrowserContext();
@@ -471,7 +468,6 @@ const start = async () => {
         //create a cursor
         mainCursor = createCursor(mainPage);
 
-        //await warmingPage.authenticate({'username':'ESKKz1f02E', 'password':'7172'});
         mainPage.setUserAgent(`Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
 
         //change the viewport

@@ -462,10 +462,10 @@ const scrollFeed = async() => {
             console.log("scroll feed");
 
             await warmingPage.waitForSelector('div.x1hc1fzr.x1unhpq9 > div > div > div');
-            if(await warmingPage.$('[aria-label="Find friends"]') == null){
+            /*if(await warmingPage.$('[aria-label="Find friends"]') == null){
                 await pause(3);
                 await joinGroup(1);
-            }
+            }*/
 
             if(await warmingPage.$('[aria-label="Find friends"]') == null){//!delete this if statement when join group officially works
                 //scroll a random number of posts 5-20
@@ -486,25 +486,24 @@ const scrollFeed = async() => {
                     if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="hide post"]`) != null){//post
                         await logChannel.send('post');
                         await interactWithPost(i);
-                    }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"]`) != null){//!group suggestions
+                    }/*else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"]`) != null){//!group suggestions
                         await logChannel.send('group suggestions');
-                        /*if(randomChance(0.10)){
+                        if(randomChance(0.10)){
                             await logChannel.send('it hits');
                             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"] > div > ul > :nth-child(${Math.floor(Math.random() + 1)}) [aria-label="Join group"]`);
-                        }*/
+                        }
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Create"]`) != null){//reels
                         await logChannel.send('reels');
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="People you may know"]`) != null){//Friend Suggestions
                         await logChannel.send('Friend Suggestions');
-                        /*if(randomChance(0.30)){
+                        if(randomChance(0.30)){
                             await logChannel.send('it hits');
                             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="People you may know"] > div > div > :nth-child(${Math.floor(Math.random() * 2 + 2)}) [aria-label="Add friend"]`);
-                        }*/
+                        }
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Friend Requests"]`) != null){//Friend Requests
                         await logChannel.send('Friend Requests');
-                        //TODO: Find this component and fix, loop through each request and very high random chance to add
-                        await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Friend Requests"] > div > div > :nth-child(${Math.floor(Math.random() * 2 + 2)}) [aria-label="Add friend"]`);
-                    }else{
+                        //await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Friend Requests"] > div > div > :nth-child(${Math.floor(Math.random() * 2 + 2)}) [aria-label="Add friend"]`);
+                    }*/else{
                         await logChannel.send("Non-Identified Container");
                     }
                 }
@@ -533,7 +532,7 @@ const interactWithPost = async(childNum) => {
             await pause(2);
         }
 
-        let numComments;
+        /*let numComments;
         if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`) != null){
             numComments = await warmingPage.evaluate((childNum) => {return document.querySelector(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`).innerText}, childNum);
             if(numComments == ''){
@@ -626,7 +625,7 @@ const interactWithPost = async(childNum) => {
             await pause(2);
             await warmingCursor.click('[aria-label="Close"]');
             await pause(2);
-        }
+        }*/
 
         //If post is a fan page(Whatever it means to just be a public page), randomize value to follow it
         if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 > span > div > span`) != null && randomChance(0.15)){
@@ -641,7 +640,7 @@ const interactWithPost = async(childNum) => {
         }*/
 
         //Share opportunity
-        if(randomChance(0.05)){
+        if(randomChance(0.04)){
             await logChannel.send('share');
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) [aria-label="Send this to friends or post it on your timeline."]`);//share
             await warmingPage.waitForSelector(`div.x1qfuztq.xh8yej3 > div > div > :nth-child(1)`);
