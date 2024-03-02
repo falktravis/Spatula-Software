@@ -1,6 +1,6 @@
 //require
 require('dotenv').config();
-const { workerData } = require('worker_threads');
+const { workerData, parentPort } = require('worker_threads');
 const puppeteer = require('puppeteer-extra');
 const stealthPlugin = require('puppeteer-extra-plugin-stealth')
 puppeteer.use(stealthPlugin());
@@ -18,7 +18,6 @@ const fs = require('fs/promises');
 
 //init chatgpt
 const OpenAI = require("openai");
-const { channel } = require('diagnostics_channel');
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
@@ -26,7 +25,7 @@ const openai = new OpenAI({
 //error message send function
 const errorMessage = (message, error) => {
     console.log(message + ': ' + error);
-    //mainChannel.send(message + ': ' + error);
+    Channel.send(message + ': ' + error);
 }
 
 //convert platform string for a user agent
@@ -40,155 +39,19 @@ const platformConverter = (platform) => {
     }
 }
 
-//manipulating metadata
-const exiftool = require('node-exiftool');
-const exiftoolBin = require('dist-exiftool');
-const ep = new exiftool.ExiftoolProcess(exiftoolBin);
-const overWriteMetadata = async (destination) => {
-    const date = new Date(Date.now() - Math.floor(Math.random() * 86400000 * 365));
-    const model = Math.floor(Math.random() * 2) + 13;
-    // Add more fields as needed
-    const metadata = {
-        'Make': 'Apple',
-        'Model': `iPhone ${model}`,
-        'Lens': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
-        'FocalLength': '5.7 mm',
-        'Aperture': (Math.random() * (2.8 - 1) + 1).toFixed(1),
-        'Exposure': `1/${Math.floor(Math.random() * (500 - 1) + 1)}`,
-        'ISO': 160,
-        'Flash': 'Auto, Did not fire',
-        'AccelerationVector': '-1.002320409 0.008560923856 0.04708275201',
-        'AuxiliaryImageType': 'urn:com:apple:photo:2020:aux:hdrgainmap',
-        'AverageFrameRate': 0,
-        'BitDepthChroma': 8,
-        'BitDepthLuma': 8,
-        'BlueMatrixColumn': '0.1571 0.06657 0.78407',
-        'BrightnessValue': Math.random() * 5,
-        'CMMFlags': 'Not Embedded, Independent',
-        'ChromaFormat': '4:2:0',
-        'ChromaticAdaptation': '1.04788 0.02292 -0.0502 0.02959 0.99048 -0.01706 -0.00923 0.01508 0.75168',
-        'CircleOfConfusion': '0.002 mm',
-        'ColorSpace': 'Uncalibrated',
-        'ColorSpaceData': 'RGB',
-        'CompatibleBrands': ['mif1', 'MiHE', 'MiPr', 'miaf', 'MiHB', 'heic'],
-        'CompositeImage': 'General Composite Image',
-        'ConnectionSpaceIlluminant': '0.9642 1 0.82491',
-        'ConstantFrameRate': 'Unknown',
-        'ConstraintIndicatorFlags': '176 0 0 0 0 0',
-        'CreateDate': date,
-        'DateTimeOriginal': date,
-        'DeviceAttributes': 'Reflective, Glossy, Positive, Color',
-        'DeviceManufacturer': 'Apple Computer Inc.',
-        'DigitalZoomRatio': 3.43246311,
-        'ExifByteOrder': 'Big-endian (Motorola, MM)',
-        'ExifImageHeight': 3024,
-        'ExifImageWidth': 4032,
-        'ExifVersion': '0232',
-        'ExposureCompensation': 0,
-        'ExposureMode': 'Auto',
-        'ExposureProgram': 'Program AE',
-        'FNumber': 1.5,
-        'FOV': '23.1 deg',
-        'FileAccessDate': '2024-02-13 19:25:23 +0000',
-        'FileInodeChangeDate': '2024-02-13 19:25:23 +0000',
-        'FileModifyDate': '2024-02-13 19:25:23 +0000',
-        'FilePermissions': 'prw-------',
-        'FileSize': '0 bytes',
-        'FileType': 'HEIC',
-        'FileTypeExtension': 'heic',
-        'FocalLength35efl': '5.7 mm (35 mm equivalent: 88.0 mm)',
-        'FocalLengthIn35mmFormat': '88 mm',
-        'FocusDistanceRange': '0.15 - 0.46 m',
-        'GenProfileCompatibilityFlags': 'Main Still Picture, Main 10, Main',
-        'GeneralLevelIDC': '90 (level 3.0)',
-        'GeneralProfileIDC': 'Main Still Picture',
-        'GeneralProfileSpace': 'Conforming',
-        'GeneralTierFlag': 'Main Tier',
-        'GreenMatrixColumn': '0.29198 0.69225 0.04189',
-        'HEVCConfigurationVersion': 1,
-        'HandlerType': 'Picture',
-        'HostComputer': `iPhone ${model}`,
-        'HyperfocalDistance': '11.13 m',
-        'ImageHeight': 3024,
-        'ImagePixelDepth': 8,
-        'ImageSize': '4032x3024',
-        'ImageSpatialExtent': '4032x3024',
-        'ImageWidth': 4032,
-        'LensID': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
-        'LensInfo': '1.539999962-5.7mm f/1.5-2.4',
-        'LensMake': 'Apple',
-        'LensModel': `iPhone ${model} back dual wide camera 5.7mm f/1.5`,
-        'LightValue': 6.1,
-        'MIMEType': 'image/heic',
-        'MajorBrand': 'High Efficiency Image Format HEVC still image (.HEIC)',
-        'MediaDataOffset': 3752,
-        'MediaDataSize': 884274,
-        'MediaGroupUUID': 'EE718457-727B-4B90-B1E9-5518B8CB8CBF',
-        'MediaWhitePoint': '0.96419 1 0.82489',
-        'Megapixels': 12.2,
-        'MetaImageSize': '4032x3024',
-        'MeteringMode': 'Multi-segment',
-        'MinSpatialSegmentationIDC': 0,
-        'MinorVersion': '0.0.0',
-        'ModifyDate': date,
-        'NumTemporalLayers': 1,
-        'OffsetTime': '-05:00',
-        'OffsetTimeDigitized': '-05:00',
-        'OffsetTimeOriginal': '-05:00',
-        'Orientation': 'Horizontal (normal)',
-        'ParallelismType': 0,
-        'PrimaryItemReference': 49,
-        'PrimaryPlatform': 'Apple Computer Inc.',
-        'ProfileCMMType': 'Apple Computer Inc.',
-        'ProfileClass': 'Display Device Profile',
-        'ProfileConnectionSpace': 'XYZ',
-        'ProfileCopyright': 'Copyright Apple Inc., 2022',
-        'ProfileCreator': 'Apple Computer Inc.',
-        'ProfileDateTime': '2022-01-01 00:00:00 +0000',
-        'ProfileDescription': 'Display P3',
-        'ProfileFileSignature': 'acsp',
-        'ProfileID': 'ecfda38e388547c36db4bd4f7ada182f',
-        'ProfileVersion': '4.0.0',
-        'RedMatrixColumn': '0.51512 0.2412 -0.00105',
-        'RenderingIntent': 'Perceptual',
-        'ResolutionUnit': 'inches',
-        'Rotation': 0,
-        'RunTimeEpoch': 0,
-        'RunTimeFlags': 'Valid',
-        'RunTimeScale': 1000000000,
-        'RunTimeSincePowerUp': '16 days 3:59:30',
-        'RunTimeValue': 1396770404182625,
-        'ScaleFactor35efl': 15.4,
-        'SceneType': 'Directly photographed',
-        'SensingMethod': 'One-chip color area',
-        'ShutterSpeed': '1/50',
-        'ShutterSpeedValue': '1/50',
-        'Software': '17.2.1',
-        'SubSecCreateDate': date,
-        'SubSecDateTimeOriginal': date,
-        'SubSecModifyDate': date,
-        'SubSecTimeDigitized': 572,
-        'SubSecTimeOriginal': 572,
-        'SubjectArea': '2009 1502 2321 1317',
-        'TemporalIDNested': 'No',
-        'WhiteBalance': 'Auto',
-        'XMPToolkit': 'XMP Core 6.0.0',
-        'XResolution': 72,
-        'YResolution': 72
-    };
-
-    //change actual picture data
-    await ep.open();
-    await ep.writeMetadata(destination, metadata, ['overwrite_original']);
-    await ep.close();
-}
-
-let mainChannel;
+let Channel;
 client.on('ready', async () => {
     try {
-        mainChannel = client.channels.cache.get(workerData.channel);
-        if(mainChannel == null){
-            mainChannel = await client.channels.fetch(workerData.channel);
+        if(workerData.channel != null){
+            Channel = client.channels.cache.get(workerData.channel);
+            if(Channel == null){
+                Channel = await client.channels.fetch(workerData.channel);
+            }
+        }else{
+            Channel = client.channels.cache.get('1196915422042259466');
+            if(Channel == null){
+                Channel = await client.channels.fetch('1196915422042259466');
+            }
         }
     } catch (error) {
         errorMessage('Error fetching channel', error);
@@ -201,7 +64,7 @@ const logPageContent = async (page) => {
         const htmlContent = await page.content();
         const { Readable } = require('stream');
         const htmlStream = Readable.from([htmlContent]);
-        mainChannel.send({
+        Channel.send({
             files: [
                 {
                     attachment: htmlStream,
@@ -237,6 +100,46 @@ async function typeWithRandomSpeed(page, text) {
     }
 }
 
+const login = async () => {
+    try {
+        Channel.send("Re-Login Required: " + burnerUsername);
+
+        //check for this weird shit
+        if(await initiationPage.$('[title="Allow all cookies"]') != null){
+            await pause(2);
+            await initiationCursor.click('[title="Allow all cookies"]');
+            try {
+                await initiationPage.waitForNavigation();
+            } catch (error) {}
+        }
+
+        await initiationCursor.click('[name="email"]');
+        await pause(1);
+        await typeWithRandomSpeed(initiationPage, burnerUsername);
+        await pause(1);
+        await initiationCursor.click('[name="pass"]');
+        await pause(1);
+        await typeWithRandomSpeed(initiationPage, burnerPassword);
+        await pause(1);
+        await initiationCursor.click('[name="login"]');
+
+        try{
+            await initiationPage.waitForNavigation();
+        }catch (error) {}
+
+        //update burnerCookies
+        burnerCookies = await initiationPage.cookies();
+        parentPort.postMessage({cookies: await initiationPage.cookies()});
+        return true;
+    } catch (error) {
+        await Channel.send('error with re-login + ban: ' + error);
+        parentPort.postMessage({action: 'ban', username: burnerUsername});
+        await initiationBrowser.close();
+        await initiationPage.close();
+        process.exit();
+    }
+}
+
 //general instantiation
 let initiationBrowser;
 let initiationPage;
@@ -246,8 +149,8 @@ const start = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         initiationBrowser = await puppeteer.launch({
-            headless: false,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]
+            headless: 'new',
+            args: ['--no-sandbox', `--proxy-server=${workerData.proxy}`]
         });
         let pages = await initiationBrowser.pages();
         initiationPage = pages[0];
@@ -256,47 +159,65 @@ const start = async () => {
         const context = initiationBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
-        //change http headers
-        initiationPage.setExtraHTTPHeaders({
-            'Referer': 'https://www.facebook.com/login',
-            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-            'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-            'Sec-Ch-Ua-Platform': workerData.platform
-        });
+        //change the viewport
+        initiationPage.setViewport({ width: 1366, height: 768 });
 
-        //await initiationPage.setRequestInterception(true);
-        /*initiationPage.on('response', async response => {
+        //redirect management
+        initiationPage.on('response', async response => {
             //detect redirection
             if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
                 const redirectURL = response.headers()['location'];
                 console.log(`Redirected to: ${redirectURL}`);
 
-                if(await initiationPage.$('[href="https://m.facebook.com/terms.php"]') != null && await initiationPage.$('[aria-label="Dismiss"]') != null){
-                    console.log("checkpointed")
-                    await pause(1);
+                if(await initiationPage.$('[aria-label="Dismiss"]') != null){
+                    await pause(2);
                     await initiationCursor.click('[aria-label="Dismiss"]');
                 }
+
+                if(redirectURL.includes('/checkpoint/')){
+                    await Channel.send('Account banned: ' + burnerUsername);
+            
+                    //message the main script to delete the burner account
+                    parentPort.postMessage({action: 'ban', username: burnerUsername});
+                    await initiationPage.close();
+                    await initiationBrowser.close();
+                    process.exit();
+                }else if(redirectURL.includes('/login/?next')){
+                    try{
+                        await initiationPage.waitForSelector('[name="email"]');
+                    }catch(error){}
+
+                    await login();
+                }
             }
-        });*/
+        });
+
+        //change http headers
+        initiationPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
+        initiationPage.setExtraHTTPHeaders({
+            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
+            'SEC-CH-UA-ARCH': '"x86"',
+            'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
+            'SEC-CH-UA-MOBILE':	'?0',
+            'Sec-Ch-Ua-Platform': `"${workerData.platform}"`,
+            'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
+            'Referer': 'https://www.facebook.com/login'
+        });
 
         //create cursor
         initiationCursor = createCursor(initiationPage);
 
-        //change the viewport
-        initiationPage.setViewport({ width: 1366, height: 768 });
-
         //Set cookies in browser
         await initiationPage.setCookie(...workerData.cookies);
-
-        console.log(workerData.username);
 
         await initiationPage.goto('https://www.facebook.com', {waitUntil: 'domcontentloaded'});
 
         //detect accounts that need login
         if(await initiationPage.$('[name="login"]') != null){
-            console.log("account is fucked");
-            return false;
+            Channel.send("account is fucked");
+            return login();
         }else{
+            parentPort.postMessage({cookies: await initiationPage.cookies()});
             return true;
         }
     }catch(error){
@@ -304,7 +225,14 @@ const start = async () => {
     }
 }
 
-//** Works */
+const randomChance = (chance) => {
+    if(Math.random() < chance){
+        return true;
+    }else{
+        return false;
+    }
+}
+
 const changeLanguage = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
@@ -373,16 +301,51 @@ const changeLanguage = async () => {
         try {
             await initiationPage.waitForNavigation({ waitUntil: 'load' });
         } catch (error) {}
-        await pause(2);
+        await pause(1);
         await initiationCursor.click('[href="/"]')
-        await mainChannel.send("Finish: " + workerData.username);
+        parentPort.postMessage({languageChange: true})
+        await Channel.send("Finish: " + workerData.username);
     }catch(error){
         errorMessage('Error with page initiation', error);
-        //await logPageContent(initiationPage);
+        await logPageContent(initiationPage);
     }
 }
 
-//**Works for now */
+const checkNotifs = async () => {
+    try {
+        await initiationPage.waitForSelector('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+        if(await initiationPage.$('div.x1ja2u2z > div:nth-child(2) > span > span > div > div > span > span') != null){//check for unread notifs
+            await pause(1);
+            await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+            try {
+                await initiationPage.waitForSelector('div.x78zum5 > div:nth-child(3) > div.x4k7w5x.x1jfb8zj > div > div > div.x1n2onr6');
+                await pause(3);
+                //Chance to click on one notif 1-4 and click back to home
+                if(randomChance(0.4)){
+                    const notifs = await initiationPage.$$('div.x78zum5 > div:nth-child(3) > div.x4k7w5x.x1jfb8zj > div > div > div.x1n2onr6');
+                    if(notifs.length < 5){
+                        await initiationCursor.click(`div.x78zum5 > div:nth-child(3) > div.x4k7w5x.x1jfb8zj > div > div > div.x1n2onr6:nth-child(${Math.floor(Math.random() * 4 + 2)})`);
+                    }else{
+                        await initiationCursor.click(`div.x78zum5 > div:nth-child(3) > div.x4k7w5x.x1jfb8zj > div > div > div.x1n2onr6:nth-child(${Math.floor(Math.random() * (notifs.length - 1) + 2)})`);
+                    }
+                    await pause(3);
+                    //scroll down
+                    await initiationCursor.click('[href="/"]');
+                }else{
+                    await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+                }
+                await pause(2);
+            } catch (error) {
+                Channel.send("notifs thing: " + error);
+                await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+            }
+        }
+    } catch (error) {
+        Channel.send("Notification Checking Error: " + error);
+        await logPageContent(initiationPage);
+    }
+}
+
 const scrollFeed = async() => {
     try {
         await initiationPage.waitForSelector('div.x1hc1fzr.x1unhpq9 > div > div > div');
@@ -404,10 +367,10 @@ const scrollFeed = async() => {
 
             //check what kind of container it is
             if(await initiationPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="hide post"]`) != null){//post
-                await mainChannel.send('post');
+                await Channel.send('post');
                 await interactWithPost(i);
             }else{
-                await mainChannel.send("Non-Identified Container");
+                await Channel.send("Non-Identified Container");
             }
         }
 
@@ -418,20 +381,12 @@ const scrollFeed = async() => {
     }
 }
 
-const randomChance = (chance) => {
-    if(Math.random() < chance){
-        return true;
-    }else{
-        return false;
-    }
-}
-
 const interactWithPost = async(childNum) => {
     try {
         await pause(2);
         //like
         if(randomChance(0.12)){
-            await mainChannel.send('like');
+            await Channel.send('like');
             await initiationCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) div.x5ve5x3 > div.x9f619.x1n2onr6 > div:nth-child(1)`);//Like
             await pause(2);
         }
@@ -443,7 +398,7 @@ const interactWithPost = async(childNum) => {
 
         //Share opportunity
         if(randomChance(0.02)){
-            await mainChannel.send('share');
+            await Channel.send('share');
             await initiationCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) div:nth-child(3) > div > div.xuxw1ft > div:nth-child(2)`);//share
             await initiationPage.waitForSelector(`div.x1qfuztq.xh8yej3 > div > div > :nth-child(1)`);
             await pause(1);
@@ -455,7 +410,7 @@ const interactWithPost = async(childNum) => {
                 await pause(2);
                 await initiationCursor.click('div.x6s0dn4.x9f619.x78zum5.x1qughib > div > div > div.x6s0dn4.x78zum5');
             } catch (error) {
-                await mainChannel.send("error clicning share thing: " + error);
+                await Channel.send("error clicning share thing: " + error);
                 await initiationCursor.click('div.x9f619.x71s49j div:nth-child(1) > div.x1n2onr6 > div > div.x78zum5 > div > div > i')
             }
         }
@@ -469,32 +424,26 @@ const interactWithPost = async(childNum) => {
 (async () => {
     try {
         if(await start()){
+            //check notifs
+            await checkNotifs();
+
+            //scroll feed
+            await scrollFeed();
+
             //Change Language
             if(workerData.changeLanguage == true){
-                //start by "checking" notifs
-                await initiationPage.waitForSelector('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
-                await pause(1);
-                await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
-                await pause(3);
-                //TODO: Chance to click on one notif and click back to home
-                await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
-                await pause(1);
-
-                await scrollFeed();
-
                 const initiation = await initiationPage.evaluate(() => {return document.documentElement.lang});
                 if (initiation !== 'en') {
                     await changeLanguage();
                 }
-
                 await scrollFeed();
-                //await initiationPage.close();
-                //await initiationBrowser.close();
-                //process.exit(1);
             }
         }
 
         console.log('finish');
+        await initiationPage.close();
+        await initiationBrowser.close();
+        process.exit();
     } catch (error) {
         errorMessage('Error with main function', error);
     }
