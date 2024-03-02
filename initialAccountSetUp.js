@@ -9,7 +9,7 @@ const { createCursor } = require("ghost-cursor");
 //discord.js
 const { Client, GatewayIntentBits } = require('discord.js');
 const { Page } = require('puppeteer');
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
 //for fetching pics from the database
