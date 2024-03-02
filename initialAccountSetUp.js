@@ -356,13 +356,13 @@ const checkNotifs = async () => {
     }
 }
 
-const scrollFeed = async() => {
+const scrollFeed = async (posts) => {
     try {
         await initiationPage.waitForSelector('div.x1hc1fzr.x1unhpq9 > div > div > div');
 
         //pick a feed and scroll through a random amount of post, interacting with a random amount of posts
         //scroll a random number of posts 5-20
-        for(let i = 1; i < Math.floor(Math.random() * 8 + 5); i++){
+        for(let i = 1; i < Math.floor(Math.random() * 6 + posts); i++){
             await pause(3);
             //scroll into view
             await initiationPage.waitForSelector(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i})`);
@@ -438,7 +438,7 @@ const interactWithPost = async(childNum) => {
             await checkNotifs();
 
             //scroll feed
-            await scrollFeed();
+            await scrollFeed(12);
 
             //Change Language
             if(workerData.changeLanguage == true){
@@ -446,7 +446,7 @@ const interactWithPost = async(childNum) => {
                 if (initiation !== 'en') {
                     await changeLanguage();
                 }
-                await scrollFeed();
+                await scrollFeed(5);
             }
         }
 
