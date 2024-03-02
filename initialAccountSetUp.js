@@ -72,6 +72,13 @@ const logPageContent = async (page) => {
                 },
             ],
         });
+
+        //png
+        await page.screenshot({ path: 'screenshot.png' });
+        await Channel.send({
+            files: ['screenshot.png'],
+        });
+        await fs.unlink('screenshot.png');
     }catch(error){
         errorMessage('error loggin content: ', error);
     }
