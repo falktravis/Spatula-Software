@@ -127,9 +127,14 @@ const login = async () => {
             await initiationPage.waitForNavigation();
         }catch (error) {}
 
-        //update burnerCookies
-        parentPort.postMessage({cookies: await initiationPage.cookies()});
-        return true;
+        if(initiationPage.$('div.fsl.fwb.fcb') != null){
+            Channel.send(await initiationPage.evaluate(() => {return document.querySelector('div.fsl.fwb.fcb').innerText}));
+            return false;
+        }else{
+            //update burnerCookies
+            parentPort.postMessage({cookies: await initiationPage.cookies()});
+            return true;
+        }
     } catch (error) {
         await Channel.send('error with re-login + ban: ' + error);
         parentPort.postMessage({action: 'ban', username: workerData.username});
