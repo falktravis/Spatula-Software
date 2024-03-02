@@ -63,36 +63,6 @@ process.on('unhandledRejection', async (reason, promise) => {
     warmingLogChannel.send('Uncaught rejection: ' + reason);
 });
 
-//scan database for non-paying users
-const scanDatabase = async () => {
-    try {
-        usersToDelete = [];
-
-        //check map against db
-        for (const [key, value] of users) {
-            const userObj = await userDB.findOne({ UserId: key });
-            if (!userObj) {
-                usersToDelete.push(key);
-            }
-        }
-
-        //actually delete the users from map
-        usersToDelete.forEach(async (userId) => {
-            users.get(userId).facebook.forEach(async (task, key) => {
-                await deleteTask(task, key, userId);
-            })
-                            
-            //delete from db
-            await taskDB.deleteMany({UserId: userId});
-
-            users.delete(userId);
-        })
-    } catch (error) {
-        console.log("Error scaning Database: \n\t" + error);
-        warmingLogChannel.send("Error scaning Database: \n\t" + error);
-    }
-}
-
 //start warming accs for the day
 const warmAccs = async() => {
     try {
@@ -104,6 +74,7 @@ const warmAccs = async() => {
             if(warmingAccounts[i].LastActive == 10000000000000){//language not changed
                 let warmer = new Worker('./initialAccountSetUp.js', { workerData:{
                     username: warmingAccounts[i].Username,
+                    password: warmingAccounts[i].Password,
                     proxy: warmingAccounts[i].Proxy,
                     cookies: warmingAccounts[i].Cookies,
                     platform: warmingAccounts[i].Platform,
@@ -137,6 +108,7 @@ const warmAccs = async() => {
             }/*else{
                 let warmer = new Worker('./warmAccount.js', { workerData:{
                     username: warmingAccounts[i].Username,
+                    password: warmingAccounts[i].Password,
                     proxy: warmingAccounts[i].Proxy,
                     cookies: warmingAccounts[i].Cookies,
                     platform: warmingAccounts[i].Platform,
@@ -175,7 +147,6 @@ const warmAccs = async() => {
 
 //run daily tasks at the same time every day
 const RunDailyTasks = () => {
-    scanDatabase();
     warmAccs();
 
     setTimeout(async () => {

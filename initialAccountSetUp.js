@@ -102,7 +102,7 @@ async function typeWithRandomSpeed(page, text) {
 
 const login = async () => {
     try {
-        Channel.send("Re-Login Required: " + burnerUsername);
+        Channel.send("Re-Login Required: " + workerData.username);
 
         //check for this weird shit
         if(await initiationPage.$('[title="Allow all cookies"]') != null){
@@ -115,11 +115,11 @@ const login = async () => {
 
         await initiationCursor.click('[name="email"]');
         await pause(1);
-        await typeWithRandomSpeed(initiationPage, burnerUsername);
+        await typeWithRandomSpeed(initiationPage, workerData.username);
         await pause(1);
         await initiationCursor.click('[name="pass"]');
         await pause(1);
-        await typeWithRandomSpeed(initiationPage, burnerPassword);
+        await typeWithRandomSpeed(initiationPage, workerData.password);
         await pause(1);
         await initiationCursor.click('[name="login"]');
 
@@ -128,12 +128,11 @@ const login = async () => {
         }catch (error) {}
 
         //update burnerCookies
-        burnerCookies = await initiationPage.cookies();
         parentPort.postMessage({cookies: await initiationPage.cookies()});
         return true;
     } catch (error) {
         await Channel.send('error with re-login + ban: ' + error);
-        parentPort.postMessage({action: 'ban', username: burnerUsername});
+        parentPort.postMessage({action: 'ban', username: workerData.username});
         await initiationBrowser.close();
         await initiationPage.close();
         process.exit();
@@ -144,7 +143,6 @@ const login = async () => {
 let initiationBrowser;
 let initiationPage;
 let initiationCursor;
-
 const start = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
@@ -175,10 +173,10 @@ const start = async () => {
                 }
 
                 if(redirectURL.includes('/checkpoint/')){
-                    await Channel.send('Account banned: ' + burnerUsername);
+                    await Channel.send('Account banned: ' + workerData.username);
             
                     //message the main script to delete the burner account
-                    parentPort.postMessage({action: 'ban', username: burnerUsername});
+                    parentPort.postMessage({action: 'ban', username: workerData.username});
                     await initiationPage.close();
                     await initiationBrowser.close();
                     process.exit();
@@ -446,6 +444,9 @@ const interactWithPost = async(childNum) => {
         process.exit();
     } catch (error) {
         errorMessage('Error with main function', error);
+        await initiationPage.close();
+        await initiationBrowser.close();
+        process.exit();
     }
 })();
 
