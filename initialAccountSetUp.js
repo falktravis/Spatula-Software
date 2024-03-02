@@ -185,13 +185,13 @@ const start = async () => {
                     await initiationPage.close();
                     await initiationBrowser.close();
                     process.exit();
-                }else if(redirectURL.includes('/login/?next')){
+                }/*else if(redirectURL.includes('/login/?next')){
                     try{
                         await initiationPage.waitForSelector('[name="email"]');
                     }catch(error){}
 
                     await login();
-                }
+                }*/
             }
         });
 
