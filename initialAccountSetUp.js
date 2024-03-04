@@ -450,7 +450,7 @@ const interactWithPost = async(childNum) => {
             }
         }
 
-        console.log('finish');
+        await Channel.send('finish');
         await initiationPage.close();
         await initiationBrowser.close();
         process.exit();
