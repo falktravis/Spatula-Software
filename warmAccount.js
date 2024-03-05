@@ -286,19 +286,22 @@ const start = async () => {
             }
         });
 
-        //change http headers
-        warmingPage.setExtraHTTPHeaders({
-            'Referer': 'https://www.facebook.com/login',
-            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-            'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-            'Sec-Ch-Ua-Platform': workerData.platform
-        });
-
-        //create cursor
-        warmingCursor = createCursor(warmingPage);
-
         //change the viewport
         warmingPage.setViewport({ width: 1366, height: 768 });
+
+        //change http headers
+        warmingPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
+        warmingPage.setExtraHTTPHeaders({
+            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
+            'SEC-CH-UA-ARCH': '"x86"',
+            'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
+            'SEC-CH-UA-MOBILE':	'?0',
+            'Sec-Ch-Ua-Platform': `"${workerData.platform}"`,
+            'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
+            'Referer': 'https://www.facebook.com/login'
+        });
+        //create cursor
+        warmingCursor = createCursor(warmingPage);
 
         //Set cookies in browser
         await warmingPage.setCookie(...workerData.cookies);
@@ -309,7 +312,7 @@ const start = async () => {
         //detect accounts that need login
         const language = await warmingPage.evaluate(() => {return document.documentElement.lang});
         if (language !== 'en') {
-            logChannel.send("language wrong: " + workerData.username);
+            logChannel.send("warming language wrong: " + workerData.username);
             return false;
         }else if(await warmingPage.$('[name="login"]') != null){
             logChannel.send("account is fucked: " + workerData.username);
@@ -492,8 +495,6 @@ const scrollFeed = async() => {
                             await logChannel.send('it hits');
                             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Suggested for you"] > div > ul > :nth-child(${Math.floor(Math.random() + 1)}) [aria-label="Join group"]`);
                         }
-                    }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="Create"]`) != null){//reels
-                        await logChannel.send('reels');
                     }else if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${i}) [aria-label="People you may know"]`) != null){//Friend Suggestions
                         await logChannel.send('Friend Suggestions');
                         if(randomChance(0.30)){
@@ -532,7 +533,7 @@ const interactWithPost = async(childNum) => {
             await pause(2);
         }
 
-        /*let numComments;
+        let numComments;
         if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`) != null){
             numComments = await warmingPage.evaluate((childNum) => {return document.querySelector(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`).innerText}, childNum);
             if(numComments == ''){
@@ -585,9 +586,9 @@ const interactWithPost = async(childNum) => {
             await pause(2);
         }
 
-        //comment
+        //comment //?We start simple, just for proof of concept, writing comments seems to complex for now.
         //**Posts must have at least (5) comments, and readable text to be used
-        if(randomChance(0.10) && numComments > 6 && await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x9f619 > div > div > div > div > div:nth-child(3) > :nth-child(1) .x78zum5`) != null){
+        /*if(randomChance(0.10) && numComments > 6 && await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x9f619 > div > div > div > div > div:nth-child(3) > :nth-child(1) .x78zum5`) != null){
             await logChannel.send('comment');
             //Use chatgpt on the post to generate an accurate comment.
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) .x1yrsyyn [id*=":"]`);
@@ -631,13 +632,6 @@ const interactWithPost = async(childNum) => {
         if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 > span > div > span`) != null && randomChance(0.15)){
             await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) h4 > span > div > span`);
         }
-        
-        //If post is from a recommended group, randomize value to follow
-        /*if(await warmingPage.$(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) span.x3nfvp2 .x1fey0fg`) != null && randomChance(0.05)){
-            await logChannel.send('join group');
-            await warmingCursor.click(`div.x1hc1fzr.x1unhpq9 > div > div > div:nth-child(${childNum}) span.x3nfvp2 .x1fey0fg`);
-            await pause(2);
-        }*/
 
         //Share opportunity
         if(randomChance(0.04)){

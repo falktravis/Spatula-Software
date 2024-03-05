@@ -24,6 +24,7 @@ let staticProxyDB;
 let burnerAccountDB;
 let userDB;
 let taskDB;
+let days = 24 * 60 * 60 * 1000;
 (async () => {
     try {
         await mongoClient.connect();
@@ -33,14 +34,6 @@ let taskDB;
         burnerAccountDB = mongoClient.db('Spatula-Software').collection('burnerAccounts');
         userDB = mongoClient.db('Spatula-Software').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
-
-        //**reset Next Warming
-        /*let accs = await burnerAccountDB.find({}).toArray();
-        const currentDate = new Date();
-        for(const acc of accs){
-            const randomMillisecondsDay = Math.floor(Math.random() * (4 * 24 * 60 * 60 * 1000) + 60 * 1000);
-            await burnerAccountDB.updateOne({_id: acc._id}, {NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay)});
-        }*/
 
         //new proxy accs - {Start: {$gte: 1708094011108}}
         //hq - {AccountType: "Hq"}
@@ -82,13 +75,12 @@ discordClient.on('ready', async () => {
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
         }
-
+        
         warmingLogChannel = discordClient.channels.cache.get('1196915422042259466');
         if(warmingLogChannel == null){
             warmingLogChannel = await discordClient.channels.fetch('1196915422042259466');
         }
 
-        //start daily tasks
         RunDailyTasks();
     } catch (error) {
         console.log('Error fetching channel: ' + error)
@@ -139,6 +131,45 @@ const facebookListener = async (message, task, user) => {
     }
 }
 
+//run daily tasks at the same time every day
+const RunDailyTasks = () => {
+    scanDatabase();
+
+    setTimeout(async () => {
+        RunDailyTasks();
+    }, 86400000) //24 hours
+}
+
+//scan database for non-paying users
+const scanDatabase = async () => {
+    try {
+        usersToDelete = [];
+
+        //check map against db
+        for (const [key, value] of users) {
+            const userObj = await userDB.findOne({ UserId: key });
+            if (!userObj) {
+                usersToDelete.push(key);
+            }
+        }
+
+        //actually delete the users from map
+        usersToDelete.forEach(async (userId) => {
+            users.get(userId).facebook.forEach(async (task, key) => {
+                await deleteTask(task, key, userId);
+            })
+                            
+            //delete from db
+            await taskDB.deleteMany({UserId: userId});
+
+            users.delete(userId);
+        })
+    } catch (error) {
+        console.log("Error scaning Database: \n\t" + error);
+        warmingLogChannel.send("Error scaning Database: \n\t" + error);
+    }
+}
+
 const getStaticFacebookMessageProxy = async () => {
     //get the proxy
     let staticProxyObj = await staticProxyDB.findOne({CurrentFacebookMessageTasks: {$lt: 2}}, {sort: { CurrentFacebookMessageTasks: 1}});
@@ -154,7 +185,7 @@ const getStaticFacebookMessageProxy = async () => {
 
 const getStaticFacebookBurnerProxy = async () => {
     //get the proxy
-    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}, Fresh: true}, {sort: {TotalFacebookBurnerAccounts: 1}});//!change
+    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}, Fresh: true, ISP: null}, {sort: {TotalFacebookBurnerAccounts: 1}});
     if(staticProxyObj == null){
         staticProxyObj = await staticProxyDB.findOne({}, {sort: { TotalFacebookBurnerAccounts: 1}});
     }
@@ -168,8 +199,7 @@ const getStaticFacebookBurnerProxy = async () => {
 const getFacebookAccount = async () => {
 
     //burner account assignment
-    let burnerAccountObj = await burnerAccountDB.findOne({LastActive: {$ne: null}, WarmingPeriodEnd: null}, {sort: {LastActive: 1}});//ActiveTasks: 0
-
+    let burnerAccountObj = await burnerAccountDB.findOne({LastActive: {$ne: null}}, {sort: {LastActive: 1}});
 
     //if there is no un-active accounts, This should NEVER happen
     if(burnerAccountObj == null){
@@ -230,7 +260,6 @@ const deleteTask = async (task, taskName, userId) => {
                 await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
             }
         }else{
-            //console.log("Message failed");//!delete for production
             logChannel.send("Message failed @everyone");
         }
 
@@ -243,99 +272,6 @@ const deleteTask = async (task, taskName, userId) => {
     } catch (error) {
         logChannel.send("Error Deleting Task: " + error);
     }
-}
-
-//scan database for non-paying users
-const scanDatabase = async () => {
-    try {
-        usersToDelete = [];
-
-        //check map against db
-        for (const [key, value] of users) {
-            const userObj = await userDB.findOne({ UserId: key });
-            if (!userObj) {
-                usersToDelete.push(key);
-            }
-        }
-
-        //actually delete the users from map
-        usersToDelete.forEach(async (userId) => {
-            users.get(userId).facebook.forEach(async (task, key) => {
-                await deleteTask(task, key, userId);
-            })
-                            
-            //delete from db
-            await taskDB.deleteMany({UserId: userId});
-
-            users.delete(userId);
-        })
-    } catch (error) {
-        console.log("Error scaning Database: \n\t" + error);
-        logChannel.send("Error scaning Database: \n\t" + error);
-    }
-}
-
-//start warming accs for the day
-const warmAccs = async() => {  
-    //**Over the next (almost) 24 hours calculate proper intervals and run warming script for all necessary accs */
-    try {
-        const warmingAccounts = await burnerAccountDB.find({LastActive: {$nin: [10000000000000, 10000000000001]}, NextWarming: {$lte: new Date()}}).toArray();
-        for(let i = 0; i < warmingAccounts.length; i++){
-            await warmingLogChannel.send('new warmer: ' + warmingAccounts[i].Username);
-            //create a new worker
-            let warmer = new Worker('./warmAccount.js', { workerData:{
-                username: warmingAccounts[i].Username,
-                proxy: warmingAccounts[i].Proxy,
-                cookies: warmingAccounts[i].Cookies,
-                platform: warmingAccounts[i].Platform,
-                initiated: warmingAccounts[i].Initiated,
-                start: warmingAccounts[i].Start
-            }});
-
-            warmer.on('message', async (message) => {
-                await warmingLogChannel.send('updating cookies for: ' + warmingAccounts[i].Username);
-                if(message.cookies != null && message.cookies != []){
-                    await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {Cookies: message.cookies}});
-                }
-            }); 
- 
-            const currentDate = new Date();
-            let randomMilliseconds;
-
-            //check for warming period
-            if(warmingAccounts[i].WarmingPeriodEnd != null){
-                if(warmingAccounts[i].WarmingPeriodEnd < new Date()){
-                    await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$unset: {WarmingPeriodEnd: 1}});
-                }
-
-                // Random number of milliseconds between 3 and 5 days
-                randomMilliseconds = Math.floor(Math.random() * (2 * 24 * 60 * 60 * 1000) + 3 * 24 * 60 * 60 * 1000);
-            }else{
-                // Random number of milliseconds between 5 and 7 days
-                randomMilliseconds = Math.floor(Math.random() * (2 * 24 * 60 * 60 * 1000) + 5 * 24 * 60 * 60 * 1000);
-            }
-
-            await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$set: {NextWarming: new Date(currentDate.getTime() + randomMilliseconds)}});
-
-            //wait for a calculated interval
-            const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
-            await new Promise(r => setTimeout(r, randomInterval));
-        }
-    } catch (error) {
-        warmingLogChannel.send("Error Warming Account: " + error);
-        console.log("Error Warming Account: " + error);
-    }
-}
-
-//run daily tasks at the same time every day
-const RunDailyTasks = () => {
-    scanDatabase();
-    //warmAccs();
-
-    setTimeout(async () => {
-        warmingLogChannel.send("Run Daily Tasks");
-        RunDailyTasks();
-    }, 86400000) //24 hours
 }
 
 const resetProxyTracking = async () => {
@@ -537,26 +473,44 @@ const executeCommand = async (interaction) => {
                 //await warmAccs();
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
-                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).limit(20).sort({_id: -1});
+                //const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).limit(20).sort({_id: -1});
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).toArray();
                 //const newAccs = await burnerAccountDB.find({Username: 'ocybhfve@znemail.com'});
 
                 const initialAccountSetUp = async (acc) => {
-                    new Worker('./initialAccountSetUp.js', { workerData:{
+                    let warmer = new Worker('./initialAccountSetUp.js', { workerData:{
                         username: acc.Username,
+                        password: acc.Password,
                         proxy: acc.Proxy,
                         cookies: acc.Cookies,
                         platform: acc.Platform,
                         channel: interaction.channelId,
                         changeLanguage: true
                     }});
-                    
-                    await new Promise(r => setTimeout(r, 70000));
 
-                    await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now(), Initiated: true}});
-                    //await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {Initiated: true}});
+                    warmer.on('message', async (message) => {
+                        if(message.cookies != null && message.cookies != []){
+                            await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {Cookies: message.cookies}});
+                            console.log('updating cookies for: ' + acc.Username);//!Testing and such
+                        }else if(message.action == 'ban'){
+                            console.log("BANBANBANBANBANBANBANBAN")
+    
+                            //decrease the proxy account num before deleting account
+                            const oldAccountObj = await burnerAccountDB.findOne({Username: message.username});
+                            await staticProxyDB.updateOne({Proxy: oldAccountObj.Proxy}, {$inc: {TotalFacebookBurnerAccounts: -1}});
+                    
+                            //Delete the burner account
+                            await burnerAccountDB.deleteOne({_id: oldAccountObj._id});
+                        }
+                    }); 
+                    
+                    await new Promise(r => setTimeout(r, 100000));
+
+                    await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now()}});
                 }
 
                 for await(const acc of newAccs){
+                    console.log(acc.Username);
                     await initialAccountSetUp(acc);
                 }
 
@@ -702,24 +656,25 @@ const executeCommand = async (interaction) => {
 
                     //get random platform
                     const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
-
-                    //get a static proxy
-                    const proxyObj = await getStaticFacebookBurnerProxy();
  
                     //get warming date
-                    const currentDate = new Date();
-                    const randomMillisecondsDay = Math.floor(Math.random() * (2 * 24 * 60 * 60 * 1000) + 60 * 1000);
+        
+                    const randomMillisecondsDay = Math.floor(Math.random() * (2 * days) + 60 * 1000);
                     const randomWeeks = Math.floor(Math.random() * 2 + 7);
-                    //const randomMillisecondsWeek = randomWeeks * 7 * 24 * 60 * 60 * 1000;
+                    //const randomMillisecondsWeek = randomWeeks * 7 * days;
 
-                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), LastActive: Date.now(), Platform: randomPlatform, Initiated: false, Start: startTime, AccountType: "Hq"});
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, Start: startTime, AccountType: "Hq"});
+                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, LastActive: Date.now(), Platform: randomPlatform, Start: startTime, AccountType: "Hq"});
+                    if(await burnerAccountDB.findOne({Username: email}) == null){
+                        //get a static proxy
+                        const proxyObj = await getStaticFacebookBurnerProxy();
+                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, AccountType: "Hq", ErrorReset: true});
+                    }
                     /*if(i < 10){
-                        const randomMillisecondsWeek = 1 * 7 * 24 * 60 * 60 * 1000;
-                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek), TotalWarmingPeriod: 1, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, Start: startTime, AccountType: "Hq"});
+                        const randomMillisecondsWeek = 1 * 7 * days;
+                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, WarmingPeriodEnd: Date.now() + randomMillisecondsWeek, TotalWarmingPeriod: 1, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, AccountType: "Hq"});
                     }else if(i < 15){
-                        const randomMillisecondsWeek = 2 * 7 * 24 * 60 * 60 * 1000;
-                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek), TotalWarmingPeriod: 2, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, Start: startTime, AccountType: "Hq"});
+                        const randomMillisecondsWeek = 2 * 7 * days;
+                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, WarmingPeriodEnd: Date.now() + randomMillisecondsWeek, TotalWarmingPeriod: 2, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, AccountType: "Hq"});
                     }else{
                         
                     }*/
@@ -755,13 +710,13 @@ const executeCommand = async (interaction) => {
                     const proxyObj = await getStaticFacebookBurnerProxy();
  
                     //get warming date
-                    const currentDate = new Date();
-                    const randomMillisecondsDay = Math.floor(Math.random() * (2 * 24 * 60 * 60 * 1000) + 60 * 1000);
+        
+                    const randomMillisecondsDay = Math.floor(Math.random() * (2 * days) + 60 * 1000);
                     const randomWeeks = Math.floor(Math.random() * 2 + 7);
-                    const randomMillisecondsWeek = randomWeeks * 7 * 24 * 60 * 60 * 1000;
+                    const randomMillisecondsWeek = randomWeeks * 7 * days;
 
-                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), WarmingPeriodEnd: new Date(currentDate.getTime() + randomMillisecondsWeek)});
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: Date.now(), Platform: randomPlatform, NextWarming: new Date(currentDate.getTime() + randomMillisecondsDay), ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Initiated: false, Start: startTime});//
+                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, WarmingPeriodEnd: Date.now() + randomMillisecondsWeek});
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: Date.now(), Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime});//
 
                     console.log(email);
                 }*/

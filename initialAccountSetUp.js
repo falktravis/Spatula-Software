@@ -134,7 +134,7 @@ const login = async () => {
             await initiationPage.waitForNavigation();
         }catch (error) {}
 
-        if(initiationPage.$('div.fsl.fwb.fcb') != null){
+        if(await initiationPage.$('div.fsl.fwb.fcb') != null){
             Channel.send(await initiationPage.evaluate(() => {return document.querySelector('div.fsl.fwb.fcb').innerText}));
             return false;
         }else{
@@ -393,7 +393,7 @@ const scrollFeed = async (posts) => {
 
 const interactWithPost = async(childNum) => {
     try {
-        await pause(2);
+        await pause(3);
         //like
         if(randomChance(0.12)){
             await Channel.send('like');
@@ -445,8 +445,8 @@ const interactWithPost = async(childNum) => {
                 const initiation = await initiationPage.evaluate(() => {return document.documentElement.lang});
                 if (initiation !== 'en') {
                     await changeLanguage();
+                    await scrollFeed(5);
                 }
-                await scrollFeed(5);
             }
         }
 

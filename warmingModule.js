@@ -136,7 +136,7 @@ const warmAccs = async() => {
             await new Promise(r => setTimeout(r, randomInterval));
         }
     } catch (error) {
-        warmingLogChannel.send("Error Warming Account: " + error);
+        await warmingLogChannel.send("Error Warming Account: " + error);
         console.log("Error Warming Account: " + error);
     }
 }
@@ -146,7 +146,7 @@ const RunDailyTasks = () => {
     warmAccs();
 
     setTimeout(async () => {
-        warmingLogChannel.send("Run Daily Warming");
+        await warmingLogChannel.send("Run Daily Warming");
         RunDailyTasks();
     }, 86400000) //24 hours
 }

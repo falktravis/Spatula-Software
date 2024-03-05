@@ -273,6 +273,16 @@ const accountRotation = () => {
 const login = async () => {
     try {
         logChannel.send("Re-Login Required: " + burnerUsername);
+
+        //check for this weird shit
+        if(await mainPage.$('[title="Allow all cookies"]') != null){
+            await pause();
+            await mainCursor.click('[title="Allow all cookies"]');
+            try {
+                await mainPage.waitForNavigation();
+            } catch (error) {}
+        }
+
         await mainCursor.click('[name="email"]');
         await pause();
         await typeWithRandomSpeed(mainPage, burnerUsername);
@@ -293,9 +303,10 @@ const login = async () => {
             await logChannel.send("Ban on Re-login: " + errorMsg);
             parentPort.postMessage({action: 'ban', username: burnerUsername});
         }else{
-            await logChannel.send("@everyone login success???")
             //update burnerCookies
             burnerCookies = await mainPage.cookies();
+            await setDistance();
+            mainPageInitiate = false;
         }
     } catch (error) {
         startError = true;
@@ -324,13 +335,11 @@ const sendMessage = async (link) => {
         //create a cursor
         messageCursor = createCursor(itemPage);
 
-        //await warmingPage.authenticate({'username':'ESKKz1f02E', 'password':'7172'});
-        itemPage.setUserAgent(`Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
-
         //change the viewport
         itemPage.setViewport({ width: 1366, height: 768 });
 
         //change http headers
+        itemPage.setUserAgent(`Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
         itemPage.setExtraHTTPHeaders({
             'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
             'SEC-CH-UA-ARCH': '"x86"',
@@ -439,6 +448,7 @@ let prices = getPrices(); //array of all possible prices for max price
 let mainPageInitiate;
 let mainChannel;
 let logChannel;
+let distanceRetries = 0;
 
 //changeable account stuff
 let messageCookies = workerData.messageCookies;
@@ -468,12 +478,11 @@ const start = async () => {
         //create a cursor
         mainCursor = createCursor(mainPage);
 
-        mainPage.setUserAgent(`Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
-
         //change the viewport
         mainPage.setViewport({ width: 1366, height: 768 });
 
         //change http headers
+        mainPage.setUserAgent(`Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
         mainPage.setExtraHTTPHeaders({
             'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
             'SEC-CH-UA-ARCH': '"x86"',
@@ -495,11 +504,7 @@ const start = async () => {
                     logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
                     startError = true;
     
-                    if(redirectURL.includes('privacy/consent/lgpd_migrated')){
-                        //end the task and message myself containing the account name
-                        logChannel.send('Account lgpd migrated: ' + burnerUsername);
-                        console.log('Account lgpd migrated: ' + burnerUsername);
-                    }else if(redirectURL.includes('/checkpoint/')){
+                    if(redirectURL.includes('/checkpoint/')){
                         logChannel.send('Account banned: ' + burnerUsername);
                         console.log('Account banned: ' + burnerUsername);
                 
@@ -511,10 +516,6 @@ const start = async () => {
                         }catch(error){}
     
                         await login();
-                        /*logChannel.send("Rotate Account Instead Of Login: " + burnerUsername);
-                        await mainBrowser.close();
-                        mainBrowser = null;
-                        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});*/
                     }else{
                         //message the main script to get a new accounts
                         logChannel.send("Rotate Account: " + burnerUsername);
@@ -569,76 +570,68 @@ const start = async () => {
         //make sure the url is correct
         if(await mainPage.url().split('?')[0] != (workerData.link).split('?')[0] && startError == false){
             startError = true;
-            if(await mainPage.$('[name="login"]') != null || (mainPage.url()).includes('/login/?next')){
+            if(await mainPage.$('[name="login"]') == null && !(mainPage.url()).includes('/login/?next')){
                 await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
-
-                if(await mainPage.$('[title="Allow all cookies"]') != null){
-                    await pause();
-                    await mainCursor.click('[title="Allow all cookies"]');
-                    try {
-                        await mainPage.waitForNavigation();
-                    } catch (error) {}
-                }
-
-                //await login();
-            }else{
                 await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
                 await mainPage.close();
                 await mainBrowser.close();
                 mainBrowser = null;
                 parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
             }
+        }else{
+            await setDistance();
+            mainPageInitiate = false;
         }
-    
-        //set distance
-        if(startError == false){
-            try {
-                //apply a random element
-                await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k > div.x1iyjqo2', {visible: true});
-                await pause();
-                await mainCursor.click('div.x1y1aw1k.xl56j7k > div.x1iyjqo2');
-                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
-                await pause();
-                await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
-                await pause();
-                //click a random element
-                await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${Math.floor(Math.random() * 11 + 1)})`);
-                await pause();
-                await mainCursor.click('[aria-label="Apply"]');
+    }catch(error){
+        errorMessage('error with start', error);
+    }
+}
 
-                //long pause
-                await new Promise(r => setTimeout(r, Math.random() * 15000 + 5000));
+const setDistance = async () => {
+    //set distance
+    if(startError == false){
+        try {
+            //apply a random element
+            await mainPage.waitForSelector('div.x1y1aw1k.xl56j7k > div.x1iyjqo2', {visible: true});
+            await pause();
+            await mainCursor.click('div.x1y1aw1k.xl56j7k > div.x1iyjqo2');
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+            await pause();
+            await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
+            await pause();
+            //click a random element
+            await mainCursor.click(`[role="listbox"] div.x4k7w5x > :nth-child(${Math.floor(Math.random() * 11 + 1)})`);
+            await pause();
+            await mainCursor.click('[aria-label="Apply"]');
 
-                //apply real distance
-                await mainCursor.click('div.x1y1aw1k.xl56j7k > div.x1iyjqo2');
-                await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
-                await pause();
-                await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
-                await pause();
-                await typeWithRandomSpeed(mainPage, (workerData.distance).toString());
-                await pause();
-                await mainPage.keyboard.press("Enter");
-                await pause();
-                await mainCursor.click('[aria-label="Apply"]');
-                //wait for the results to update, we aren't concerned about time
-                await new Promise(r => setTimeout(r, 10000));
+            //long pause
+            await new Promise(r => setTimeout(r, Math.random() * 15000 + 5000));
 
-                /*
-                //Check for kilometers
-                try {
-                    if((await mainPage.evaluate((distance) => {return document.querySelector(`[role="listbox"] div.x4k7w5x > :nth-child(${distance})`).innerText}, workerData.distance)).includes("kilo")){
-                        logChannel.send("kilometers: " + burnerUsername + " : " + workerData.name);
-                    }
-                } catch (error) {logChannel.send("checking for kilo error: " + error);}
-                */
-            } catch (error) {
-                await logPageContent(mainPage);
+            //apply real distance
+            await mainCursor.click('div.x1y1aw1k.xl56j7k > div.x1iyjqo2');
+            await mainPage.waitForSelector('div.x9f619.x14vqqas.xh8yej3', {visible: true});
+            await pause();
+            await mainCursor.click('div.x9f619.x14vqqas.xh8yej3');
+            await pause();
+            await typeWithRandomSpeed(mainPage, (workerData.distance).toString());
+            await pause();
+            await mainPage.keyboard.press("Enter");
+            await pause();
+            await mainCursor.click('[aria-label="Apply"]');
+            //wait for the results to update, we aren't concerned about time
+            await new Promise(r => setTimeout(r, 10000));
+            distanceRetries = 0;
+        } catch (error) {
+            await logPageContent(mainPage);
+            if(distanceRetries < 2){
+                distanceRetries++;
+                await logChannel.send("Distance Set Retry " + distanceRetries + ": " + workerData.name)
+                await mainPage.reload({ waitUntil: 'load', timeout: 50000});
+                setDistance();
+            }else{
                 errorMessage('Error with setting distance', error);
             }
         }
-        mainPageInitiate = false;
-    }catch(error){
-        errorMessage('error with start', error);
     }
 }
 
@@ -752,7 +745,11 @@ function interval() {
                         price = 0;
                     }else{
                         const numbersOnly = price.match(/\d+/g);
-                        price = parseInt(numbersOnly.join(''), 10);
+                        if(numbersOnly == null){
+                            await logChannel.send(price);
+                        }else{
+                            price = parseInt(numbersOnly.join(''), 10);
+                        }
                     }
                 } catch (error) {
                     errorMessage('Error with getting price', error);
@@ -948,7 +945,11 @@ function interval() {
                                 price = 0;
                             }else{
                                 const numbersOnly = price.match(/\d+/g);
-                                price = parseInt(numbersOnly.join(''), 10);
+                                if(numbersOnly == null){
+                                    await logChannel.send(price);
+                                }else{
+                                    price = parseInt(numbersOnly.join(''), 10);
+                                }
                             }
                         }else{
                             newPostExists = false;
