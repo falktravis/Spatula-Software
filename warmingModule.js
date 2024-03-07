@@ -100,7 +100,7 @@ const warmAccs = async() => {
                 }); 
 
                 // Random number of milliseconds between 3 and 4 days
-                randomMilliseconds = Math.floor(Math.random() * (1 * days) + 3 * days);
+                randomMilliseconds = Math.floor(Math.random() * (1 * days) + 2 * days);
             }/*else{
                 let warmer = new Worker('./warmAccount.js', { workerData:{
                     username: warmingAccounts[i].Username,
