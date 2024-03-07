@@ -74,10 +74,10 @@ const warmAccs = async() => {
                     proxy: warmingAccounts[i].Proxy,
                     cookies: warmingAccounts[i].Cookies,
                     platform: warmingAccounts[i].Platform,
-                    changeLanguage: (warmingAccounts[i].start < Date.now() - (2 * days))
+                    changeLanguage: (warmingAccounts[i].Start < Date.now() - (2 * days))
                 }});
 
-                if(warmingAccounts[i].start < Date.now() - (2 * days)){//!Testing and such
+                if(warmingAccounts[i].Start < Date.now() - (2 * days)){//!Testing and such
                     await warmingLogChannel.send('Language Change Attempt: ' + warmingAccounts[i].Username);
                 }
 
