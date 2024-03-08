@@ -37,9 +37,6 @@ parentPort.on('message', async (message) => {
     
             //restart the main page
             await start();
-            await setListingStorage();
-    
-            isDormant = true;
         } catch (error) {
             errorMessage("Error assigning new account: ", error);
         }
@@ -62,25 +59,7 @@ client.on('ready', async () => {
     }
 
     //Start up
-    try {
-        isDormant = false;
-        await start();
-        
-        if(startError == false){
-            setListingStorage();
-            accountRotation();
-            interval(); 
-        }/*else{
-            await logChannel.send("Rotate Account for Start Error: " + burnerUsername);
-            await mainBrowser.close();
-            mainBrowser = null;
-            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: burnerCookies});
-        }*/
-
-        isDormant = true;
-    } catch (error) {
-        errorMessage("Error starting up task", error);
-    }
+    await start();
 });
 
 //Sigterm testing, idek
@@ -460,6 +439,7 @@ let burnerPlatform = workerData.burnerPlatform;
 
 const start = async () => {
     try{
+        isDormant = false;
         mainPageInitiate = true;
 
         //initialize the static isp proxy page
@@ -518,6 +498,7 @@ const start = async () => {
                         await login();
                     }else{
                         //message the main script to get a new accounts
+                        await logPageContent(mainPage);
                         logChannel.send("Rotate Account: " + burnerUsername);
                         await mainPage.close();
                         await mainBrowser.close();
@@ -581,6 +562,10 @@ const start = async () => {
         }else{
             await setDistance();
             mainPageInitiate = false;
+            await setListingStorage();
+            accountRotation();
+            interval(); 
+            isDormant = true;
         }
     }catch(error){
         errorMessage('error with start', error);
@@ -869,9 +854,9 @@ function interval() {
                         //Handle Discord messaging
                         if(workerData.messageType != 2){//if its not manual messaging
                             try{
-                                mainChannel.send({ content: postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
+                                mainChannel.send({ content: "$" + postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
-                                    .setTitle(postObj.price + " - " + postObj.title)
+                                    .setTitle("$" + postObj.price + " - " + postObj.title)
                                     .setURL(newPost)
                                     .setAuthor({ name: workerData.name })
                                     .setDescription(postObj.description)
@@ -885,9 +870,9 @@ function interval() {
                         }else{
                             let notification;
                             try{
-                                notification = await mainChannel.send({ content: postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
+                                notification = await mainChannel.send({ content: "$" + postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
                                     .setColor(0x0099FF)
-                                    .setTitle(postObj.price + " - " + postObj.title)
+                                    .setTitle("$" + postObj.price + " - " + postObj.title)
                                     .setURL(newPost)
                                     .setAuthor({ name: workerData.name })
                                     .setDescription(postObj.description)
