@@ -553,7 +553,6 @@ const start = async () => {
             startError = true;
             if(await mainPage.$('[name="login"]') == null && !(mainPage.url()).includes('/login/?next')){
                 await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
-                await logChannel.send("Link is wrong: " + mainPage.url() + " at account: " + burnerUsername);
                 await mainPage.close();
                 await mainBrowser.close();
                 mainBrowser = null;
@@ -565,8 +564,8 @@ const start = async () => {
             await setListingStorage();
             accountRotation();
             interval(); 
-            isDormant = true;
         }
+        isDormant = true;
     }catch(error){
         errorMessage('error with start', error);
     }
