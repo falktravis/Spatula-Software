@@ -427,7 +427,7 @@ let prices = getPrices(); //array of all possible prices for max price
 let mainPageInitiate;
 let mainChannel;
 let logChannel;
-let distanceRetries = 0;
+let startRetries = 0;
 
 //changeable account stuff
 let messageCookies = workerData.messageCookies;
@@ -551,6 +551,7 @@ const start = async () => {
         //make sure the url is correct
         if(await mainPage.url().split('?')[0] != (workerData.link).split('?')[0] && startError == false){
             startError = true;
+            await logChannel.send("startError = true: " + workerData.Name);
             if(await mainPage.$('[name="login"]') == null && !(mainPage.url()).includes('/login/?next')){
                 await logChannel.send("Login required: " + mainPage.url() + " at account: " + burnerUsername);
                 await mainPage.close();
@@ -604,12 +605,12 @@ const setDistance = async () => {
             await mainCursor.click('[aria-label="Apply"]');
             //wait for the results to update, we aren't concerned about time
             await new Promise(r => setTimeout(r, 10000));
-            distanceRetries = 0;
+            startRetries = 0;
         } catch (error) {
             await logPageContent(mainPage);
-            if(distanceRetries < 2){
-                distanceRetries++;
-                await logChannel.send("Distance Set Retry " + distanceRetries + ": " + workerData.name)
+            if(startRetries < 2){
+                startRetries++;
+                await logChannel.send("Distance Set Retry " + startRetries + ": " + workerData.name)
                 await mainPage.reload({ waitUntil: 'load', timeout: 50000});
                 setDistance();
             }else{

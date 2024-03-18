@@ -35,10 +35,8 @@ let days = 24 * 60 * 60 * 1000;
         userDB = mongoClient.db('Spatula-Software').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
-        //new proxy accs - {Start: {$gte: 1708094011108}}
-        //hq - {AccountType: "Hq"}
-        //non-hq - {Start: {$gte: 1708094011108, $lt: 1708500000000}} 
-        //integration testing accs - {TotalWarmingPeriod: {$ne: null}, LastActive: 10000000000001}      First Warming: Feb 24       Second Warming: Feb 28
+        //integration testing accounts - {Start: 1709527992829}
+        //regular accounts - {Start: 1709786152699}
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -118,7 +116,7 @@ const facebookListener = async (message, task, user) => {
         await burnerAccountDB.deleteOne({_id: oldAccountObj._id});
     }
 
-    if(message.action == 'ban' || message.action == 'rotateAccount'){
+    if(message.action == 'ban' || message.action == 'rotateAccount' || message.action == 'languageWrong'){
 
         //get a new account to send back to the task
         const newAccountObj = await getFacebookAccount();
@@ -185,7 +183,7 @@ const getStaticFacebookMessageProxy = async () => {
 
 const getStaticFacebookBurnerProxy = async () => {
     //get the proxy
-    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}, Fresh: true, ISP: null}, {sort: {TotalFacebookBurnerAccounts: 1}});
+    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}, Fresh: true}, {sort: {TotalFacebookBurnerAccounts: 1}});
     if(staticProxyObj == null){
         staticProxyObj = await staticProxyDB.findOne({}, {sort: { TotalFacebookBurnerAccounts: 1}});
     }
@@ -229,9 +227,9 @@ const handleUser = async (userId) => {
 }
 
 const deleteTask = async (task, taskName, userId) => {
+    const taskObj = await taskDB.findOne({UserId: userId, Name: taskName});
     try {
         let messageSuccess;
-        const taskObj = await taskDB.findOne({UserId: userId, Name: taskName});
 
         let message = await Promise.race([
             new Promise(resolve => {
@@ -260,9 +258,13 @@ const deleteTask = async (task, taskName, userId) => {
                 await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
             }
         }else{
-            logChannel.send("Message failed @everyone");
+            await logChannel.send("Message failed @everyone");
         }
+    } catch (error) {
+        await logChannel.send("Error Deleting Task Message: " + error);
+    }
 
+    try {
         //update account and proxy stats
         let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
         await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$set: {LastActive: Date.now()}});
@@ -270,7 +272,7 @@ const deleteTask = async (task, taskName, userId) => {
         //delete from server
         task.terminate();
     } catch (error) {
-        logChannel.send("Error Deleting Task: " + error);
+        await logChannel.send("Error Deleting Task: " + error);
     }
 }
 
@@ -656,28 +658,17 @@ const executeCommand = async (interaction) => {
 
                     //get random platform
                     const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
- 
-                    //get warming date
-        
-                    const randomMillisecondsDay = Math.floor(Math.random() * (2 * days) + 60 * 1000);
-                    const randomWeeks = Math.floor(Math.random() * 2 + 7);
-                    //const randomMillisecondsWeek = randomWeeks * 7 * days;
 
-                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, LastActive: Date.now(), Platform: randomPlatform, Start: startTime, AccountType: "Hq"});
+                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, LastActive: Date.now(), Platform: randomPlatform, Start: startTime});
                     if(await burnerAccountDB.findOne({Username: email}) == null){
                         //get a static proxy
                         const proxyObj = await getStaticFacebookBurnerProxy();
-                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, AccountType: "Hq", ErrorReset: true});
+                        if(i < 150){
+                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, NextWarming: Date.now() - (2 * days)});
+                        }else{
+                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, NextWarming: Date.now()});
+                        }
                     }
-                    /*if(i < 10){
-                        const randomMillisecondsWeek = 1 * 7 * days;
-                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, WarmingPeriodEnd: Date.now() + randomMillisecondsWeek, TotalWarmingPeriod: 1, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, AccountType: "Hq"});
-                    }else if(i < 15){
-                        const randomMillisecondsWeek = 2 * 7 * days;
-                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000001, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, WarmingPeriodEnd: Date.now() + randomMillisecondsWeek, TotalWarmingPeriod: 2, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, AccountType: "Hq"});
-                    }else{
-                        
-                    }*/
 
                     console.log(email);
                 }
@@ -733,7 +724,7 @@ const executeCommand = async (interaction) => {
                 //insert the new proxies
                 await proxyList.forEach(async (proxy) => {
                     if(await staticProxyDB.findOne({Proxy: proxy}) == null){
-                        await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, TotalFacebookBurnerAccounts: 0, Fresh: true});
+                        await staticProxyDB.insertOne({Proxy: proxy, CurrentFacebookMessageTasks: 0, TotalFacebookBurnerAccounts: 0, Fresh: true, Group: interaction.options.getString("proxy-group")});
                         console.log(proxy);
                     }else{
                         console.log("PROXY ALREADY PRESENT");
