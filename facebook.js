@@ -69,22 +69,30 @@ process.on('SIGTERM', async (err) => {
 
 // Add cleanup logic on uncaught exception
 process.on('uncaughtException', async (err) => {
-    await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
-    if(mainBrowser != null){
-        await mainPage.close();
-        await mainBrowser.close();
+    try {
+        await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
+        if(mainBrowser != null){
+            await mainPage.close();
+            await mainBrowser.close();
+        }
+        process.exit(1); // Terminate the process
+    } catch (error) {
+        await logChannel.send('Error handling exception: ' + workerData.Name);
     }
-    process.exit(1); // Terminate the process
 });
 
 // Add cleanup logic on unhandled promise rejection
 process.on('unhandledRejection', async (reason, promise) => {
-    await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
-    if(mainBrowser != null){
-        await mainPage.close();
-        await mainBrowser.close();
+    try {
+        await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
+        if(mainBrowser != null){
+            await mainPage.close();
+            await mainBrowser.close();
+        }
+        process.exit(1); // Terminate the process
+    } catch (error) {
+        await logChannel.send('Error handling rejection: ' + workerData.Name);
     }
-    process.exit(1); // Terminate the process
 });
 
 //error message send function 
@@ -498,11 +506,13 @@ const start = async () => {
                         await login();
                     }else{
                         //message the main script to get a new accounts
-                        await logPageContent(mainPage);
                         logChannel.send("Rotate Account: " + burnerUsername);
-                        await mainPage.close();
-                        await mainBrowser.close();
-                        mainBrowser = null;
+                        if(mainBrowser != null){
+                            await logPageContent(mainPage);
+                            await mainPage.close();
+                            await mainBrowser.close();
+                            mainBrowser = null;
+                        }
                         parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
                     }
                 }
@@ -623,22 +633,24 @@ const setDistance = async () => {
 const setListingStorage = async () => {
     // Set listingStorage, run once in the begging of the day
     try{
-        mainListingStorage = await mainPage.evaluate(() => {
-            if(document.querySelector('div.xx6bls6') == null && document.querySelector('[aria-label="Browse Marketplace"]') == null){
-                let links = [document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(2) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(3) a")];
-                return links.map((link) => {
-                    if(link != null){
-                        let href = link.href;
-                        return href.substring(0, href.indexOf("?"));
-                    }else{
-                        return null;
-                    }
-                })
-            }else{
-                return [null, null, null];
-            }
-        });
-        console.log("Main Storage: " + mainListingStorage);
+        if(startError == false){
+            mainListingStorage = await mainPage.evaluate(() => {
+                if(document.querySelector('div.xx6bls6') == null && document.querySelector('[aria-label="Browse Marketplace"]') == null){
+                    let links = [document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(1) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(2) a"), document.querySelector("div.x1xfsgkm > :nth-child(1) div > :nth-child(3) a")];
+                    return links.map((link) => {
+                        if(link != null){
+                            let href = link.href;
+                            return href.substring(0, href.indexOf("?"));
+                        }else{
+                            return null;
+                        }
+                    })
+                }else{
+                    return [null, null, null];
+                }
+            });
+            console.log("Main Storage: " + mainListingStorage);
+        }
     }catch (error){
         errorMessage('Error with setting listing storage', error);
     }
@@ -687,10 +699,12 @@ function interval() {
             } catch(error) {
                 if(error.message.includes('TargetCloseError')){
                     logChannel.send("Page Closed");
-                    await mainPage.close();
-                    await mainBrowser.close();
-                    mainBrowser = null;
-                    await start();
+                    if(mainBrowser != null){
+                        await mainPage.close();
+                        await mainBrowser.close();
+                        mainBrowser = null;
+                        await start();
+                    }
                 }else if(error.message.includes('ERR_TUNNEL_CONNECTION_FAILED') && resultsRefreshMaxAttempts < 3){
                     resultsRefreshMaxAttempts++;
                     await resultsRefresh();
@@ -766,9 +780,12 @@ function interval() {
                                 await itemBrowser.close();
                                 itemBrowser = null;
                             } catch(error){
-                                await logPageContent(itemPage);
-                                await itemBrowser.close();
-                                itemBrowser = null;
+                                if(itemBrowser != null){
+                                    await logPageContent(itemPage);
+                                    await itemPage.close();
+                                    await itemBrowser.close();
+                                    itemBrowser = null;
+                                }
                                 errorMessage('Error with getting item data', error);
                             }
                         }else{
@@ -834,9 +851,11 @@ function interval() {
                                 await itemPage.close();
                                 itemPage = null;
                             } catch(error){
-                                await logPageContent(itemPage);
-                                await itemPage.close();
-                                itemPage = null;
+                                if(itemPage != null){
+                                    await logPageContent(itemPage);
+                                    await itemPage.close();
+                                    itemPage = null;
+                                }
                                 errorMessage(`Error with getting item data at ${newPost}`, error);
                             }
                         }
