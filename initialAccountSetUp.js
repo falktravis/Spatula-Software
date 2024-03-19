@@ -53,6 +53,36 @@ client.on('ready', async () => {
                 Channel = await client.channels.fetch('1196915422042259466');
             }
         }
+
+        //main function
+        try {
+            if(await start()){
+                //check notifs
+                await checkNotifs();
+
+                //scroll feed
+                await scrollFeed(12);
+
+                //Change Language
+                if(workerData.changeLanguage == true){
+                    const initiation = await initiationPage.evaluate(() => {return document.documentElement.lang});
+                    if (initiation !== 'en') {
+                        await changeLanguage();
+                        await scrollFeed(5);
+                    }
+                }
+            }
+
+            await Channel.send('finish');
+            await initiationPage.close();
+            await initiationBrowser.close();
+            process.exit();
+        } catch (error) {
+            errorMessage('Error with main function', error);
+            await initiationPage.close();
+            await initiationBrowser.close();
+            process.exit();
+        }
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -429,38 +459,6 @@ const interactWithPost = async(childNum) => {
         await logPageContent(initiationPage);
     }
 }
-
-//main function
-(async () => {
-    try {
-        if(await start()){
-            //check notifs
-            await checkNotifs();
-
-            //scroll feed
-            await scrollFeed(12);
-
-            //Change Language
-            if(workerData.changeLanguage == true){
-                const initiation = await initiationPage.evaluate(() => {return document.documentElement.lang});
-                if (initiation !== 'en') {
-                    await changeLanguage();
-                    await scrollFeed(5);
-                }
-            }
-        }
-
-        await Channel.send('finish');
-        await initiationPage.close();
-        await initiationBrowser.close();
-        process.exit();
-    } catch (error) {
-        errorMessage('Error with main function', error);
-        await initiationPage.close();
-        await initiationBrowser.close();
-        process.exit();
-    }
-})();
 
 
 const fillProfile = async() => {
