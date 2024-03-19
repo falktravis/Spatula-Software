@@ -29,6 +29,7 @@ let days = 24 * 60 * 60 * 1000;
         
         //start daily tasks
         RunDailyTasks();
+        await burnerAccountDB.updateMany({NextWarming: NaN}, {$set: {NextWarming: Date.now()}})
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -62,7 +63,8 @@ process.on('unhandledRejection', async (reason, promise) => {
 //start warming accs for the day
 const warmAccs = async() => {
     try {
-        const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: Date.now()}}).toArray();
+        //!remove last active requirement for {LastActive: null}  -   We don't want to warm active accs
+        const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: Date.now()}, LastActive: 10000000000000}).toArray();
         for(let i = 0; i < warmingAccounts.length; i++){
             await warmingLogChannel.send('new warmer: ' + warmingAccounts[i].Username);
             let randomMilliseconds;
