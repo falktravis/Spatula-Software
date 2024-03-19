@@ -97,9 +97,13 @@ process.on('unhandledRejection', async (reason, promise) => {
 
 //error message send function 
 const errorMessage = (message, error) => {
-    console.log(workerData.name + ': ' + message + ': ' + error);
-    logChannel.send(workerData.name + ': ' + message + ': ' + error);
-    //mainChannel.send(workerData.name + ': ' + message + ': ' + error); .... :)
+    try {
+        console.log(workerData.name + ': ' + message + ': ' + error);
+        logChannel.send(workerData.name + ': ' + message + ': ' + error.stack);
+        //mainChannel.send(workerData.name + ': ' + message + ': ' + error); .... :)
+    } catch (error) {
+        logChannel.send('error with error message??? Who tf knows...' + error)
+    }
 }
 
 const endTask = async () => {
@@ -423,6 +427,7 @@ const sendMessage = async (link) => {
 }
 
 let startError = false; //stops script on error
+let isInitiation = true;
 let newPost;
 let mainBrowser;
 let mainPage;
@@ -573,12 +578,24 @@ const start = async () => {
             await setDistance();
             mainPageInitiate = false;
             await setListingStorage();
-            accountRotation();
-            interval(); 
+            if(isInitiation){
+                accountRotation();
+                interval(); 
+                isInitiation = false;
+            }
         }
         isDormant = true;
+        startRetries = 0;
     }catch(error){
-        errorMessage('error with start', error);
+        await logPageContent(mainPage);
+        if(startRetries < 2){
+            startRetries++;
+            await logChannel.send("Start Retry " + startRetries + ": " + workerData.name)
+            await mainPage.reload({ waitUntil: 'load', timeout: 50000});
+            start();
+        }else{
+            errorMessage('error with start', error);
+        }
     }
 }
 
