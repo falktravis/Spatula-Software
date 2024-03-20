@@ -295,11 +295,11 @@ const changeLanguage = async () => {
 
         await initiationCursor.click('[href*="language"] span')
         try {
-            await initiationPage.waitForNavigation({waitUntil: 'load'});
+            await initiationPage.waitForFunction(() => window.location.href.includes('language'));
+            await pause(2);
         } catch (error) {
             await Channel.send("Problem waiting for language page nav");
         }
-        await pause(2);
 
         if(await initiationPage.$('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div.xezivpi') != null){
             if(await initiationPage.$('div.x1uvtmcs.x4k7w5x > div > div > div > div.xpvyfi4.xc9qbxq > div > div') != null){

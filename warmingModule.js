@@ -62,8 +62,8 @@ process.on('unhandledRejection', async (reason, promise) => {
 //start warming accs for the day
 const warmAccs = async() => {
     try {
-        //!remove last active requirement for {LastActive: null}  -   We don't want to warm active accs
-        const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: Date.now()}, LastActive: 10000000000000}).toArray();
+        //!remove last active requirement for {NextWarming: {$lte: Date.now()}, LastActive: null}  -   We don't want to warm active accs
+        const warmingAccounts = await burnerAccountDB.find({LastActive: 10000000000000}).toArray();
         for(let i = 0; i < warmingAccounts.length; i++){
             await warmingLogChannel.send('new warmer: ' + warmingAccounts[i].Username);
             let randomMilliseconds;
