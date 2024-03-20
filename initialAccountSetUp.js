@@ -296,7 +296,7 @@ const changeLanguage = async () => {
         await initiationCursor.click('[href*="language"] span')
         try {
             await initiationPage.waitForFunction(() => window.location.href.includes('language'));
-            await pause(2);
+            await new Promise(r => setTimeout(r, Math.floor(Math.random() * (20000)) + 30000));
         } catch (error) {
             await Channel.send("Problem waiting for language page nav");
         }
