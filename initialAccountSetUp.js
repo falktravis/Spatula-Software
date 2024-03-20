@@ -284,7 +284,7 @@ const changeLanguage = async () => {
         await initiationPage.waitForSelector('div.x1y1aw1k > div > div:nth-child(1) > a > div.x6s0dn4.x1q0q8m5 > div.x6s0dn4.xkh2ocl.x1q0q8m5 > div');
         await pause(1);
         await initiationCursor.click('div.x1y1aw1k > div > div:nth-child(1) > a > div.x6s0dn4.x1q0q8m5 > div.x6s0dn4.xkh2ocl.x1q0q8m5 > div');
-        await initiationPage.waitForSelector('img[src*="ienSOP1BvzL.png"]');//('[href*="language"]')
+        await initiationPage.waitForSelector('[href*="language"] span')
         await pause(2);
 
         if(await initiationPage.$('div.xpvyfi4.xc9qbxq.xyamay9.x1pi30zi.x1l90r2v.x1swvt13.x1n2onr6.xq1dxzn > div > div > div.x6s0dn4.x78zum5.xl56j7k.x1608yet.xljgi0e.x1e0frkt > div') != null){
@@ -293,7 +293,12 @@ const changeLanguage = async () => {
             await pause(2);
         }
 
-        await initiationCursor.click('img[src*="ienSOP1BvzL.png"]');//('[href*="language"]')
+        await initiationCursor.click('[href*="language"] span')
+        try {
+            await initiationPage.waitForNavigation({waitUntil: 'load'});
+        } catch (error) {
+            await Channel.send("Problem waiting for language page nav");
+        }
         await pause(2);
 
         if(await initiationPage.$('div.x9f619.x1n2onr6.x1ja2u2z.xdt5ytf.x193iq5w.xeuugli.x1r8uery.x1iyjqo2.xs83m0k.x78zum5.x1t2pt76 > div > div > div > div > div:nth-child(2) > div > div > div:nth-child(1) > div:nth-child(2) > div > div.xezivpi') != null){
@@ -345,6 +350,8 @@ const changeLanguage = async () => {
         await Channel.send("Finish: " + workerData.username);
     }catch(error){
         errorMessage('Error with page initiation', error);
+        await pause(1);
+        await initiationCursor.click('[href="/"]');
         await logPageContent(initiationPage);
     }
 }
