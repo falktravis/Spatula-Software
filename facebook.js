@@ -70,11 +70,12 @@ process.on('SIGTERM', async (err) => {
 // Add cleanup logic on uncaught exception
 process.on('uncaughtException', async (err) => {
     try {
-        await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
+        await logChannel.send('@everyone Uncaught Exception in ' + workerData.name + ': ' + err);
         if(mainBrowser != null){
             await mainPage.close();
             await mainBrowser.close();
         }
+        parentPort.postMessage({action: 'restart'});
         process.exit(1); // Terminate the process
     } catch (error) {
         await logChannel.send('Error handling exception: ' + workerData.Name);
@@ -84,11 +85,12 @@ process.on('uncaughtException', async (err) => {
 // Add cleanup logic on unhandled promise rejection
 process.on('unhandledRejection', async (reason, promise) => {
     try {
-        await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
+        await logChannel.send('@everyone Unhandled Rejection in ' + workerData.name + ':' + reason);
         if(mainBrowser != null){
             await mainPage.close();
             await mainBrowser.close();
         }
+        parentPort.postMessage({action: 'restart'});
         process.exit(1); // Terminate the process
     } catch (error) {
         await logChannel.send('Error handling rejection: ' + workerData.Name);
@@ -99,7 +101,7 @@ process.on('unhandledRejection', async (reason, promise) => {
 const errorMessage = (message, error) => {
     try {
         console.log(workerData.name + ': ' + message + ': ' + error);
-        logChannel.send(workerData.name + ': ' + message + ': ' + error.stack);
+        logChannel.send(workerData.name + ': ' + message + ': ' + error);//.stack
         //mainChannel.send(workerData.name + ': ' + message + ': ' + error); .... :)
     } catch (error) {
         logChannel.send('error with error message??? Who tf knows...' + error)
@@ -497,7 +499,10 @@ const start = async () => {
                     logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
                     startError = true;
     
-                    if(redirectURL.includes('/checkpoint/')){
+                    if(await mainPage.$('[aria-label="Dismiss"]') != null){
+                        await pause();
+                        await mainPage.click('[aria-label="Dismiss"]');
+                    }else if(redirectURL.includes('/checkpoint/')){
                         logChannel.send('Account banned: ' + burnerUsername);
                         console.log('Account banned: ' + burnerUsername);
                 
@@ -576,7 +581,6 @@ const start = async () => {
             }
         }else{
             await setDistance();
-            mainPageInitiate = false;
             await setListingStorage();
             if(isInitiation){
                 accountRotation();
@@ -585,7 +589,6 @@ const start = async () => {
             }
         }
         isDormant = true;
-        startRetries = 0;
     }catch(error){
         await logPageContent(mainPage);
         if(startRetries < 2){
@@ -633,15 +636,23 @@ const setDistance = async () => {
             //wait for the results to update, we aren't concerned about time
             await new Promise(r => setTimeout(r, 10000));
             startRetries = 0;
+            mainPageInitiate = false;
         } catch (error) {
             await logPageContent(mainPage);
             if(startRetries < 2){
                 startRetries++;
                 await logChannel.send("Distance Set Retry " + startRetries + ": " + workerData.name)
                 await mainPage.reload({ waitUntil: 'load', timeout: 50000});
-                setDistance();
+                if(mainBrowser != null){
+                    if(mainPage != null){
+                        await mainPage.close();
+                    }
+                    await mainBrowser.close();
+                }
+                start();
             }else{
                 errorMessage('Error with setting distance', error);
+                mainPageInitiate = false;
             }
         }
     }
@@ -747,6 +758,11 @@ function interval() {
                 errorMessage('Error with getting results', error);
             }
         
+            //make sure listing storage didn't get all fucked up
+            if(mainListingStorage == null){
+                await setListingStorage();
+            }
+
             //newPost is actually new
             if(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && newPost != null){
 

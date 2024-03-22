@@ -114,6 +114,11 @@ const facebookListener = async (message, task, user) => {
 
         //Delete the burner account
         await burnerAccountDB.deleteOne({_id: oldAccountObj._id});
+
+        //check account:task ratio
+        if(await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}}) < (await taskDB.countDocuments({})) * 1.5){
+            await logChannel.send("BURNER ACCOUNTS LOW @everyone");
+        }
     }
 
     if(message.action == 'ban' || message.action == 'rotateAccount' || message.action == 'languageWrong'){
@@ -126,6 +131,47 @@ const facebookListener = async (message, task, user) => {
 
         //send the data to the task
         users.get(user).facebook.get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
+    }else if(message.action == 'restart'){
+        await logChannel.send('Restarting task');
+
+        //get task from db
+        const taskObj = await taskDB.findOne({UserId: user, Name: task});
+
+        //get burner account from db
+        const burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
+
+        //get the max price from link
+        let maxPrice = (taskObj.Link).match(/[?&]maxPrice=(\d+)/);
+        maxPrice = parseInt(maxPrice[1]);
+
+        //get the user obj if necessary for messaging
+        let userObj;
+        if(taskObj.MessageType != 3){
+            userObj = await userDB.findOne({UserId: taskObj.UserId});
+        }
+
+        //create a new worker and add it to the map
+        user.facebook.set(taskObj.Name, new Worker('./facebook.js', { workerData:{
+            name: taskObj.Name,
+            link: taskObj.Link + "&sortBy=creation_time_descend&daysSinceListed=1",
+            messageType: taskObj.MessageType,
+            message: taskObj.Message,
+            burnerUsername: burnerAccountObj.Username,
+            burnerPassword: burnerAccountObj.Password,
+            burnerProxy: burnerAccountObj.Proxy,
+            messageProxy: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Proxy,
+            burnerCookies: burnerAccountObj.Cookies,
+            messageCookies: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Cookies,
+            burnerPlatform: burnerAccountObj.Platform,
+            messagePlatform: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Platform,
+            maxPrice: maxPrice,
+            distance: taskObj.Distance,
+            channel: taskObj.ChannelId,
+        }}));
+
+        user.facebook.get(taskObj.Name).on('message', message => facebookListener(message, taskObj.Name, taskObj.UserId)); 
+
+        await logChannel.send("Successfully Re-Started " + taskObj.Name);
     }
 }
 
@@ -201,7 +247,6 @@ const getFacebookAccount = async () => {
 
     //if there is no un-active accounts, This should NEVER happen
     if(burnerAccountObj == null){
-        //burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
         console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
         logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
     }
@@ -519,55 +564,12 @@ const executeCommand = async (interaction) => {
                 await Channel.send('finish');
             }
             else if(interaction.commandName === "get-dormant-proxies" && interaction.user.id === '456168609639694376'){
-                //await resetProxyTracking();
+                await resetProxyTracking();
 
                 //get all proxies
-                let proxyArr = await staticProxyDB.find({ISP: null}).toArray()
+                let proxyArr = await staticProxyDB.find({TotalFacebookBurnerAccounts: 0, Fresh: false}).toArray();
 
-                let account50Proxies = (interaction.options.getString("50")).split(' ');
-                let account25Proxies = (interaction.options.getString("25")).split(' ');
-                let account10Proxies = (interaction.options.getString("10")).split(' ');
-                let account100Proxies = (interaction.options.getString("100")).split(' ');
-                let account50DormantProxies = [];
-                let account25DormantProxies = [];
-                let account10DormantProxies = [];
-                let account100DormantProxies = [];
-
-                //print proxy list
-                let i = 0;
-                for(let x = 0; x < proxyArr.length; x++){
-                    if(account50Proxies.includes(proxyArr[x].Proxy)){
-                        account50DormantProxies.push(proxyArr[x].Proxy);
-                    }else if(account25Proxies.includes(proxyArr[x].Proxy)){
-                        account25DormantProxies.push(proxyArr[x].Proxy);
-                    }else if(account10Proxies.includes(proxyArr[x].Proxy)){
-                        account10DormantProxies.push(proxyArr[x].Proxy);
-                    }else if(account100Proxies.includes(proxyArr[x].Proxy)){
-                        account100DormantProxies.push(proxyArr[x].Proxy);
-                    }else{
-                        await staticProxyDB.deleteOne({Proxy: proxyArr[x].Proxy});
-                    }
-                }
-
-                console.log("50 - " + account50DormantProxies.length);
-                for(let i = 0; i < account50DormantProxies.length; i++){
-                    console.log(account50DormantProxies[i]);
-                }
-
-                console.log("\n\n25 - " + account25DormantProxies.length)
-                for(let i = 0; i < account25DormantProxies.length; i++){
-                    console.log(account25DormantProxies[i]);
-                }
-
-                console.log("\n\n10 - " + account10DormantProxies.length)
-                for(let i = 0; i < account10DormantProxies.length; i++){
-                    console.log(account10DormantProxies[i]);
-                }
-
-                console.log("\n\n100 - " + account100DormantProxies.length)
-                for(let i = 0; i < account100DormantProxies.length; i++){
-                    console.log(account100DormantProxies[i]);
-                }
+                
             }
             else if(interaction.commandName === "list"){
                 const taskArray = await taskDB.find({UserId: interaction.user.id});
@@ -771,72 +773,56 @@ const executeCommand = async (interaction) => {
                 
                 const taskArray = taskDB.find();
 
-                for await (const document of taskArray){
+                for await (const taskObj of taskArray){
                     //handle and get the user
-                    await handleUser(document.UserId);
-                    const user = users.get(document.UserId);
+                    await handleUser(taskObj.UserId);
+                    const user = users.get(taskObj.UserId);
                     if(user != null){
                         //increase the worker count
                         user.taskCount++;
 
                         //burner account assignment
-                        let burnerAccountObj = await burnerAccountDB.findOne({LastActive: {$ne: null}}, {sort: {LastActive: 1}});
-
-                        //if there is no un-active accounts 
-                        if(burnerAccountObj == null){
-                            //burnerAccountObj = await burnerAccountDB.findOne({}, {sort: {ActiveTasks: 1}});
-                            console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-                            logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
-                        }
+                        const burnerAccountObj = await getFacebookAccount();
 
                         //update task for new burnerAccount
-                        await taskDB.updateOne({_id: document._id}, {$set: {burnerAccount: burnerAccountObj.Username}});
-
-                        //set lastActive to null
-                        await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$set: {LastActive: null}});
-
-                        //!Fix the fucking staticAccountDB
-                        //await staticProxyDB.updateOne({Proxy: burnerAccountObj.Proxy}, {$inc: {TotalFacebookBurnerAccounts: 1}});
-
-                        //!Add burnerUsername to the task db
-                        //await taskDB.updateOne({UserId: document.UserId, Name: document.Name}, {$set: {burnerAccount: burnerAccountObj.Username}});
+                        await taskDB.updateOne({_id: taskObj._id}, {$set: {burnerAccount: burnerAccountObj.Username}});
 
                         //get the max price from link
-                        let maxPrice = (document.Link).match(/[?&]maxPrice=(\d+)/);
+                        let maxPrice = (taskObj.Link).match(/[?&]maxPrice=(\d+)/);
                         maxPrice = parseInt(maxPrice[1]);
 
                         //get the user obj if necessary for messaging
                         let userObj;
-                        if(document.MessageType != 3){
-                            userObj = await userDB.findOne({UserId: document.UserId});
+                        if(taskObj.MessageType != 3){
+                            userObj = await userDB.findOne({UserId: taskObj.UserId});
                         }
 
                         //create a new worker and add it to the map
-                        user.facebook.set(document.Name, new Worker('./facebook.js', { workerData:{
-                            name: document.Name,
-                            link: document.Link + "&sortBy=creation_time_descend&daysSinceListed=1",
-                            messageType: document.MessageType,
-                            message: document.Message,
+                        user.facebook.set(taskObj.Name, new Worker('./facebook.js', { workerData:{
+                            name: taskObj.Name,
+                            link: taskObj.Link + "&sortBy=creation_time_descend&daysSinceListed=1",
+                            messageType: taskObj.MessageType,
+                            message: taskObj.Message,
                             burnerUsername: burnerAccountObj.Username,
                             burnerPassword: burnerAccountObj.Password,
                             burnerProxy: burnerAccountObj.Proxy,
-                            messageProxy: document.MessageType == 3 ? null : userObj.MessageAccount.Proxy,
+                            messageProxy: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Proxy,
                             burnerCookies: burnerAccountObj.Cookies,
-                            messageCookies: document.MessageType == 3 ? null : userObj.MessageAccount.Cookies,
+                            messageCookies: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Cookies,
                             burnerPlatform: burnerAccountObj.Platform,
-                            messagePlatform: document.MessageType == 3 ? null : userObj.MessageAccount.Platform,
+                            messagePlatform: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Platform,
                             maxPrice: maxPrice,
-                            distance: document.Distance,
-                            channel: document.ChannelId,
+                            distance: taskObj.Distance,
+                            channel: taskObj.ChannelId,
                         }}));
 
-                        user.facebook.get(document.Name).on('message', message => facebookListener(message, document.Name, document.UserId)); 
+                        user.facebook.get(taskObj.Name).on('message', message => facebookListener(message, taskObj.Name, taskObj.UserId)); 
 
-                        Channel.send("Created " + document.Name);
+                        Channel.send("Created " + taskObj.Name);
 
                         await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10000 + 55000)));
                     }else{
-                        await taskDB.deleteOne({_id: document._id});
+                        await taskDB.deleteOne({_id: taskObj._id});
                     }
                 }
 
