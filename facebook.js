@@ -70,13 +70,13 @@ process.on('SIGTERM', async (err) => {
 // Add cleanup logic on uncaught exception
 process.on('uncaughtException', async (err) => {
     try {
-        await logChannel.send('@everyone Uncaught Exception in ' + workerData.name + ': ' + err);
-        if(mainBrowser != null){
+        await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
+        /*if(mainBrowser != null){
             await mainPage.close();
             await mainBrowser.close();
         }
-        parentPort.postMessage({action: 'restart'});
-        process.exit(1); // Terminate the process
+        //parentPort.postMessage({action: 'restart'});
+        //process.exit(1); // Terminate the process*/
     } catch (error) {
         await logChannel.send('Error handling exception: ' + workerData.Name);
     }
@@ -85,13 +85,13 @@ process.on('uncaughtException', async (err) => {
 // Add cleanup logic on unhandled promise rejection
 process.on('unhandledRejection', async (reason, promise) => {
     try {
-        await logChannel.send('@everyone Unhandled Rejection in ' + workerData.name + ':' + reason);
-        if(mainBrowser != null){
+        await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
+        /*if(mainBrowser != null){
             await mainPage.close();
             await mainBrowser.close();
         }
         parentPort.postMessage({action: 'restart'});
-        process.exit(1); // Terminate the process
+        process.exit(1); // Terminate the process*/
     } catch (error) {
         await logChannel.send('Error handling rejection: ' + workerData.Name);
     }
@@ -581,12 +581,6 @@ const start = async () => {
             }
         }else{
             await setDistance();
-            await setListingStorage();
-            if(isInitiation){
-                accountRotation();
-                interval(); 
-                isInitiation = false;
-            }
         }
         isDormant = true;
     }catch(error){
@@ -635,6 +629,14 @@ const setDistance = async () => {
             await mainCursor.click('[aria-label="Apply"]');
             //wait for the results to update, we aren't concerned about time
             await new Promise(r => setTimeout(r, 10000));
+
+            //finish rest of the start process
+            await setListingStorage();
+            if(isInitiation){
+                accountRotation();
+                interval(); 
+                isInitiation = false;
+            }
             startRetries = 0;
             mainPageInitiate = false;
         } catch (error) {
@@ -652,6 +654,15 @@ const setDistance = async () => {
                 start();
             }else{
                 errorMessage('Error with setting distance', error);
+                
+                //finish rest of the start process
+                await setListingStorage();
+                if(isInitiation){
+                    accountRotation();
+                    interval(); 
+                    isInitiation = false;
+                }
+                startRetries = 0;
                 mainPageInitiate = false;
             }
         }
