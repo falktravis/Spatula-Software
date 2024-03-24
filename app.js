@@ -121,7 +121,7 @@ const facebookListener = async (message, task, user) => {
             let numTasks = (await taskDB.countDocuments({}))
             if(numAccs < numTasks * 1.5){
                 logChannel.send("BURNER ACCOUNTS LOW Accounts: " + numAccs + " Tasks: " + numTasks + " @everyone");
-            }else if(numAccs == numTasks){
+            }else if(numAccs < numTasks){
                 logChannel.send("BURNER ACCOUNTS OUT @everyone");
             }
         }
