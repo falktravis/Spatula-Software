@@ -117,8 +117,12 @@ const facebookListener = async (message, task, user) => {
             await burnerAccountDB.deleteOne({_id: oldAccountObj._id});
     
             //check account:task ratio
-            if(await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}}) < (await taskDB.countDocuments({})) * 1.5){
-                logChannel.send("BURNER ACCOUNTS LOW @everyone");
+            let numAccs = await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}});
+            let numTasks = (await taskDB.countDocuments({}))
+            if(numAccs < numTasks * 1.5){
+                logChannel.send("BURNER ACCOUNTS LOW Accounts: " + numAccs + " Tasks: " + numTasks + " @everyone");
+            }else if(numAccs == numTasks){
+                logChannel.send("BURNER ACCOUNTS OUT @everyone");
             }
         }
     
@@ -127,11 +131,13 @@ const facebookListener = async (message, task, user) => {
             //get a new account to send back to the task
             const newAccountObj = await getFacebookAccount();
     
-            //update taskDB for new acc
-            await taskDB.updateOne({UserId: user, Name: task}, {$set: {burnerAccount: newAccountObj.Username}});
-    
-            //send the data to the task
-            users.get(user).facebook.get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
+            if(newAccountObj != null){
+                //update taskDB for new acc
+                await taskDB.updateOne({UserId: user, Name: task}, {$set: {burnerAccount: newAccountObj.Username}});
+        
+                //send the data to the task
+                users.get(user).facebook.get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
+            }
         }
         //**Restarting task script */
         /*else if(message.action == 'restart'){
@@ -253,18 +259,19 @@ const getStaticFacebookBurnerProxy = async () => {
 const getFacebookAccount = async () => {
 
     //burner account assignment
-    let burnerAccountObj = await burnerAccountDB.findOne({LastActive: {$ne: null}}, {sort: {LastActive: 1}});
+    let burnerAccountObj = await burnerAccountDB.findOne({LastActive: {$nin: [null, 10000000000000]}}, {sort: {LastActive: 1}});
 
     //if there is no un-active accounts, This should NEVER happen
     if(burnerAccountObj == null){
         console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
         logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+        return null;
+    }else{
+        //change LastActive to null, signifing the account is being used
+        await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$set: {LastActive: null}});//{$inc: {ActiveTasks: 1}}
+
+        return burnerAccountObj;
     }
-
-    //change LastActive to null, signifing the account is being used
-    await burnerAccountDB.updateOne({_id: burnerAccountObj._id}, {$set: {LastActive: null}});//{$inc: {ActiveTasks: 1}}
-
-    return burnerAccountObj;
 }
 
 const handleUser = async (userId) => {
@@ -412,38 +419,39 @@ const executeCommand = async (interaction) => {
                                             let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
                                             maxPrice = parseInt(maxPrice[1]);
 
-                                            //increase the worker count
-                                            user.taskCount++;
-
                                             //burner account assignment
                                             const burnerAccountObj = await getFacebookAccount();
-                                            //const burnerAccountObj = await burnerAccountDB.findOne({Username: ""});
 
-                                            //set the task in db
-                                            await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance")});
+                                            if(burnerAccountObj != null){
+                                                //increase the worker count
+                                                user.taskCount++;
 
-                                            //create a new worker and add it to the map
-                                            user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
-                                                name: interaction.options.getString("name"),
-                                                link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
-                                                messageType: interaction.options.getNumber("message-type"),
-                                                message: interaction.options.getString("message"),
-                                                burnerUsername: burnerAccountObj.Username,
-                                                burnerPassword: burnerAccountObj.Password,
-                                                burnerProxy: burnerAccountObj.Proxy,
-                                                messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
-                                                burnerCookies: burnerAccountObj.Cookies,
-                                                messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
-                                                burnerPlatform: burnerAccountObj.Platform,
-                                                messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
-                                                maxPrice: maxPrice,
-                                                distance: interaction.options.getNumber("distance"),
-                                                channel: interaction.channelId,
-                                            }}));
+                                                //set the task in db
+                                                await taskDB.insertOne({UserId: interaction.user.id, ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link"), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance")});
 
-                                            user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id)); 
+                                                //create a new worker and add it to the map
+                                                user.facebook.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
+                                                    name: interaction.options.getString("name"),
+                                                    link: interaction.options.getString("link") + "&sortBy=creation_time_descend&daysSinceListed=1",
+                                                    messageType: interaction.options.getNumber("message-type"),
+                                                    message: interaction.options.getString("message"),
+                                                    burnerUsername: burnerAccountObj.Username,
+                                                    burnerPassword: burnerAccountObj.Password,
+                                                    burnerProxy: burnerAccountObj.Proxy,
+                                                    messageProxy: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Proxy,
+                                                    burnerCookies: burnerAccountObj.Cookies,
+                                                    messageCookies: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Cookies,
+                                                    burnerPlatform: burnerAccountObj.Platform,
+                                                    messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
+                                                    maxPrice: maxPrice,
+                                                    distance: interaction.options.getNumber("distance"),
+                                                    channel: interaction.channelId,
+                                                }}));
 
-                                            Channel.send("Created " + interaction.options.getString("name"));
+                                                user.facebook.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.user.id)); 
+
+                                                Channel.send("Created " + interaction.options.getString("name"));
+                                            }
                                         } else{
                                             Channel.send("You must provide a message account to use messaging, use the facebook-update-message-account command to add a message account to your profile.");
                                         }
@@ -589,7 +597,7 @@ const executeCommand = async (interaction) => {
                     }
 
                     //delete garbage
-                    //await staticProxyDB.deleteOne({Proxy: proxyArr[i].Proxy});
+                    await staticProxyDB.deleteOne({Proxy: proxyArr[i].Proxy});
                 }
                 
                 proxyArr = await staticProxyDB.find({TotalFacebookBurnerAccounts: 0, Fresh: false, Group: '184098'}).toArray();
@@ -604,26 +612,25 @@ const executeCommand = async (interaction) => {
                     }
 
                     //delete garbage
-                    //await staticProxyDB.deleteOne({Proxy: proxyArr[i].Proxy});
+                    await staticProxyDB.deleteOne({Proxy: proxyArr[i].Proxy});
                 }
 
                 await Channel.send("finish");
             }
             else if(interaction.commandName === "list"){
-                const taskArray = await taskDB.find({UserId: interaction.user.id});
+                const taskArray = await taskDB.find({UserId: interaction.user.id}).toArray();
 
                 if(taskArray != null){
                     let list = '';
+                    let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
 
                     await taskArray.forEach((task) => {
-                        let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
-
                         list += '- name: ' + task.Name +  ' link: <' + task.Link +  '> message-type: ' + messagingTypes[task.MessageType - 1] +  ' distance: ' + task.Distance + '\n';
                     })
 
-                    Channel.send(list);
+                    await Channel.send(list);
                 }else{
-                    Channel.send("No Active Tasks");
+                    await Channel.send("No Active Tasks");
                 }
             }else if(interaction.commandName === 'facebook-update-message-account'){
                 const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
@@ -649,7 +656,6 @@ const executeCommand = async (interaction) => {
                 const fileContents = fs.readFileSync(interaction.options.getString("path"), 'utf-8');
 
                 const accountArray = fileContents.split('\n');
-                let startTime = Date.now();
 
                 //** Reset Cookies for null insertion
                 /* 
@@ -699,17 +705,16 @@ const executeCommand = async (interaction) => {
                     //get random platform
                     const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
 
-                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, LastActive: Date.now(), Platform: randomPlatform, Start: startTime});
+                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, LastActive: Date.now(), Platform: randomPlatform, Start: Date.now()});
                     if(await burnerAccountDB.findOne({Username: email}) == null){
                         //get a static proxy
                         const proxyObj = await getStaticFacebookBurnerProxy();
-                        if(i < 150){
-                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, NextWarming: Date.now() - (2 * days)});
-                        }else{
-                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, NextWarming: Date.now()});
+                        if(i < 38){//begin now
+                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: Date.now() - (2 * days), NextWarming: Date.now()});
+                        }else{//warming period
+                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: Date.now(), NextWarming: Date.now()});
                         }
                     }
-
                     console.log(email);
                 }
 
@@ -747,7 +752,7 @@ const executeCommand = async (interaction) => {
                     const randomMillisecondsWeek = randomWeeks * 7 * days;
 
                     //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, WarmingPeriodEnd: Date.now() + randomMillisecondsWeek});
-                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: Date.now(), Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime});//
+                    await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: Date.now(), Platform: randomPlatform, NextWarming: Date.now() + randomMillisecondsDay, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: Date.now()});//
 
                     console.log(email);
                 }*/
@@ -816,47 +821,49 @@ const executeCommand = async (interaction) => {
                     await handleUser(taskObj.UserId);
                     const user = users.get(taskObj.UserId);
                     if(user != null){
-                        //increase the worker count
-                        user.taskCount++;
 
                         //burner account assignment
                         const burnerAccountObj = await getFacebookAccount();
+                        if(burnerAccountObj != null){
+                            //increase the worker count
+                            user.taskCount++;
 
-                        //update task for new burnerAccount
-                        await taskDB.updateOne({_id: taskObj._id}, {$set: {burnerAccount: burnerAccountObj.Username}});
+                            //update task for new burnerAccount
+                            await taskDB.updateOne({_id: taskObj._id}, {$set: {burnerAccount: burnerAccountObj.Username}});
 
-                        //get the max price from link
-                        let maxPrice = (taskObj.Link).match(/[?&]maxPrice=(\d+)/);
-                        maxPrice = parseInt(maxPrice[1]);
+                            //get the max price from link
+                            let maxPrice = (taskObj.Link).match(/[?&]maxPrice=(\d+)/);
+                            maxPrice = parseInt(maxPrice[1]);
 
-                        //get the user obj if necessary for messaging
-                        let userObj;
-                        if(taskObj.MessageType != 3){
-                            userObj = await userDB.findOne({UserId: taskObj.UserId});
+                            //get the user obj if necessary for messaging
+                            let userObj;
+                            if(taskObj.MessageType != 3){
+                                userObj = await userDB.findOne({UserId: taskObj.UserId});
+                            }
+
+                            //create a new worker and add it to the map
+                            user.facebook.set(taskObj.Name, new Worker('./facebook.js', { workerData:{
+                                name: taskObj.Name,
+                                link: taskObj.Link + "&sortBy=creation_time_descend&daysSinceListed=1",
+                                messageType: taskObj.MessageType,
+                                message: taskObj.Message,
+                                burnerUsername: burnerAccountObj.Username,
+                                burnerPassword: burnerAccountObj.Password,
+                                burnerProxy: burnerAccountObj.Proxy,
+                                messageProxy: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Proxy,
+                                burnerCookies: burnerAccountObj.Cookies,
+                                messageCookies: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Cookies,
+                                burnerPlatform: burnerAccountObj.Platform,
+                                messagePlatform: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Platform,
+                                maxPrice: maxPrice,
+                                distance: taskObj.Distance,
+                                channel: taskObj.ChannelId,
+                            }}));
+
+                            user.facebook.get(taskObj.Name).on('message', message => facebookListener(message, taskObj.Name, taskObj.UserId)); 
+
+                            Channel.send("Created " + taskObj.Name);
                         }
-
-                        //create a new worker and add it to the map
-                        user.facebook.set(taskObj.Name, new Worker('./facebook.js', { workerData:{
-                            name: taskObj.Name,
-                            link: taskObj.Link + "&sortBy=creation_time_descend&daysSinceListed=1",
-                            messageType: taskObj.MessageType,
-                            message: taskObj.Message,
-                            burnerUsername: burnerAccountObj.Username,
-                            burnerPassword: burnerAccountObj.Password,
-                            burnerProxy: burnerAccountObj.Proxy,
-                            messageProxy: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Proxy,
-                            burnerCookies: burnerAccountObj.Cookies,
-                            messageCookies: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Cookies,
-                            burnerPlatform: burnerAccountObj.Platform,
-                            messagePlatform: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Platform,
-                            maxPrice: maxPrice,
-                            distance: taskObj.Distance,
-                            channel: taskObj.ChannelId,
-                        }}));
-
-                        user.facebook.get(taskObj.Name).on('message', message => facebookListener(message, taskObj.Name, taskObj.UserId)); 
-
-                        Channel.send("Created " + taskObj.Name);
 
                         await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10000 + 55000)));
                     }else{

@@ -490,42 +490,45 @@ const start = async () => {
 
         //network shit
         mainPage.on('response', async response => {
-
-            //detect redirection
-            if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
-                const redirectURL = response.headers()['location'];
-                if(await redirectURL.split('?')[0] != (workerData.link).split('?')[0]){
-                    console.log(`Redirected to: ${redirectURL}`);
-                    logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
-                    startError = true;
-    
-                    if(await mainPage.$('[aria-label="Dismiss"]') != null){
-                        await pause();
-                        await mainPage.click('[aria-label="Dismiss"]');
-                    }else if(redirectURL.includes('/checkpoint/')){
-                        logChannel.send('Account banned: ' + burnerUsername);
-                        console.log('Account banned: ' + burnerUsername);
-                
-                        //message the main script to delete the burner account
-                        parentPort.postMessage({action: 'ban', username: burnerUsername});
-                    }else if(redirectURL.includes('/login/?next')){
-                        try{
-                            await mainPage.waitForSelector('[name="email"]');
-                        }catch(error){}
-    
-                        await login();
-                    }else{
-                        //message the main script to get a new accounts
-                        logChannel.send("Rotate Account: " + burnerUsername);
-                        if(mainBrowser != null){
-                            await logPageContent(mainPage);
-                            await mainPage.close();
-                            await mainBrowser.close();
-                            mainBrowser = null;
+            try {
+                //detect redirection
+                if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
+                    const redirectURL = response.headers()['location'];
+                    if(await redirectURL.split('?')[0] != (workerData.link).split('?')[0]){
+                        console.log(`Redirected to: ${redirectURL}`);
+                        logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
+                        startError = true; 
+        
+                        if(redirectURL.includes('/checkpoint/')){
+                            logChannel.send('Account banned: ' + burnerUsername);
+                            console.log('Account banned: ' + burnerUsername);
+                    
+                            //message the main script to delete the burner account
+                            parentPort.postMessage({action: 'ban', username: burnerUsername});
+                        }else if(redirectURL.includes('/login/?next')){
+                            try{
+                                await mainPage.waitForSelector('[name="email"]');
+                            }catch(error){}
+        
+                            await login();
+                        }else if(await mainPage.$('[aria-label="Dismiss"]') != null){
+                            await pause();
+                            await mainPage.click('[aria-label="Dismiss"]');
+                        }else{
+                            //message the main script to get a new accounts
+                            logChannel.send("Rotate Account: " + burnerUsername);
+                            if(mainBrowser != null){
+                                await logPageContent(mainPage);
+                                await mainPage.close();
+                                await mainBrowser.close();
+                                mainBrowser = null;
+                            }
+                            parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
                         }
-                        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
                     }
                 }
+            }catch (error) {
+                errorMessage("Error with handling network response", error);
             }
         });
 
