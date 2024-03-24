@@ -347,7 +347,6 @@ const changeLanguage = async () => {
         await pause(1);
         await initiationCursor.click('[href="/"]')
         parentPort.postMessage({languageChange: true})
-        await Channel.send("Finish: " + workerData.username);
     }catch(error){
         errorMessage('Error with page initiation', error);
         await pause(1);

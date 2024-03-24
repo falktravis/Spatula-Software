@@ -75,12 +75,12 @@ const warmAccs = async() => {
                     proxy: warmingAccounts[i].Proxy,
                     cookies: warmingAccounts[i].Cookies,
                     platform: warmingAccounts[i].Platform,
-                    changeLanguage: (warmingAccounts[i].Start < Date.now() - (2 * days))
+                    changeLanguage: true//(warmingAccounts[i].Start < Date.now() - (2 * days))
                 }});
 
-                if(warmingAccounts[i].Start < Date.now() - (2 * days)){//!Testing and such
+                //if(warmingAccounts[i].Start < Date.now() - (2 * days)){//!Testing and such
                     await warmingLogChannel.send('Language Change Attempt: ' + warmingAccounts[i].Username);
-                }
+                //}
 
                 warmer.on('message', async (message) => {
                     if(message.cookies != null && message.cookies != []){
@@ -133,7 +133,8 @@ const warmAccs = async() => {
             await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$set: {NextWarming: Date.now() + randomMilliseconds}});
 
             //wait for a calculated interval
-            const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
+            //const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
+            const randomInterval = 60000;
             await new Promise(r => setTimeout(r, randomInterval));
         }
     } catch (error) {
