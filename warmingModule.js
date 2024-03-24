@@ -134,7 +134,7 @@ const warmAccs = async() => {
 
             //wait for a calculated interval
             //const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
-            const randomInterval = 600000
+            const randomInterval = 60000
             await new Promise(r => setTimeout(r, randomInterval));
         }
         await warmingLogChannel.send("Warming Script Finish");
