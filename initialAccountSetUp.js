@@ -18,6 +18,7 @@ const fs = require('fs/promises');
 
 //init chatgpt
 const OpenAI = require("openai");
+const { log } = require('util');
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
@@ -65,8 +66,12 @@ client.on('ready', async () => {
 
                 //Change Language
                 if(workerData.changeLanguage == true){
-                    const initiation = await initiationPage.evaluate(() => {return document.documentElement.lang});
-                    if (initiation !== 'en') {
+                    if (language != 'en') {
+                        await changeLanguage();
+                        await scrollFeed(5);
+                    }else if (await initiationPage.$("[aria-label='Search Facebook']") == null){
+                        await Channel.send("Language check missfire");
+                        await logPageContent(initiationPage);
                         await changeLanguage();
                         await scrollFeed(5);
                     }else{
@@ -172,6 +177,7 @@ const login = async () => {
         }else{
             //update burnerCookies
             parentPort.postMessage({cookies: await initiationPage.cookies()});
+            language = await initiationPage.evaluate(() => document.documentElement.lang);
             return true;
         }
     } catch (error) {
@@ -187,6 +193,7 @@ const login = async () => {
 let initiationBrowser;
 let initiationPage;
 let initiationCursor;
+let language;
 const start = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
@@ -252,7 +259,7 @@ const start = async () => {
         //Set cookies in browser
         await initiationPage.setCookie(...workerData.cookies);
 
-        await initiationPage.goto('https://www.facebook.com', {waitUntil: 'domcontentloaded'});
+        await initiationPage.goto('https://www.facebook.com', {waitUntil: 'load'});
 
         //detect accounts that need login
         if(await initiationPage.$('[name="login"]') != null){
@@ -260,6 +267,7 @@ const start = async () => {
             return login();
         }else{
             parentPort.postMessage({cookies: await initiationPage.cookies()});
+            language = await initiationPage.evaluate(() => document.documentElement.lang);
             return true;
         }
     }catch(error){
