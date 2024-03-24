@@ -137,6 +137,7 @@ const warmAccs = async() => {
             const randomInterval = 60000;
             await new Promise(r => setTimeout(r, randomInterval));
         }
+        await warmingLogChannel.send("Warming Script Finish");
     } catch (error) {
         await warmingLogChannel.send("Error Warming Account: " + error);
         console.log("Error Warming Account: " + error);

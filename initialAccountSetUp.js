@@ -69,6 +69,8 @@ client.on('ready', async () => {
                     if (initiation !== 'en') {
                         await changeLanguage();
                         await scrollFeed(5);
+                    }else{
+                        parentPort.postMessage({languageChange: true});
                     }
                 }
             }
