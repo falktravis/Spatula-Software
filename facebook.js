@@ -868,7 +868,7 @@ function interval() {
                                 //change the viewport
                                 itemPage.setViewport({ width: 1366, height: 768 });
     
-                                await itemPage.goto(newPost, { waitUntil: 'networkidle0' });
+                                await itemPage.goto(newPost, { waitUntil: 'load', timeout: 60000});
                             }catch(error){
                                 errorMessage('Error with product page initiation, no message', error);
                             }
@@ -879,7 +879,7 @@ function interval() {
                                 //check for video
                                 if(await itemPage.$('.xcg96fm img') == null){
                                     itemPageFullLoad = true;
-                                    await itemPage.reload({ waitUntil: 'networkidle0' });
+                                    await itemPage.reload({ waitUntil: 'load', timeout: 60000});
                                 }
 
                                 //set post data obj
