@@ -555,7 +555,11 @@ const start = async () => {
 
         //go to the search page
         try {
-            await mainPage.goto(workerData.link, { waitUntil: 'load', timeout: 50000});//networkidle2
+            if(!(workerData.link).includes("<")){
+                await mainPage.goto(workerData.link, { waitUntil: 'load', timeout: 50000});//networkidle2
+            }else{
+                await logChannel.send("< Present in: " + workerData.name);
+            }
         } catch (error) {await logChannel.send("Timeout on going to link")}
 
         //update burnerCookies
@@ -564,7 +568,7 @@ const start = async () => {
     
             // Detect the current language
             const language = await mainPage.evaluate(() => document.documentElement.lang);
-            if (language != 'en' && language != null && language != '') {
+            if (language != 'en') {
                 logChannel.send('Language Wrong: ' + language + " -> " + burnerUsername);
                 startError = true;
                 parentPort.postMessage({action: 'languageWrong', username: burnerUsername});
