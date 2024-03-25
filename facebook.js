@@ -564,7 +564,7 @@ const start = async () => {
     
             // Detect the current language
             const language = await mainPage.evaluate(() => document.documentElement.lang);
-            if (language !== 'en') {
+            if (language != 'en' && language != null && language != '') {
                 logChannel.send('Language Wrong: ' + language + " -> " + burnerUsername);
                 startError = true;
                 parentPort.postMessage({action: 'languageWrong', username: burnerUsername});

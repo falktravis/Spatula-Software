@@ -67,13 +67,13 @@ client.on('ready', async () => {
                 if(workerData.changeLanguage == true){
                     await changeLanguage();
                     await scrollFeed(5);
-                    /*const language = await initiationPage.evaluate(() => document.documentElement.lang);
-                    if (language !== 'en') {
+                    const language = await initiationPage.evaluate(() => document.documentElement.lang);
+                    if (language != 'en' && language != null && language != '') {
                         await changeLanguage();
                         await scrollFeed(5);
                     }else{
                         parentPort.postMessage({languageChange: true});
-                    }*/
+                    }
                 }
             }
 
