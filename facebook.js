@@ -555,11 +555,7 @@ const start = async () => {
 
         //go to the search page
         try {
-            if(!(workerData.link).includes("<")){
-                await mainPage.goto(workerData.link, { waitUntil: 'load', timeout: 50000});//networkidle2
-            }else{
-                await logChannel.send("< Present in: " + workerData.name);
-            }
+            await mainPage.goto(workerData.link, { waitUntil: 'load', timeout: 50000});//networkidle2
         } catch (error) {await logChannel.send("Timeout on going to link")}
 
         //update burnerCookies

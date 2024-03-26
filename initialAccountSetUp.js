@@ -61,14 +61,14 @@ client.on('ready', async () => {
                 await checkNotifs();
 
                 //scroll feed
-                await scrollFeed(10);
+                await scrollFeed(5);
 
                 //Change Language
                 if(workerData.changeLanguage == true){
                     await changeLanguage();
                     await scrollFeed(5);
                     const language = await initiationPage.evaluate(() => document.documentElement.lang);
-                    if (language != 'en' && language != null && language != '') {
+                    if (language != 'en') {
                         await changeLanguage();
                         await scrollFeed(5);
                     }else{
