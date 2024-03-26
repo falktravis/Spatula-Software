@@ -622,9 +622,9 @@ const executeCommand = async (interaction) => {
 
                 if(taskArray != null){
                     let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
-                    
-                    for (const task of taskArray){
-                        await Channel.send('- name: ' + taskArray[task].Name +  ' link: <' + taskArray[task].Link +  '> message-type: ' + messagingTypes[taskArray[task].MessageType - 1] +  ' distance: ' + taskArray[task].Distance + '\n');
+
+                    for (let i = 0; i < taskArray.length; i++){
+                        await Channel.send('- name: ' + taskArray[i].Name +  ' link: <' + taskArray[i].Link +  '> message-type: ' + messagingTypes[taskArray[i].MessageType - 1] +  ' distance: ' + taskArray[i].Distance + '\n');
                     }
                 }else{
                     await Channel.send("No Active Tasks");
