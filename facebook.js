@@ -857,16 +857,26 @@ function interval() {
                                     }
                                 });
     
-                                //change http headers
-                                itemPage.setExtraHTTPHeaders({
-                                    'Referer': 'https://www.facebook.com/login',
-                                    'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-                                    'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-                                    'Sec-Ch-Ua-Platform': burnerPlatform
-                                });
-    
+                                //create a cursor
+                                messageCursor = createCursor(itemPage);
+
                                 //change the viewport
                                 itemPage.setViewport({ width: 1366, height: 768 });
+
+                                //change http headers
+                                itemPage.setUserAgent(`Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
+                                itemPage.setExtraHTTPHeaders({
+                                    'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
+                                    'SEC-CH-UA-ARCH': '"x86"',
+                                    'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
+                                    'SEC-CH-UA-MOBILE':	'?0',
+                                    'Sec-Ch-Ua-Platform': `"${burnerPlatform}"`,
+                                    'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
+                                    'Referer': workerData.link
+                                });
+
+                                //set cookies/login if the login was a success
+                                await itemPage.setCookie(...burnerCookies);
     
                                 await itemPage.goto(newPost, { waitUntil: 'load', timeout: 60000});
                             }catch(error){
