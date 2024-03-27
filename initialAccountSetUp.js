@@ -61,17 +61,16 @@ client.on('ready', async () => {
                 await checkNotifs();
 
                 //scroll feed
-                await scrollFeed(5);
+                await scrollFeed(8);
 
                 //Change Language
                 if(workerData.changeLanguage == true){
-                    await changeLanguage();
-                    await scrollFeed(5);
                     const language = await initiationPage.evaluate(() => document.documentElement.lang);
                     if (language != 'en') {
                         await changeLanguage();
                         await scrollFeed(5);
                     }else{
+                        await Channel.send("language: " + language);
                         parentPort.postMessage({languageChange: true});
                     }
                 }
