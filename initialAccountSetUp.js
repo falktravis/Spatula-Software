@@ -56,25 +56,7 @@ client.on('ready', async () => {
 
         //main function
         try {
-            if(await start()){
-                //check notifs
-                await checkNotifs();
-
-                //scroll feed
-                await scrollFeed(8);
-
-                //Change Language
-                if(workerData.changeLanguage == true){
-                    const language = await initiationPage.evaluate(() => document.documentElement.lang);
-                    if (language != 'en') {
-                        await changeLanguage();
-                        await scrollFeed(5);
-                    }else{
-                        await Channel.send("language: " + language);
-                        parentPort.postMessage({languageChange: true});
-                    }
-                }
-            }
+            await start()
 
             await Channel.send('finish');
             await initiationPage.close();
@@ -173,7 +155,8 @@ const login = async () => {
         }else{
             //update burnerCookies
             parentPort.postMessage({cookies: await initiationPage.cookies()});
-            return true;
+            isLogin = true;
+            actions();
         }
     } catch (error) {
         await Channel.send('error with re-login + ban: ' + error);
@@ -184,10 +167,35 @@ const login = async () => {
     }
 }
 
+const actions = async() => {
+    try {
+        //check notifs
+        await checkNotifs();
+
+        //scroll feed
+        await scrollFeed(8);
+
+        //Change Language
+        if(workerData.changeLanguage == true){
+            const language = await initiationPage.evaluate(() => document.documentElement.lang);
+            if (language != 'en') {
+                await changeLanguage();
+                await scrollFeed(5);
+            }else{
+                await Channel.send("language: " + language);
+                parentPort.postMessage({languageChange: true});
+            }
+        }
+    } catch (error) {
+        Channel.send("Error carrying out actions: " + error);
+    }
+}
+
 //general instantiation
 let initiationBrowser;
 let initiationPage;
 let initiationCursor;
+let isLogin = false;
 const start = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
@@ -225,13 +233,16 @@ const start = async () => {
                     await initiationPage.close();
                     await initiationBrowser.close();
                     process.exit();
-                }/*else if(redirectURL.includes('/login/?next')){
+                }else if(redirectURL.includes('/login/?next')){
                     try{
                         await initiationPage.waitForSelector('[name="email"]');
                     }catch(error){}
 
-                    await login();
-                }*/
+                    if(isLogin == false){
+                        isLogin = true;
+                        return login();
+                    }
+                }
             }
         });
 
@@ -256,12 +267,15 @@ const start = async () => {
         await initiationPage.goto('https://www.facebook.com', {waitUntil: 'domcontentloaded'});
 
         //detect accounts that need login
-        if(await initiationPage.$('[name="login"]') != null){
+        if(await initiationPage.$('[name="login"]') != null || (await initiationPage.url()).includes('/login/?next')){
             Channel.send("account is fucked");
-            return login();
+            if(isLogin == false){
+                isLogin = true;
+                login();
+            }
         }else{
             parentPort.postMessage({cookies: await initiationPage.cookies()});
-            return true;
+            actions();
         }
     }catch(error){
         errorMessage('Error with page initiation', error);
