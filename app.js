@@ -25,6 +25,7 @@ let burnerAccountDB;
 let userDB;
 let taskDB;
 let days = 24 * 60 * 60 * 1000;
+let banCount = 0;
 (async () => {
     try {
         await mongoClient.connect();
@@ -67,9 +68,10 @@ for (const file of commandFiles) {
 //get log channel
 let logChannel;
 let warmingLogChannel;
+let metricsChannel;
 discordClient.on('ready', async () => {
     try {
-        logChannel = discordClient.channels.cache.get('1091532766522376243');
+        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
         }
@@ -79,7 +81,12 @@ discordClient.on('ready', async () => {
             warmingLogChannel = await discordClient.channels.fetch('1196915422042259466');
         }
 
-        RunDailyTasks();
+        metricsChannel = discordClient.channels.cache.get('1223126332779794442');
+        if(metricsChannel == null){
+            metricsChannel = await discordClient.channels.fetch('1223126332779794442');
+        }
+
+        RunDailyTasks();*/
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
@@ -88,12 +95,12 @@ discordClient.on('ready', async () => {
 // Define a global error handler
 process.on('uncaughtException', async (error) => {
     console.error('Uncaught Exception:', error);
-    logChannel.send('Uncaught error: ' + error);
+    //logChannel.send('Uncaught error: ' + error);
 });
 
 process.on('unhandledRejection', async (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    logChannel.send('Uncaught rejection: ' + reason);
+    //logChannel.send('Uncaught rejection: ' + reason);
 });
 
 //worker login listening function
@@ -120,10 +127,12 @@ const facebookListener = async (message, task, user) => {
             let numAccs = await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}});
             let numTasks = (await taskDB.countDocuments({}))
             if(numAccs < numTasks * 1.5){
-                logChannel.send("BURNER ACCOUNTS LOW Accounts: " + numAccs + " Tasks: " + numTasks + " @everyone");
+                //logChannel.send("BURNER ACCOUNTS LOW Accounts: " + numAccs + " Tasks: " + numTasks + " @everyone");
             }else if(numAccs < numTasks){
-                logChannel.send("BURNER ACCOUNTS OUT @everyone");
+                //logChannel.send("BURNER ACCOUNTS OUT @everyone");
             }
+
+            banCount++;
         }
     
         if(message.action == 'ban' || message.action == 'rotateAccount' || message.action == 'languageWrong'){
@@ -141,7 +150,7 @@ const facebookListener = async (message, task, user) => {
         }
         //**Restarting task script */
         /*else if(message.action == 'restart'){
-            logChannel.send('Restarting task');
+            //logChannel.send('Restarting task');
     
             //get task from db
             const taskObj = await taskDB.findOne({UserId: user, Name: task});
@@ -184,20 +193,30 @@ const facebookListener = async (message, task, user) => {
     
             userItem.facebook.get(taskObj.Name).on('message', message => facebookListener(message, taskObj.Name, taskObj.UserId)); 
     
-            logChannel.send("Successfully Re-Started " + taskObj.Name);
+            //logChannel.send("Successfully Re-Started " + taskObj.Name);
         }*/
     } catch (error) {
-        logChannel.send("Error handling task message: " + error);
+        //logChannel.send("Error handling task message: " + error);
     }
 }
 
 //run daily tasks at the same time every day
-const RunDailyTasks = () => {
-    scanDatabase();
+const RunDailyTasks = async () => {
+    try {
+        scanDatabase();
 
-    setTimeout(async () => {
-        RunDailyTasks();
-    }, 86400000) //24 hours
+        //log metrics for the day
+        const today = new Date();
+        let numAccs = await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}});
+        let numTasks = (await taskDB.countDocuments({}))
+        await metricsChannel.send(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + "\nTasks: " + numTasks + "\nAccounts: " + numAccs + "\nBans: " + banCount);
+    
+        setTimeout(async () => {
+            RunDailyTasks();
+        }, 86400000) //24 hours
+    } catch (error) {
+        await logChannel.send("Error running daily tasks: " + error);
+    }
 }
 
 //scan database for non-paying users
@@ -264,7 +283,7 @@ const getFacebookAccount = async () => {
     //if there is no un-active accounts, This should NEVER happen
     if(burnerAccountObj == null){
         console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-        logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+        //logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
         return null;
     }else{
         //change LastActive to null, signifing the account is being used
@@ -320,10 +339,10 @@ const deleteTask = async (task, taskName, userId) => {
                 await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
             }
         }else{
-            logChannel.send("Message failed @everyone");
+            //logChannel.send("Message failed @everyone");
         }
     } catch (error) {
-        logChannel.send("Error Deleting Task Message: " + error);
+        //logChannel.send("Error Deleting Task Message: " + error);
     }
 
     try {
@@ -334,7 +353,7 @@ const deleteTask = async (task, taskName, userId) => {
         //delete from server
         task.terminate();
     } catch (error) {
-        logChannel.send("Error Deleting Task: " + error);
+        //logChannel.send("Error Deleting Task: " + error);
     }
 }
 
@@ -391,7 +410,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Error getting channel for command: " + error);
-        logChannel.send("Error getting channel for command: " + error);
+        //logChannel.send("Error getting channel for command: " + error);
     }
 
     try {
@@ -688,7 +707,7 @@ const executeCommand = async (interaction) => {
                 // Regular expression patterns
                 const arrayRegex = /\[(.*?)\]/g;
 
-                for(let i = 0; i < accountArray.length; i++){
+                for(let i = 0; i < accountArray.length; i++){// previously -> 24 of C:\Users\falkt\Documents\Facebook Accounts\order_25447706.txt 
 
                     //collect the cookie array
                     const cookiesMatch = accountArray[i].match(arrayRegex);
@@ -883,7 +902,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        logChannel.send("Command Error: \n\t" + error);
+        //logChannel.send("Command Error: \n\t" + error);
         Channel.send("Command Error: \n\t" + error);
     }
 }

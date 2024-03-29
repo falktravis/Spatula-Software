@@ -266,6 +266,8 @@ const accountRotation = () => {
 const login = async () => {
     try {
         logChannel.send("Re-Login Required: " + burnerUsername);
+        mainPageInitiate = true;
+        await mainPage.reload({waitUntil: 'load'});
 
         //check for this weird shit
         if(await mainPage.$('[title="Allow all cookies"]') != null){
@@ -303,8 +305,8 @@ const login = async () => {
         }
     } catch (error) {
         startError = true;
-        await logChannel.send('error with re-login + ban: ' + error);
-        parentPort.postMessage({action: 'ban', username: burnerUsername});
+        await logChannel.send('error with re-login: ' + error);
+        parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
     }
 }
 
@@ -843,11 +845,12 @@ function interval() {
                                 itemPage.on('request', async request => {
                                     const resource = request.resourceType();
                                     if(itemPageFullLoad){
-                                        if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
+                                        request.continue(); //!If this doesn't change data collection error, change it back
+                                        /*if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
                                             request.abort();
                                         }else{
                                             request.continue();
-                                        }
+                                        }*/
                                     }else{
                                         if(resource != 'document'){
                                             request.abort();
@@ -875,8 +878,8 @@ function interval() {
                                     'Referer': workerData.link
                                 });
 
-                                //set cookies/login if the login was a success
-                                await itemPage.setCookie(...burnerCookies);
+                                //!assuming this doesn't do shit
+                                //await itemPage.setCookie(...burnerCookies);
     
                                 await itemPage.goto(newPost, { waitUntil: 'load', timeout: 60000});
                             }catch(error){
