@@ -935,7 +935,7 @@ function interval() {
                             //manage description
                             if(postObj?.description != null){
                                 if(postObj?.description.length > 700){
-                                    postObj?.description = (postObj?.description)?.substring(0, 700) + '...';
+                                    postObj.description = (postObj?.description)?.substring(0, 700) + '...';
                                 }
                             }
 
