@@ -28,6 +28,16 @@ const errorMessage = (message, error) => {
     Channel.send(message + ': ' + error);
 }
 
+// Add cleanup logic on uncaught exception
+process.on('uncaughtException', async (err) => {
+    await Channel.send('Uncaught Exception in: ' + err);
+});
+
+// Add cleanup logic on unhandled promise rejection
+process.on('unhandledRejection', async (reason, promise) => {
+    await Channel.send('Unhandled Rejection in:' + reason);
+});
+
 //convert platform string for a user agent
 const platformConverter = (platform) => {
     if(platform === 'Windows'){
@@ -54,20 +64,7 @@ client.on('ready', async () => {
             }
         }
 
-        //main function
-        try {
-            await start()
-
-            await Channel.send('finish');
-            await initiationPage.close();
-            await initiationBrowser.close();
-            process.exit();
-        } catch (error) {
-            errorMessage('Error with main function', error);
-            await initiationPage.close();
-            await initiationBrowser.close();
-            process.exit();
-        }
+        await start()
     } catch (error) {
         errorMessage('Error fetching channel', error);
     }
@@ -186,8 +183,16 @@ const actions = async() => {
                 parentPort.postMessage({languageChange: true});
             }
         }
+
+        await Channel.send('finish');
+        await initiationPage.close();
+        await initiationBrowser.close();
+        process.exit();
     } catch (error) {
         Channel.send("Error carrying out actions: " + error);
+        await initiationPage.close();
+        await initiationBrowser.close();
+        process.exit();
     }
 }
 
@@ -220,19 +225,23 @@ const start = async () => {
                 const redirectURL = response.headers()['location'];
                 Channel.send(`Redirected to: ${redirectURL}`);
 
-                if(await initiationPage.$('[aria-label="Dismiss"]') != null){
-                    await pause(2);
-                    await initiationCursor.click('[aria-label="Dismiss"]');
-                }
-
                 if(redirectURL.includes('/checkpoint/')){
-                    await Channel.send('Account banned: ' + workerData.username);
+                    try {
+                        initiationPage.waitForSelector('[aria-label="Dismiss"]', {timeout: 30000});
+                    } catch (error) {}
+
+                    if(await initiationPage.$('[aria-label="Dismiss"]') != null){
+                        await pause(2);
+                        await initiationCursor.click('[aria-label="Dismiss"]');
+                    }else{
+                        await Channel.send('Account banned: ' + workerData.username);
             
-                    //message the main script to delete the burner account
-                    parentPort.postMessage({action: 'ban', username: workerData.username});
-                    await initiationPage.close();
-                    await initiationBrowser.close();
-                    process.exit();
+                        //message the main script to delete the burner account
+                        parentPort.postMessage({action: 'ban', username: workerData.username});
+                        await initiationPage.close();
+                        await initiationBrowser.close();
+                        process.exit();
+                    }
                 }else if(redirectURL.includes('/login/?next')){
                     try{
                         await initiationPage.waitForSelector('[name="email"]');

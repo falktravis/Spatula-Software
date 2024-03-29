@@ -502,20 +502,28 @@ const start = async () => {
                         startError = true; 
         
                         if(redirectURL.includes('/checkpoint/')){
-                            logChannel.send('Account banned: ' + burnerUsername);
-                            console.log('Account banned: ' + burnerUsername);
-                    
-                            //message the main script to delete the burner account
-                            parentPort.postMessage({action: 'ban', username: burnerUsername});
+                            try {
+                                mainPage.waitForSelector('[aria-label="Dismiss"]', {timeout: 30000});
+                            } catch (error) {}
+                            await logPageContent(mainPage);
+
+                            if(await mainPage.$('[aria-label="Dismiss"]') != null){
+                                await pause();
+                                await mainPage.click('[aria-label="Dismiss"]');
+                                await logChannel.send("dismiss warming");
+                            }else{
+                                logChannel.send('Account banned: ' + burnerUsername);
+                                console.log('Account banned: ' + burnerUsername);
+                        
+                                //message the main script to delete the burner account
+                                parentPort.postMessage({action: 'ban', username: burnerUsername});
+                            }
                         }else if(redirectURL.includes('/login/?next')){
                             try{
                                 await mainPage.waitForSelector('[name="email"]');
                             }catch(error){}
         
                             await login();
-                        }else if(await mainPage.$('[aria-label="Dismiss"]') != null){
-                            await pause();
-                            await mainPage.click('[aria-label="Dismiss"]');
                         }else{
                             //message the main script to get a new accounts
                             logChannel.send("Rotate Account: " + burnerUsername);
@@ -719,7 +727,10 @@ function interval() {
         const resultsRefresh = async () => {
             try {
                 //change link for results change
-                await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`), {waitUntil: 'networkidle2', timeout: 60000});
+                await mainPage.goto((workerData.link).replace(/maxPrice=([^&]+)/, `maxPrice=${value}`));//, {waitUntil: 'networkidle2', timeout: 60000}
+                try {
+                    await mainPage.waitForSelector(".x3ct3a4 a");
+                } catch (error) {await logChannel.send("Error waiting for listing selector")}
                 console.log(mainPage.url());
         
                 //if the listings dont exist on the page, refresh
@@ -877,22 +888,21 @@ function interval() {
                                     'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
                                     'Referer': workerData.link
                                 });
-
-                                //!assuming this doesn't do shit
-                                //await itemPage.setCookie(...burnerCookies);
     
-                                await itemPage.goto(newPost, { waitUntil: 'load', timeout: 60000});
+                                await itemPage.goto(newPost, { waitUntil: 'domcontentloaded', timeout: 60000});
                             }catch(error){
                                 errorMessage('Error with product page initiation, no message', error);
                             }
     
                             //get post data
                             try{
-
                                 //check for video
                                 if(await itemPage.$('.xcg96fm img') == null){
                                     itemPageFullLoad = true;
-                                    await itemPage.reload({ waitUntil: 'load', timeout: 60000});
+                                    await itemPage.reload();
+                                    try {
+                                        await itemPage.waitForSelector('.xcg96fm img');
+                                    } catch (error) {await logChannel.send("Error waiting for image selector")}
                                 }
 
                                 //set post data obj
@@ -919,72 +929,72 @@ function interval() {
                                 errorMessage(`Error with getting item data at ${newPost}`, error);
                             }
                         }
-
-                        try {
-                            if(postObj.description != null){
-                                if(postObj.description.length > 700){
-                                    postObj.description = (postObj.description).substring(0, 700) + '...';
+                        
+                        //check for listing deleted and collection error
+                        if(postObj != null){
+                            //manage description
+                            if(postObj?.description != null){
+                                if(postObj?.description.length > 700){
+                                    postObj?.description = (postObj?.description)?.substring(0, 700) + '...';
                                 }
                             }
-                        } catch (error) {
-                            logChannel.send("Error managing description");
-                        }
-                        
-                        //Handle Discord messaging
-                        if(workerData.messageType != 2){//if its not manual messaging
-                            try{
-                                mainChannel.send({ content: "$" + postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
-                                    .setColor(0x0099FF)
-                                    .setTitle("$" + postObj.price + " - " + postObj.title)
-                                    .setURL(newPost)
-                                    .setAuthor({ name: workerData.name })
-                                    .setDescription(postObj.description)
-                                    .addFields({ name: postObj.date, value: postObj.shipping })
-                                    .setImage(postObj.img)
-                                    .setTimestamp(new Date())
-                                ]});
-                            }catch(error){
-                                errorMessage('Error with item notification', error);
-                            }
-                        }else{
-                            let notification;
-                            try{
-                                notification = await mainChannel.send({ content: "$" + postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
-                                    .setColor(0x0099FF)
-                                    .setTitle("$" + postObj.price + " - " + postObj.title)
-                                    .setURL(newPost)
-                                    .setAuthor({ name: workerData.name })
-                                    .setDescription(postObj.description)
-                                    .addFields({ name: postObj.date, value: postObj.shipping })
-                                    .setImage(postObj.img)
-                                    .setTimestamp(new Date())
-                                ], components: [new ActionRowBuilder()
-                                    .addComponents(
-                                        new ButtonBuilder()
-                                        .setCustomId('message-' + newPost)
-                                        .setLabel('Message')
-                                        .setStyle(ButtonStyle.Primary),
-                                    )
-                                ]});
-                            }catch(error){
-                                errorMessage('Error with new item notification with message button', error);
-                            }
-    
-                            try {
-                                const filter = i => i.customId.split("-")[0] == 'message';
-                                const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
-                                collector.on('collect', async i => {
-                                    i.reply("Sending...");
-    
-                                    sendMessage(i.customId.split("-")[1]);
+
+                            //Handle Discord messaging
+                            if(workerData.messageType != 2){//if its not manual messaging
+                                try{
+                                    mainChannel.send({ content: "$" + postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
+                                        .setColor(0x0099FF)
+                                        .setTitle("$" + postObj.price + " - " + postObj.title)
+                                        .setURL(newPost)
+                                        .setAuthor({ name: workerData.name })
+                                        .setDescription(postObj.description)
+                                        .addFields({ name: postObj.date, value: postObj.shipping })
+                                        .setImage(postObj.img)
+                                        .setTimestamp(new Date())
+                                    ]});
+                                }catch(error){
+                                    errorMessage('Error with item notification', error);
+                                }
+                            }else{
+                                let notification;
+                                try{
+                                    notification = await mainChannel.send({ content: "$" + postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
+                                        .setColor(0x0099FF)
+                                        .setTitle("$" + postObj.price + " - " + postObj.title)
+                                        .setURL(newPost)
+                                        .setAuthor({ name: workerData.name })
+                                        .setDescription(postObj.description)
+                                        .addFields({ name: postObj.date, value: postObj.shipping })
+                                        .setImage(postObj.img)
+                                        .setTimestamp(new Date())
+                                    ], components: [new ActionRowBuilder()
+                                        .addComponents(
+                                            new ButtonBuilder()
+                                            .setCustomId('message-' + newPost)
+                                            .setLabel('Message')
+                                            .setStyle(ButtonStyle.Primary),
+                                        )
+                                    ]});
+                                }catch(error){
+                                    errorMessage('Error with new item notification with message button', error);
+                                }
         
-                                    collector.stop();
-                                });
-                                collector.on('end', () => {
-                                    notification.edit({ components: [] });
-                                });
-                            } catch (error) {
-                                errorMessage('Error collecting new item notification button', error);
+                                try {
+                                    const filter = i => i.customId.split("-")[0] == 'message';
+                                    const collector = await notification.createMessageComponentCollector({ filter, time: 14400000 }); //4 hours, I think
+                                    collector.on('collect', async i => {
+                                        i.reply("Sending...");
+        
+                                        sendMessage(i.customId.split("-")[1]);
+            
+                                        collector.stop();
+                                    });
+                                    collector.on('end', () => {
+                                        notification.edit({ components: [] });
+                                    });
+                                } catch (error) {
+                                    errorMessage('Error collecting new item notification button', error);
+                                }
                             }
                         }
                     }else{

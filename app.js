@@ -71,7 +71,7 @@ let warmingLogChannel;
 let metricsChannel;
 discordClient.on('ready', async () => {
     try {
-        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
+        logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
         }
@@ -86,7 +86,7 @@ discordClient.on('ready', async () => {
             metricsChannel = await discordClient.channels.fetch('1223126332779794442');
         }
 
-        RunDailyTasks();*/
+        RunDailyTasks();
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
@@ -95,12 +95,12 @@ discordClient.on('ready', async () => {
 // Define a global error handler
 process.on('uncaughtException', async (error) => {
     console.error('Uncaught Exception:', error);
-    //logChannel.send('Uncaught error: ' + error);
+    logChannel.send('Uncaught error: ' + error);
 });
 
 process.on('unhandledRejection', async (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    //logChannel.send('Uncaught rejection: ' + reason);
+    logChannel.send('Uncaught rejection: ' + reason);
 });
 
 //worker login listening function
@@ -127,9 +127,9 @@ const facebookListener = async (message, task, user) => {
             let numAccs = await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}});
             let numTasks = (await taskDB.countDocuments({}))
             if(numAccs < numTasks * 1.5){
-                //logChannel.send("BURNER ACCOUNTS LOW Accounts: " + numAccs + " Tasks: " + numTasks + " @everyone");
+                logChannel.send("BURNER ACCOUNTS LOW Accounts: " + numAccs + " Tasks: " + numTasks + " @everyone");
             }else if(numAccs < numTasks){
-                //logChannel.send("BURNER ACCOUNTS OUT @everyone");
+                logChannel.send("BURNER ACCOUNTS OUT @everyone");
             }
 
             banCount++;
@@ -150,7 +150,7 @@ const facebookListener = async (message, task, user) => {
         }
         //**Restarting task script */
         /*else if(message.action == 'restart'){
-            //logChannel.send('Restarting task');
+            logChannel.send('Restarting task');
     
             //get task from db
             const taskObj = await taskDB.findOne({UserId: user, Name: task});
@@ -193,10 +193,10 @@ const facebookListener = async (message, task, user) => {
     
             userItem.facebook.get(taskObj.Name).on('message', message => facebookListener(message, taskObj.Name, taskObj.UserId)); 
     
-            //logChannel.send("Successfully Re-Started " + taskObj.Name);
+            logChannel.send("Successfully Re-Started " + taskObj.Name);
         }*/
     } catch (error) {
-        //logChannel.send("Error handling task message: " + error);
+        logChannel.send("Error handling task message: " + error);
     }
 }
 
@@ -264,7 +264,7 @@ const getStaticFacebookMessageProxy = async () => {
 
 const getStaticFacebookBurnerProxy = async () => {
     //get the proxy
-    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}, Fresh: true}, {sort: {TotalFacebookBurnerAccounts: 1}});
+    let staticProxyObj = await staticProxyDB.findOne({TotalFacebookBurnerAccounts: {$lt: 3}, Fresh: true}, {sort: {TotalFacebookBurnerAccounts: 1}});//!, Fresh: true
     if(staticProxyObj == null){
         staticProxyObj = await staticProxyDB.findOne({}, {sort: { TotalFacebookBurnerAccounts: 1}});
     }
@@ -283,7 +283,7 @@ const getFacebookAccount = async () => {
     //if there is no un-active accounts, This should NEVER happen
     if(burnerAccountObj == null){
         console.log('SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!!');
-        //logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
+        logChannel.send("SOUND THE FUCKING ALARMS!!!! WE ARE OUT OF BURNER ACCOUNTS!!! @everyone");
         return null;
     }else{
         //change LastActive to null, signifing the account is being used
@@ -339,10 +339,10 @@ const deleteTask = async (task, taskName, userId) => {
                 await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
             }
         }else{
-            //logChannel.send("Message failed @everyone");
+            logChannel.send("Message failed @everyone");
         }
     } catch (error) {
-        //logChannel.send("Error Deleting Task Message: " + error);
+        logChannel.send("Error Deleting Task Message: " + error);
     }
 
     try {
@@ -353,7 +353,7 @@ const deleteTask = async (task, taskName, userId) => {
         //delete from server
         task.terminate();
     } catch (error) {
-        //logChannel.send("Error Deleting Task: " + error);
+        logChannel.send("Error Deleting Task: " + error);
     }
 }
 
@@ -410,7 +410,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Error getting channel for command: " + error);
-        //logChannel.send("Error getting channel for command: " + error);
+        logChannel.send("Error getting channel for command: " + error);
     }
 
     try {
@@ -558,11 +558,11 @@ const executeCommand = async (interaction) => {
             }
             else if(interaction.commandName === "change-language" && interaction.user.id === '456168609639694376'){
                 //const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).limit(20).sort({_id: -1});
-                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).limit(15).toArray();
+                const newAccs = await burnerAccountDB.find({LastActive: 10000000000000}).toArray();
                 //const newAccs = await burnerAccountDB.find({Username: 'ocybhfve@znemail.com'});
 
                 const initialAccountSetUp = async (acc) => {
-                    let warmer = new Worker('./viewAccount.js', { workerData:{
+                    let warmer = new Worker('./initialAccountSetUp.js', { workerData:{
                         username: acc.Username,
                         password: acc.Password,
                         proxy: acc.Proxy,
@@ -586,11 +586,11 @@ const executeCommand = async (interaction) => {
                             //Delete the burner account
                             await burnerAccountDB.deleteOne({_id: oldAccountObj._id});
                         }
-                    }); 
+                    });
                     
                     await new Promise(r => setTimeout(r, 60000));
 
-                    await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: 1}});
+                    await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {LastActive: Date.now()}});
                 }
 
                 for await(const acc of newAccs){
@@ -707,7 +707,7 @@ const executeCommand = async (interaction) => {
                 // Regular expression patterns
                 const arrayRegex = /\[(.*?)\]/g;
 
-                for(let i = 0; i < accountArray.length; i++){// previously -> 24 of C:\Users\falkt\Documents\Facebook Accounts\order_25447706.txt 
+                for(let i = 24; i < 44; i++){// previously -> 44 of C:\Users\falkt\Documents\Facebook Accounts\order_25447706.txt 
 
                     //collect the cookie array
                     const cookiesMatch = accountArray[i].match(arrayRegex);
@@ -725,7 +725,7 @@ const executeCommand = async (interaction) => {
                     if(await burnerAccountDB.findOne({Username: email}) == null){
                         //get a static proxy
                         const proxyObj = await getStaticFacebookBurnerProxy();
-                        if(i < 38){//begin now
+                        if(i < 100){//begin now
                             await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: Date.now() - (2 * days), NextWarming: Date.now()});
                         }else{//warming period
                             await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: Date.now(), NextWarming: Date.now()});
@@ -902,7 +902,7 @@ const executeCommand = async (interaction) => {
         }
     } catch (error) {
         console.log("Command Error: \n\t" + error);
-        //logChannel.send("Command Error: \n\t" + error);
+        logChannel.send("Command Error: \n\t" + error);
         Channel.send("Command Error: \n\t" + error);
     }
 }
