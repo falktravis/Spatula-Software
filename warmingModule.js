@@ -75,7 +75,7 @@ const warmAccs = async() => {
                     proxy: warmingAccounts[i].Proxy,
                     cookies: warmingAccounts[i].Cookies,
                     platform: warmingAccounts[i].Platform,
-                    changeLanguage: (warmingAccounts[i].Start < Date.now() - (2 * days))
+                    changeLanguage: true//(warmingAccounts[i].Start < Date.now() - (2 * days))
                 }});
 
                 if(warmingAccounts[i].Start < Date.now() - (2 * days)){
