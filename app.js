@@ -202,22 +202,22 @@ const facebookListener = async (message, task, user) => {
 
 //run daily tasks at the same time every day
 const RunDailyTasks = async () => {
-    try {
-        await metricsChannel.send("run daily tasks");
-        scanDatabase();
-
-        //log metrics for the day
-        const today = new Date();
-        let numAccs = await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}});
-        let numTasks = (await taskDB.countDocuments({}))
-        await metricsChannel.send(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + "\nTasks: " + numTasks + "\nAccounts: " + numAccs + "\nBans: " + banCount);
+    setTimeout(async () => {
+        try {
+            await metricsChannel.send("run daily tasks");
+            scanDatabase();
     
-        setTimeout(async () => {
+            //log metrics for the day
+            const today = new Date();
+            let numAccs = await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}});
+            let numTasks = (await taskDB.countDocuments({}))
+            await metricsChannel.send(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + "\nTasks: " + numTasks + "\nAccounts: " + numAccs + "\nBans: " + banCount);
+
             RunDailyTasks();
-        }, 86400000) //24 hours
-    } catch (error) {
-        logChannel.send("Error running daily tasks: " + error);
-    }
+        } catch (error) {
+            logChannel.send("Error running daily tasks: " + error);
+        }
+    }, 86400000) //24 hours
 }
 
 //scan database for non-paying users
