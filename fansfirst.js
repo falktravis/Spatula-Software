@@ -32,7 +32,7 @@ client.on('ready', async () => {
             logChannel = await client.channels.fetch('1224149224552267909');
         }
     } catch (error) {
-        errorMessage('Error fetching channel', error);
+        await logChannel.send('Error fetching channel: ' + error);
     }
 
     //Start up
@@ -59,7 +59,7 @@ const endTask = async () => {
         }
         parentPort.postMessage("Success");
     } catch (error) {
-        errorMessage("Error closing browser: ", error);
+        await logChannel.send("Error closing browser: " + error);
     }
 }
 
@@ -74,7 +74,7 @@ const getRandomInterval = () => {
         const number = minNumber + Math.pow(random, power) * range;
         return Math.round(number);
     } catch (error) {
-        errorMessage('error getting random interval', error);
+        logChannel.send('error getting random interval' + error);
     }
 }
 
@@ -101,7 +101,7 @@ const logPageContent = async (page) => {
         });
         await fs.unlink('screenshot.png');
     }catch(error){
-        errorMessage('error login content: ', error);
+        await logChannel.send('error login content: ' + error);
     }
 }
 
@@ -153,14 +153,14 @@ const start = async () => {
                     }
                 }
             }catch (error) {
-                errorMessage("Error with handling network response", error);
+                await logChannel.send("Error with handling network response" + error);
             }
         });
 
         await mainPage.setRequestInterception(true);
         mainPage.on('request', async request => {
             const resource = request.resourceType();
-            if(resource != 'document'){
+            if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'fetch' && resource != 'other'){
                 request.abort();
             }else{
                 request.continue();
@@ -169,7 +169,7 @@ const start = async () => {
 
         //go to the search page
         try {
-            await mainPage.goto(workerData.link, { waitUntil: 'domcontentloaded', timeout: 50000});//networkidle2
+            await mainPage.goto(workerData.link, { waitUntil: 'load', timeout: 50000});//networkidle2
         } catch (error) {await logChannel.send("Timeout on going to link")}
 
         
@@ -181,20 +181,24 @@ const start = async () => {
         }
     }catch(error){
         await logPageContent(mainPage);
-        errorMessage('error with start', error);
+        await logChannel.send('error with start' + error);
     }
 }
 
 const getListings = async () => {
     try{
         if(startError == false){
-            return await mainPage.evalutate(() => {
+            try {
+                await mainPage.waitForSelector("#seatsList > div > div:nth-child(1) > div > button:nth-child(3)");
+            } catch (error) {await logChannel.send("Error waiting for button")}
+
+            return await mainPage.evaluate(() => {
                 document.querySelector("#seatsList > div > div:nth-child(1) > div > button:nth-child(3)").click()
                 return parseFloat((document.querySelector("#seatsList > div > ul > div:nth-child(1) > div > div:nth-child(3) > aside").innerText).replace(/[^0-9.]/g, ''))
             })
         }
     }catch (error){
-        errorMessage('Error with setting listing storage', error);
+        await logChannel.send('Error with setting listing storage' + error);
     }
 }
 
@@ -202,14 +206,16 @@ const getListings = async () => {
 function interval() {
     setTimeout(async () => {
         //start up a new page with fresh proxy and get listings
+        await mainPage.reload({ waitUntil: 'load', timeout: 50000});
         let currentListing = await getListings();
+        console.log("Current Listing: " + currentListing);
 
         //newPost is actually new
         if(currentListing < listingStorage){
             console.log("New Post: " + currentListing);
 
             let data = await mainPage.evaluate(() => {
-                return document.querySelector("#seatsList > div > ul > div:nth-child(1) > div > div:nth-child(2) > aside").innerText + "\n" + document.querySelector('#seatsList > div > ul > div:nth-child(1) > div > div.jss824.jss857').innerText
+                return document.querySelector("#seatsList > div > ul > div:nth-child(1) > div > div:nth-child(2) > aside").innerText + "\n" + document.querySelector('#seatsList > div > ul > div:nth-child(1) > div > div').innerText
             })
             
             //check for listing deleted and collection error
@@ -222,7 +228,7 @@ function interval() {
                     .setTimestamp(new Date())
                 ]});
             }catch(error){
-                errorMessage('Error with item notification', error);
+                await logChannel.send('Error with item notification' + error);
             }
         }
         
