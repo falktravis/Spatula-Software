@@ -2,8 +2,9 @@
 /*
 *run this script to register commands in discord server
 
-
 */
+
+
 const { REST, Routes } = require('discord.js');
 require('dotenv').config();
 const fs = require('node:fs');
@@ -21,7 +22,7 @@ for (const file of commandFiles) {
 }
 
 // Construct and prepare an instance of the REST module
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN_PLACEHOLDER);
 
 // and deploy your commands!
 (async () => {
@@ -31,7 +32,7 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 		// The put method is used to fully refresh all commands in the guild with the current set
 		const data = await rest.put(
 			//Routes.applicationCommands(process.env.DISCORD_APPLICATION_ID), //*For global
-			Routes.applicationGuildCommands(process.env.DISCORD_TEST_APPLICATION_ID, process.env.DISCORD_TEST_GUILD_ID), //*for private control pannel
+			Routes.applicationGuildCommands(process.env.DISCORD_APPLICATION_ID, process.env.DISCORD_GUILD_ID), //*for private control pannel
 			{ body: commands },
 		);
 
@@ -43,10 +44,9 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 })();
 
 
+
 /*
 *delete command
-
-
 
 const { REST, Routes } = require('discord.js');
 require('dotenv').config();
@@ -56,12 +56,12 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 // ...
 
 // for guild-based commands
-rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID, '1175241982856134748'))
+rest.delete(Routes.applicationGuildCommand(process.env.DISCORD_TEST_CLIENT_ID, process.env.DISCORD_TEST_GUILD_ID, '1220567228093567017'))
 	.then(() => console.log('Successfully deleted guild command'))
 	.catch(console.error);
 
 // for global commands
-rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1175241982856134748'))
+rest.delete(Routes.applicationCommand(process.env.DISCORD_CLIENT_ID, '1175255470743748659'))
 	.then(() => console.log('Successfully deleted application command'))
 	.catch(console.error);
 

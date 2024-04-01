@@ -2,8 +2,8 @@ const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('facebook-delete-task')
-		.setDescription('Delete Facebook Task')
+		.setName('delete-task')
+		.setDescription('Delete Task')
         .addStringOption(option => 
             option.setName('task-name')
                 .setDescription('Name of Task')

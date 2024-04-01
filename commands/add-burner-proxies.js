@@ -7,7 +7,11 @@ module.exports = {
         .addStringOption(option => 
             option.setName('proxy-list')
                 .setDescription('list of proxies')
-                .setRequired(true)),
+                .setRequired(true))
+		.addStringOption(option => 
+			option.setName('proxy-group')
+				.setDescription('proxy group for refreshing')
+				.setRequired(true)),
 	async execute(interaction) {
 		await interaction.editReply(`adding burner proxies...`);
 	},

@@ -43,12 +43,12 @@ client.on('ready', async () => {
 let warmingBrowser;
 let warmingPage;
 
-const warmAccount = async () => {
+/*const warmAccount = async () => {
     //initiate a browser with random resi proxy and request interception
     try{
         warmingBrowser = await puppeteer.launch({
             headless: false,
-            args: ['--no-sandbox', '--host-resolver-rules="MAP * ~NOTFOUND, EXCLUDE myproxy"', `--proxy-server=${workerData.proxy}`]//  
+            args: ['--no-sandbox', `--proxy-server=${workerData.proxy}`]//  
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
@@ -57,14 +57,12 @@ const warmAccount = async () => {
         const context = warmingBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
-        //await warmingPage.authenticate({'username':'ESKKz1f02E', 'password':'7172'});
-        await warmingPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
-
         //change the viewport
         await warmingPage.setViewport({ width: 1366, height: 768 });
 
         //change http headers
-        await warmingPage.setExtraHTTPHeaders({
+        warmingPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
+        warmingPage.setExtraHTTPHeaders({
             'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
             'SEC-CH-UA-ARCH': '"x86"',
             'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
@@ -77,7 +75,7 @@ const warmAccount = async () => {
         //Set cookies in browser
         await warmingPage.setCookie(...workerData.cookies);
 
-        /*await warmingPage.setRequestInterception(true);
+        await warmingPage.setRequestInterception(true);
         warmingPage.on('request', async request => {
             const resource = request.resourceType();
             if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
@@ -85,7 +83,7 @@ const warmAccount = async () => {
             }else{
                 request.continue();
             }
-        });*/
+        });
 
         //testing pages
         await warmingPage.goto('https://facebook.com/', { waitUntil: 'domcontentloaded' });
@@ -97,54 +95,53 @@ const warmAccount = async () => {
     }catch(error){
         errorMessage('Error with page initiation', error);
     }
-}
+}*/
 
-/*const warmAccount = async () => {
+const warmAccount = async () => {
     //initiate the new page for collecting data
-    let itemPageFullLoad = false;
-    let itemPage;
 
     try{
         warmingBrowser = await puppeteer.launch({
             headless: false,
-            args: ['--no-sandbox', `--user-agent=Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36`, `--proxy-server=${workerData.proxy}`]//
+            args: ['--no-sandbox']//, `--proxy-server=${workerData.proxy}`
         });
         let pages = await warmingBrowser.pages();
         warmingPage = pages[0];
 
-        await warmingPage.setRequestInterception(true);
-        warmingPage.on('request', async request => {
-            const resource = request.resourceType();
-            if(itemPageFullLoad){
-                if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
-            }else{
-                if(resource != 'document'){
-                    request.abort();
-                }else{
-                    request.continue();
-                }
-            }
-        });
+        //close the notif popup
+        const context = warmingBrowser.defaultBrowserContext();
+        context.overridePermissions("https://www.facebook.com", ["notifications"]);
 
         //change http headers
+        warmingPage.setUserAgent(`Mozilla/5.0 (${platformConverter(workerData.platform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
         warmingPage.setExtraHTTPHeaders({
-            'Referer': 'https://www.facebook.com/login',
-            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114',
-            'Sec-Ch-Ua-Full-Version-List': 'Not.A/Brand";v="8.0.0.0", "Chromium";v="114.0.5735.199", "Google Chrome";v="114.0.5735.199',
-            'Sec-Ch-Ua-Platform': workerData.platform
+            'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
+            'SEC-CH-UA-ARCH': '"x86"',
+            'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
+            'SEC-CH-UA-MOBILE':	'?0',
+            'Sec-Ch-Ua-Platform': `"${workerData.platform}"`,
+            'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
+            'Referer': 'https://www.facebook.com/login'
         });
 
         //Set cookies in browser
-        await warmingPage.setCookie(...workerData.cookies);
+        //await warmingPage.setCookie(...workerData.cookies);
 
         //change the viewport
         warmingPage.setViewport({ width: 1366, height: 768 });
 
-        await warmingPage.goto('https://www.facebook.com/marketplace/item/2089249541415783/', { waitUntil: 'networkidle2' });
+        await warmingPage.setRequestInterception(true);
+        warmingPage.on('request', async request => {
+            const resource = request.resourceType();
+            //resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'
+            if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){//   && resource != 'xhr' && resource != 'websocket' && resource != 'eventsource'
+                request.abort();
+            }else{
+                request.continue();
+            }
+        });
+
+        await warmingPage.goto('https://www.facebook.com/marketplace/item/765340698906379/', { waitUntil: 'load' });
     }catch(error){
         errorMessage('Error with product page initiation, no message', error);
     }
@@ -152,30 +149,28 @@ const warmAccount = async () => {
     //get post data
     try{
         //check for video
-        let isVideo = false;
-        if(await warmingPage.$('.xpz12be[aria-label="Loading..."]') != null){
-            console.log('video sequence: ');
-            itemPageFullLoad = true;
-            await warmingPage.reload({ waitUntil: 'networkidle2' });
-            isVideo = true;
+        if(await warmingPage.$('.xcg96fm img') == null){
+            console.log('video')
+            //await warmingPage.reload({ waitUntil: 'load', timeout: 60000});
         }
 
         //set post data obj
-        postObj = await warmingPage.evaluate((isVideo) => {
+        postObj = await warmingPage.evaluate(() => {
+
             return {
-                img: isVideo ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
+                img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
                 title: document.querySelector('div.xyamay9 h1').innerText,
-                date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText,
+                date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span').innerText),
                 description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
                 shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                price: document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0) + document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.split(document.querySelector('div.xyamay9 div.x1xmf6yo').innerText.charAt(0))[1]
+                price: ((document.querySelector('div.xyamay9 div.x1xmf6yo').innerText).match(/\d+/g)).join('')
             };
-        }, isVideo);
+        });
 
         console.log(postObj);
         //await warmingPage.close();
     } catch(error){
         errorMessage('Error with getting item data', error);
     }
-}*/
+}
 warmAccount();

@@ -17,7 +17,6 @@ module.exports = {
                 .setDescription('Set the type of messaging for the task')
                 .setRequired(true)
                 .addChoices(				
-                    { name: 'Auto Messaging', value: 1 },
                     { name: 'Manual Messaging', value: 2 },
                     { name: 'No Messaging', value: 3 },
                 ))

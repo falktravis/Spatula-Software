@@ -7,7 +7,6 @@ const fs = require('fs/promises');
 
 //discord.js
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ActionRowBuilder, ButtonStyle } = require('discord.js');
-const { log } = require('console');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
@@ -62,21 +61,10 @@ client.on('ready', async () => {
     await start();
 });
 
-//Sigterm testing, idek
-process.on('SIGTERM', async (err) => {
-    await logChannel.send("sig term: " + workerData.name);
-});
-
 // Add cleanup logic on uncaught exception
 process.on('uncaughtException', async (err) => {
     try {
         await logChannel.send('Uncaught Exception in ' + workerData.name + ': ' + err);
-        /*if(mainBrowser != null){
-            await mainPage.close();
-            await mainBrowser.close();
-        }
-        //parentPort.postMessage({action: 'restart'});
-        //process.exit(1); // Terminate the process*/
     } catch (error) {
         await logChannel.send('Error handling exception: ' + workerData.Name);
     }
@@ -86,12 +74,6 @@ process.on('uncaughtException', async (err) => {
 process.on('unhandledRejection', async (reason, promise) => {
     try {
         await logChannel.send('Unhandled Rejection in ' + workerData.name + ':' + reason);
-        /*if(mainBrowser != null){
-            await mainPage.close();
-            await mainBrowser.close();
-        }
-        parentPort.postMessage({action: 'restart'});
-        process.exit(1); // Terminate the process*/
     } catch (error) {
         await logChannel.send('Error handling rejection: ' + workerData.Name);
     }
@@ -102,7 +84,6 @@ const errorMessage = (message, error) => {
     try {
         console.log(workerData.name + ': ' + message + ': ' + error);
         logChannel.send(workerData.name + ': ' + message + ': ' + error);//.stack
-        //mainChannel.send(workerData.name + ': ' + message + ': ' + error); .... :)
     } catch (error) {
         logChannel.send('error with error message??? Who tf knows...' + error)
     }
@@ -133,7 +114,7 @@ const endTask = async () => {
 const getRandomInterval = () => {
     try {
         const minNumber = 520000; //9 mins
-        const maxNumber = 720000; //12 mins
+        const maxNumber = 720000; //13 mins
         const power = 1.5;
         const random = Math.random();
         const range = maxNumber - minNumber;
@@ -432,7 +413,6 @@ const sendMessage = async (link) => {
 
 let startError = false; //stops script on error
 let isInitiation = true;
-let newPost;
 let mainBrowser;
 let mainPage;
 let itemPage;
@@ -502,9 +482,11 @@ const start = async () => {
                         startError = true; 
         
                         if(redirectURL.includes('/checkpoint/')){
+                            mainPageInitiate = true;
                             try {
-                                mainPage.waitForSelector('[aria-label="Dismiss"]', {timeout: 30000});
-                            } catch (error) {}
+                                await mainPage.reload();
+                                await mainPage.waitForSelector('[aria-label="Dismiss"]', {timeout: 30000});
+                            } catch (error) {logChannel.send("Error waiting for dismiss: " + error)}
                             await logPageContent(mainPage);
 
                             if(await mainPage.$('[aria-label="Dismiss"]') != null){
@@ -711,6 +693,7 @@ const setListingStorage = async () => {
 //the meat and cheese
 function interval() {
     let reloadBlock = false;
+    let newPost;
     setTimeout(async () => {
         isDormant = false;
 
@@ -795,7 +778,6 @@ function interval() {
 
                 let isNotification = false;
                 let postNum = 1;
-                let newPostExists = true;
                 //get the price of the post
                 let price;
                 try {
@@ -814,7 +796,7 @@ function interval() {
                     errorMessage('Error with getting price', error);
                 }
 
-                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPostExists){
+                while(mainListingStorage[0] != newPost && mainListingStorage[1] != newPost && mainListingStorage[2] != newPost && mainListingStorage[3] != newPost && postNum  <= 20 && newPost != null){
 
                     //check if "The price is right"
                     if(price <= workerData.maxPrice){
@@ -822,112 +804,84 @@ function interval() {
                         isNotification = true;
 
                         let postObj;
-                        if(workerData.messageType == 1){//auto message
-                            await sendMessage(newPost);
-    
-                            //get post data
-                            try{
-                                postObj = await itemPage.evaluate(() => {
-                                    return {
-                                        img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
-                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span').innerText),
-                                        description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                        shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                        price: ((document.querySelector('div.xyamay9 div.x1xmf6yo').innerText).match(/\d+/g)).join('')
-                                    };
-                                });
-    
-                                await itemBrowser.close();
-                                itemBrowser = null;
-                            } catch(error){
-                                if(itemBrowser != null){
-                                    await logPageContent(itemPage);
-                                    await itemPage.close();
-                                    await itemBrowser.close();
-                                    itemBrowser = null;
-                                }
-                                errorMessage('Error with getting item data', error);
-                            }
-                        }else{
-                            let itemPageFullLoad = false;
-                            try{
-                                itemPage = await mainBrowser.newPage();
-                                await itemPage.setRequestInterception(true);
-                                itemPage.on('request', async request => {
-                                    const resource = request.resourceType();
-                                    if(itemPageFullLoad){
-                                        request.continue(); //!If this doesn't change data collection error, change it back
-                                        /*if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
-                                            request.abort();
-                                        }else{
-                                            request.continue();
-                                        }*/
+                        let itemPageFullLoad = false;
+                        try{
+                            itemPage = await mainBrowser.newPage();
+                            await itemPage.setRequestInterception(true);
+                            itemPage.on('request', async request => {
+                                const resource = request.resourceType();
+                                if(itemPageFullLoad){
+                                    request.continue(); //!If this doesn't change data collection error, change it back
+                                    /*if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
+                                        request.abort();
                                     }else{
-                                        if(resource != 'document'){
-                                            request.abort();
-                                        }else{
-                                            request.continue();
-                                        }
+                                        request.continue();
+                                    }*/
+                                }else{
+                                    if(resource != 'document'){
+                                        request.abort();
+                                    }else{
+                                        request.continue();
                                     }
-                                });
-    
-                                //create a cursor
-                                messageCursor = createCursor(itemPage);
-
-                                //change the viewport
-                                itemPage.setViewport({ width: 1366, height: 768 });
-
-                                //change http headers
-                                itemPage.setUserAgent(`Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
-                                itemPage.setExtraHTTPHeaders({
-                                    'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
-                                    'SEC-CH-UA-ARCH': '"x86"',
-                                    'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
-                                    'SEC-CH-UA-MOBILE':	'?0',
-                                    'Sec-Ch-Ua-Platform': `"${burnerPlatform}"`,
-                                    'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
-                                    'Referer': workerData.link
-                                });
-    
-                                await itemPage.goto(newPost, { waitUntil: 'domcontentloaded', timeout: 60000});
-                            }catch(error){
-                                errorMessage('Error with product page initiation, no message', error);
-                            }
-    
-                            //get post data
-                            try{
-                                //check for video
-                                if(await itemPage.$('.xcg96fm img') == null){
-                                    itemPageFullLoad = true;
-                                    await itemPage.reload();
-                                    try {
-                                        await itemPage.waitForSelector('.xcg96fm img');
-                                    } catch (error) {await logChannel.send("Error waiting for image selector")}
                                 }
+                            });
 
-                                //set post data obj
-                                postObj = await itemPage.evaluate(() => {
+                            //create a cursor
+                            messageCursor = createCursor(itemPage);
 
-                                    return {
-                                        img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
-                                        title: document.querySelector('div.xyamay9 h1').innerText,
-                                        date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span').innerText),
-                                        description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                        shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                        price: ((document.querySelector('div.xyamay9 div.x1xmf6yo').innerText).match(/\d+/g)).join('')
-                                    };
-                                });
-    
+                            //change the viewport
+                            itemPage.setViewport({ width: 1366, height: 768 });
+
+                            //change http headers
+                            itemPage.setUserAgent(`Mozilla/5.0 (${platformConverter(burnerPlatform)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36`);
+                            itemPage.setExtraHTTPHeaders({
+                                'Sec-Ch-Ua': 'Not.A/Brand";v="8", "Chromium";v="121", "Google Chrome";v="121',
+                                'SEC-CH-UA-ARCH': '"x86"',
+                                'Sec-Ch-Ua-Full-Version': "121.0.6167.185",
+                                'SEC-CH-UA-MOBILE':	'?0',
+                                'Sec-Ch-Ua-Platform': `"${burnerPlatform}"`,
+                                'SEC-CH-UA-PLATFORM-VERSION': '15.0.0',
+                                'Referer': workerData.link
+                            });
+
+                            await itemPage.goto(newPost, { waitUntil: 'domcontentloaded', timeout: 60000});
+                        }catch(error){
+                            errorMessage('Error with product page initiation, no message', error);
+                        }
+
+                        //get post data
+                        try{
+                            //check for video
+                            if(await itemPage.$('.xcg96fm img') == null){
+                                itemPageFullLoad = true;
+                                await itemPage.reload();
+                                try {
+                                    await itemPage.waitForSelector('.xcg96fm img');
+                                } catch (error) {await logChannel.send("Error waiting for image selector")}
+                            }
+
+                            //set post data obj
+                            postObj = await itemPage.evaluate(() => {
+
+                                return {
+                                    img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
+                                    title: document.querySelector('div.xyamay9 h1').innerText,
+                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span').innerText),
+                                    description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
+                                    shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
+                                    price: ((document.querySelector('div.xyamay9 div.x1xmf6yo').innerText).match(/\d+/g)).join('')
+                                };
+                            });
+
+                            await itemPage.close();
+                            itemPage = null;
+                        } catch(error){
+                            if(itemPage != null){
+                                await logPageContent(itemPage);
                                 await itemPage.close();
                                 itemPage = null;
-                            } catch(error){
-                                if(itemPage != null){
-                                    await logPageContent(itemPage);
-                                    await itemPage.close();
-                                    itemPage = null;
-                                }
-                                errorMessage(`Error with getting item data at ${newPost}`, error);
                             }
+                            errorMessage(`Error with getting item data at ${newPost}`, error);
                         }
                         
                         //check for listing deleted and collection error
@@ -1026,7 +980,7 @@ function interval() {
                                 }
                             }
                         }else{
-                            newPostExists = false;
+                            newPost = null;
                         }
                     } catch (error) {
                         errorMessage('Error re-setting new post', error);
