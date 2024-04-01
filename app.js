@@ -145,7 +145,7 @@ const facebookListener = async (message, task, user) => {
                 await taskDB.updateOne({UserId: user, Name: task}, {$set: {burnerAccount: newAccountObj.Username}});
         
                 //send the data to the task
-                users.get(user).facebook.get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
+                users.get(user).get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
             }
         }
         //**Restarting task script */
@@ -235,7 +235,7 @@ const scanDatabase = async () => {
 
         //actually delete the users from map
         usersToDelete.forEach(async (userId) => {
-            users.get(userId).facebook.forEach(async (task, key) => {
+            users.get(userId).forEach(async (task, key) => {
                 await deleteTask(task, key, userId);
             })
                             
@@ -913,8 +913,8 @@ const executeCommand = async (interaction) => {
             else if(interaction.commandName === 'delete-all-tasks' && interaction.user.id === '456168609639694376'){
                 for await(const userObj of users){
                     console.log(userObj);
-                    if(userObj[1].facebook != null){
-                        for (const task of userObj[1].facebook){
+                    if(userObj != null){
+                        for (const task of userObj[1]){
                             console.log('delete task');
                             await deleteTask(task[1], task[0], userObj[0]);
                         }
