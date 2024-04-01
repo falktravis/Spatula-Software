@@ -477,12 +477,12 @@ const start = async () => {
                 if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
                     const redirectURL = response.headers()['location'];
                     if(await redirectURL.split('?')[0] != (workerData.link).split('?')[0]){
+                        mainPageInitiate = true;
                         console.log(`Redirected to: ${redirectURL}`);
                         logChannel.send(`${workerData.name} redirected to: ${redirectURL}`);
                         startError = true; 
         
                         if(redirectURL.includes('/checkpoint/')){
-                            mainPageInitiate = true;
                             try {
                                 //await mainPage.reload();
                                 await mainPage.waitForSelector('[aria-label="Dismiss"]', {timeout: 30000});
@@ -493,6 +493,7 @@ const start = async () => {
                                 await pause();
                                 await mainCursor.click('[aria-label="Dismiss"]');
                                 await logChannel.send("dismiss warming");
+                                mainPageInitiate = false;
                             }else{
                                 await logChannel.send('Account banned: ' + burnerUsername);
                                 console.log('Account banned: ' + burnerUsername);
