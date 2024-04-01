@@ -504,13 +504,14 @@ const executeCommand = async (interaction) => {
                             //set the task in db
                             await taskDB.insertOne({Platform: 'fansfirst', UserId: interaction.user.id, Name: interaction.options.getString("name"), Link: interaction.options.getString("link")});
 
+                            //get a random proxy
                             const randomProxyObj = await staticProxyDB.aggregate([{ $sample: { size: 1 } }]).toArray();
 
                             //create a new worker and add it to the map
-                            user.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
+                            user.set(interaction.options.getString("name"), new Worker('./fansfirst.js', { workerData:{
                                 name: interaction.options.getString("name"),
                                 link: interaction.options.getString("link"),
-                                proxy: randomProxyObj[0].Proxy,
+                                proxy: randomProxyObj.Proxy
                             }}));
 
                             Channel.send("Created " + interaction.options.getString("name"));
@@ -576,7 +577,17 @@ const executeCommand = async (interaction) => {
                                 user.get(taskObj.Name).on('message', message => facebookListener(message, taskObj.Name, taskObj.UserId)); 
                             }
                         }else if(taskObj.Platform == 'fansfirst'){
+                            //get a random proxy
+                            const randomProxyObj = await staticProxyDB.aggregate([{ $sample: { size: 1 } }]).toArray();
 
+                            //create a new worker and add it to the map
+                            user.set(interaction.options.getString("name"), new Worker('./fansfirst.js', { workerData:{
+                                name: taskObj.Name,
+                                link: taskObj.Link,
+                                proxy: randomProxyObj.Proxy
+                            }}));
+
+                            Channel.send("Created " + interaction.options.getString("name"));
                         }else if(taskObj.Platform == 'craigslist'){
 
                         }else if(taskObj.Platform == 'offerup'){

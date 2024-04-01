@@ -484,17 +484,17 @@ const start = async () => {
                         if(redirectURL.includes('/checkpoint/')){
                             mainPageInitiate = true;
                             try {
-                                await mainPage.reload();
+                                //await mainPage.reload();
                                 await mainPage.waitForSelector('[aria-label="Dismiss"]', {timeout: 30000});
                             } catch (error) {logChannel.send("Error waiting for dismiss: " + error)}
                             await logPageContent(mainPage);
 
                             if(await mainPage.$('[aria-label="Dismiss"]') != null){
                                 await pause();
-                                await mainPage.click('[aria-label="Dismiss"]');
+                                await mainCursor.click('[aria-label="Dismiss"]');
                                 await logChannel.send("dismiss warming");
                             }else{
-                                logChannel.send('Account banned: ' + burnerUsername);
+                                await logChannel.send('Account banned: ' + burnerUsername);
                                 console.log('Account banned: ' + burnerUsername);
                         
                                 //message the main script to delete the burner account
@@ -528,13 +528,13 @@ const start = async () => {
         mainPage.on('request', async request => {
             const resource = request.resourceType();
             if(mainPageInitiate){
-                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other'){
+                if(resource != 'document' && resource != 'script' && resource != 'xhr' && resource != 'stylesheet' && resource != 'other' && resource != 'fetch'){
                     request.abort();
                 }else{
                     request.continue();
                 }
             }else{
-                if(resource != 'document'){
+                if(resource != 'document' && resource != 'xhr' && resource != 'fetch'){
                     request.abort();
                 }else{
                     request.continue();
