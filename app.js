@@ -340,15 +340,16 @@ const deleteTask = async (task, taskName, userId) => {
             logChannel.send("Message failed @everyone");
         }
 
-        await task.terminate();
     } catch (error) {
         logChannel.send("Error Deleting Task Message: " + error);
     }
 
     try {
         //update account and proxy stats
-        let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
-        await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$set: {LastActive: Date.now()}});
+        if(taskObj.Platform == 'facebook'){
+            let burnerAccountObj = await burnerAccountDB.findOne({Username: taskObj.burnerAccount});
+            await burnerAccountDB.updateOne({Username: burnerAccountObj.Username}, {$set: {LastActive: Date.now()}});
+        }
 
         //delete from server
         task.terminate();
@@ -511,7 +512,7 @@ const executeCommand = async (interaction) => {
                             user.set(interaction.options.getString("name"), new Worker('./fansfirst.js', { workerData:{
                                 name: interaction.options.getString("name"),
                                 link: interaction.options.getString("link"),
-                                proxy: randomProxyObj.Proxy
+                                proxy: randomProxyObj[0].Proxy
                             }}));
 
                             Channel.send("Created " + interaction.options.getString("name"));
@@ -584,7 +585,7 @@ const executeCommand = async (interaction) => {
                             user.set(interaction.options.getString("name"), new Worker('./fansfirst.js', { workerData:{
                                 name: taskObj.Name,
                                 link: taskObj.Link,
-                                proxy: randomProxyObj.Proxy
+                                proxy: randomProxyObj[0].Proxy
                             }}));
 
                             Channel.send("Created " + interaction.options.getString("name"));

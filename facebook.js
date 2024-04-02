@@ -535,7 +535,7 @@ const start = async () => {
                     request.continue();
                 }
             }else{
-                if(resource != 'document' && resource != 'xhr' && resource != 'fetch'){
+                if(resource != 'document' && resource != 'xhr' && resource != 'fetch' && resource != 'other'){
                     request.abort();
                 }else{
                     request.continue();

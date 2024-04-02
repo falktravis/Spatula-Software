@@ -22,12 +22,12 @@ let logChannel;
 let mainChannel;
 client.on('ready', async () => {
     try {
-        mainChannel = client.channels.cache.get('1224149175537635491');
+        mainChannel = client.channels.cache.get('1224149175537635491');//
         if(mainChannel == null){
             mainChannel = await client.channels.fetch('1224149175537635491');
         }
 
-        logChannel = client.channels.cache.get('1224149224552267909');
+        logChannel = client.channels.cache.get('1224149224552267909');//
         if(logChannel == null){
             logChannel = await client.channels.fetch('1224149224552267909');
         }
