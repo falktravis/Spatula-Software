@@ -475,7 +475,7 @@ const start = async () => {
             try {
                 //detect redirection
                 if ([300, 301, 302, 303, 307, 308].includes(response.status())) {
-                    const redirectURL = response.headers()['location'];
+                    const redirectURL = await response.headers()['location'];
                     if(await redirectURL.split('?')[0] != (workerData.link).split('?')[0]){
                         mainPageInitiate = true;
                         console.log(`Redirected to: ${redirectURL}`);
@@ -512,16 +512,17 @@ const start = async () => {
                             logChannel.send("Rotate Account: " + burnerUsername);
                             if(mainBrowser != null){
                                 await logPageContent(mainPage);
-                                await mainPage.close();
-                                await mainBrowser.close();
-                                mainBrowser = null;
                             }
                             parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
                         }
                     }
                 }
             }catch (error) {
+                parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
                 errorMessage("Error with handling network response", error);
+                if(mainBrowser != null){
+                    await logPageContent(mainPage);
+                }
             }
         });
 
