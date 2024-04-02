@@ -598,7 +598,7 @@ const executeCommand = async (interaction) => {
                         }
                         
                         Channel.send("Created " + taskObj.Name);
-                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10000 + 55000)));
+                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10000 + 3000)));
                     }else{
                         await taskDB.deleteOne({_id: taskObj._id});
                     }
