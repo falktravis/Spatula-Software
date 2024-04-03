@@ -450,8 +450,8 @@ const start = async () => {
         mainBrowser.on('targetdestroyed', async (target) => {
             await logChannel.send(`Target ${target.type()} destroyed at ${workerData.name}: ${target.url()}`);
             if (target.type() === 'page') {
-                await logChannel.send('Page closed @everyone' + workerData.name);
-                parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
+                await logChannel.send('Page closed: ' + workerData.name);
+                //parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
             }
         });
 
