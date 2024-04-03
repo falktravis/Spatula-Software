@@ -220,9 +220,9 @@ function interval() {
             
             //check for listing deleted and collection error
             try{
-                mainChannel.send({ content: "Price Lowered - $" + currentListing, embeds: [new EmbedBuilder()
+                mainChannel.send({embeds: [new EmbedBuilder()
                     .setColor(0x0099FF)
-                    .setTitle("$" + currentListing)
+                    .setTitle("$" + currentListing + " - " + workerData.name)
                     .setURL(workerData.link)
                     .setDescription(data)
                     .setTimestamp(new Date())
