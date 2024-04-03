@@ -582,13 +582,13 @@ const executeCommand = async (interaction) => {
                             const randomProxyObj = await staticProxyDB.aggregate([{ $sample: { size: 1 } }]).toArray();
 
                             //create a new worker and add it to the map
-                            user.set(interaction.options.getString("name"), new Worker('./fansfirst.js', { workerData:{
+                            user.set(taskObj.Name, new Worker('./fansfirst.js', { workerData:{
                                 name: taskObj.Name,
                                 link: taskObj.Link,
                                 proxy: randomProxyObj[0].Proxy
                             }}));
 
-                            Channel.send("Created " + interaction.options.getString("name"));
+                            Channel.send("Created " + taskObj.Name);
                         }else if(taskObj.Platform == 'craigslist'){
 
                         }else if(taskObj.Platform == 'offerup'){
@@ -633,7 +633,7 @@ const executeCommand = async (interaction) => {
             else if(interaction.commandName === "list"){
                 const taskArray = await taskDB.find({UserId: interaction.user.id}).toArray();
 
-                if(taskArray != null){
+                if(taskArray[0] != null){
                     let messagingTypes = ["Auto Messaging", "Manual Messaging", "No Messaging"];
 
                     for (let i = 0; i < taskArray.length; i++){

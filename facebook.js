@@ -448,6 +448,15 @@ const start = async () => {
         let pages = await mainBrowser.pages();
         mainPage = pages[0];
 
+        // Listen for the 'targetdestroyed' event
+        mainBrowser.on('targetdestroyed', async (target) => {
+            await logChannel.send(`Target ${target.type()} destroyed at ${workerData.name}: ${target.url()}`);
+            if (target.type() === 'page') {
+                await logChannel.send('Page closed @everyone' + workerData.name);
+                parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
+            }
+        });
+
         //close the notif popup
         const context = mainBrowser.defaultBrowserContext();
         context.overridePermissions("https://www.facebook.com", ["notifications"]);
