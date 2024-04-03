@@ -247,8 +247,6 @@ const accountRotation = () => {
 const login = async () => {
     try {
         logChannel.send("Re-Login Required: " + burnerUsername);
-        mainPageInitiate = true;
-        await mainPage.reload({waitUntil: 'load'});
 
         //check for this weird shit
         if(await mainPage.$('[title="Allow all cookies"]') != null){
