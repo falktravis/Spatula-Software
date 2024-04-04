@@ -62,8 +62,7 @@ process.on('unhandledRejection', async (reason, promise) => {
 //start warming accs for the day
 const warmAccs = async() => {
     try {
-        //!remove last active requirement for {NextWarming: {$lte: Date.now()}, LastActive: null}  -   We don't want to warm active accs
-        const warmingAccounts = await burnerAccountDB.find({LastActive: 10000000000000}).toArray();
+        const warmingAccounts = await burnerAccountDB.find({NextWarming: {$lte: Date.now()}, LastActive: 10000000000000}).toArray();
         for(let i = 0; i < warmingAccounts.length; i++){
             await warmingLogChannel.send('new warmer: ' + warmingAccounts[i].Username);
             let randomMilliseconds;
@@ -75,7 +74,7 @@ const warmAccs = async() => {
                     proxy: warmingAccounts[i].Proxy,
                     cookies: warmingAccounts[i].Cookies,
                     platform: warmingAccounts[i].Platform,
-                    changeLanguage: true//(warmingAccounts[i].Start < Date.now() - (2 * days))
+                    changeLanguage: (warmingAccounts[i].Start < Date.now() - (2 * days))
                 }});
 
                 if(warmingAccounts[i].Start < Date.now() - (2 * days)){
@@ -85,7 +84,7 @@ const warmAccs = async() => {
                 warmer.on('message', async (message) => {
                     if(message.cookies != null && message.cookies != []){
                         await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {Cookies: message.cookies}});
-                        await warmingLogChannel.send('updating cookies for: ' + warmingAccounts[i].Username);//!Testing and such
+                        await warmingLogChannel.send('updating cookies for: ' + warmingAccounts[i].Username);
                     }else if(message.action == 'ban'){
 
                         //decrease the proxy account num before deleting account
@@ -96,11 +95,11 @@ const warmAccs = async() => {
                         await burnerAccountDB.deleteOne({_id: oldAccountObj._id});
                     }else if(message.languageChange == true){
                         await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {LastActive: Date.now()}});
-                        await warmingLogChannel.send('Language Change Success: ' + warmingAccounts[i].Username);//!Testing and such
+                        await warmingLogChannel.send('Language Change Success: ' + warmingAccounts[i].Username);
                     }
                 }); 
 
-                // Random number of milliseconds between 3 and 4 days
+                // Random number of milliseconds between 2 and 3 days
                 randomMilliseconds = Math.floor(Math.random() * (1 * days) + 2 * days);
             }/*else{
                 let warmer = new Worker('./warmAccount.js', { workerData:{
