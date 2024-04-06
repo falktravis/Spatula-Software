@@ -212,6 +212,7 @@ const RunDailyTasks = async () => {
             let numAccs = await burnerAccountDB.countDocuments({LastActive: {$ne: 10000000000000}});
             let numTasks = (await taskDB.countDocuments({}))
             await metricsChannel.send(today.getFullYear() + "/" + (today.getMonth() + 1) + "/" + today.getDate() + "\nTasks: " + numTasks + "\nAccounts: " + numAccs + "\nBans: " + banCount);
+            banCount = 0;
 
             RunDailyTasks();
         } catch (error) {
