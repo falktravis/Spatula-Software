@@ -36,8 +36,8 @@ let banCount = 0;
         userDB = mongoClient.db('Spatula-Software').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
 
-        //integration testing accounts - {Start: 1709527992829}
-        //regular accounts - {Start: 1709786152699}
+        //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Instant language change - Start: 1712033452459
+        //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Delayed language change - Start: 1712206252459
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -589,12 +589,17 @@ const executeCommand = async (interaction) => {
                             }}));
 
                             Channel.send("Created " + taskObj.Name);
-                        }else if(taskObj.Platform == 'craigslist'){
+                        }else if(taskObj.Platform == 'craigslist' || taskObj.Platform == 'ebay' || taskObj.Platform == 'offerup'){
+                            //create a new worker and add it to the map
+                            user.set(taskObj.Name, new Worker('./task.js', { workerData:{
+                                name: taskObj.Name,
+                                link: taskObj.Link,
+                                platform: taskObj.Platform,
+                                zipcode: taskObj.Zipcode,
+                                channel: taskObj.ChannelId
+                            }}));
 
-                        }else if(taskObj.Platform == 'offerup'){
-
-                        }else if(taskObj.Platform == 'ebay'){
-
+                            Channel.send("Created " + taskObj.Name);
                         }
                         
                         Channel.send("Created " + taskObj.Name);
@@ -725,6 +730,8 @@ const executeCommand = async (interaction) => {
 
                 const accountArray = fileContents.split('\n');
 
+                const startTime = Date.now();
+
                 //** Reset Cookies for null insertion
                 /* 
                 let accs = await burnerAccountDB.find({Cookies: null}).toArray();
@@ -777,10 +784,10 @@ const executeCommand = async (interaction) => {
                     if(await burnerAccountDB.findOne({Username: email}) == null){
                         //get a static proxy
                         const proxyObj = await getStaticFacebookBurnerProxy();
-                        if(i < 100){//begin now
-                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: Date.now() - (2 * days), NextWarming: Date.now()});
+                        if(i < 20){//begin now
+                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime - (2 * days), NextWarming: startTime});
                         }else{//warming period
-                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: Date.now(), NextWarming: Date.now()});
+                            await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, NextWarming: startTime});
                         }
                     }
 

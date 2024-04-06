@@ -447,13 +447,13 @@ const start = async () => {
         mainPage = pages[0];
 
         // Listen for the 'targetdestroyed' event
-        mainBrowser.on('targetdestroyed', async (target) => {
-            await logChannel.send(`Target ${target.type()} destroyed at ${workerData.name}: ${target.url()}`);
+        /*mainBrowser.on('targetdestroyed', async (target) => {
             if (target.type() === 'page') {
                 await logChannel.send('Page closed: ' + workerData.name);
                 //parentPort.postMessage({action: 'rotateAccount', username: burnerUsername, cookies: null});
             }
-        });
+        });*/
+        //?Maybe check for specifically the main page close?
 
         //close the notif popup
         const context = mainBrowser.defaultBrowserContext();
