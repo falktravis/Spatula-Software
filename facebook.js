@@ -733,7 +733,7 @@ function interval() {
                     logChannel.send("Reload block: " + workerData.name);
                 }else if(await mainPage.$(".x1lliihq .x3ct3a4 a") == null && await mainPage.$('[aria-label="Browse Marketplace"]') == null && await mainPage.$('div.xx6bls6') == null){
                     await mainPage.reload({waitUntil: 'domcontentloaded'});
-                    logPageContent(mainPage);
+                    await logPageContent(mainPage);
                     logChannel.send('Refresh for null .href error');
                 }
 
