@@ -205,7 +205,7 @@ const start = async () => {
         } catch (error) {await logChannel.send("Timeout on going to link")}
 
         if(isInitiation){
-            listingStorage = await getListings();
+            listingStorage = [await getListing(1), await getListing(2), await getListing(3), await getListing(4)];
             interval();
             console.log("Main Storage: " + listingStorage);
             isInitiation = false;
@@ -217,21 +217,21 @@ const start = async () => {
     }
 }
 
-const getListings = async () => {
+const getListing = async (num) => {
     try{
         if(startError == false){
             if(workerData.platform == "Ebay"){
-                return await mainPage.evaluate(() => {
-
-                });
+                postObj = await itemPage.evaluate(() => {
+                    (document.querySelector(`.srp-results > :nth-child(${num}) a`).href).split('?')[0]
+                })
             }else if(workerData.platform == "Craigslist"){
-                return await mainPage.evaluate(() => {
-
-                });
+                postObj = await itemPage.evaluate(() => {
+                    document.querySelector(`.cl-results-page > ol > :nth-child(${num}) a`).href
+                })
             }else if(workerData.platform == "Offerup"){
-                return await mainPage.evaluate(() => {
-
-                });
+                postObj = await itemPage.evaluate(() => {
+                    document.querySelector(`#__next > div.jss7 > div.jss9 > main > div.jss2 > div > div > div > div.jss311 > div > :nth-child(${num + 1})`).href
+                })
             }
         }
     }catch (error){
@@ -245,8 +245,7 @@ function interval() {
 
         //start up a new page with fresh proxy and get listings
         await start();
-        let currentListings = await getListings();
-        let newPost = currentListings[0];
+        let newPost = await getListing(1);
         let postNum = 1;
 
         //newPost is actually new
@@ -256,22 +255,23 @@ function interval() {
             //collect post data
             let postObj;
             try {
+                //Create item page
                 let itemPage = await mainBrowser.newPage();
-                await itemPage.goto(newPost, { waitUntil: 'domcontentloaded', timeout: 50000});//networkidle2
+                await itemPage.goto(newPost, { waitUntil: 'domcontentloaded', timeout: 50000});
 
-                //check if there is another listing that exists
+                //set postObj
                 if(workerData.platform == "Ebay"){
-                    postObj = await itemPage.evaluate(() => {
-
-                    })
+                    return await mainPage.evaluate((num) => {
+    
+                    }, num);
                 }else if(workerData.platform == "Craigslist"){
-                    postObj = await itemPage.evaluate(() => {
-
-                    })
+                    return await mainPage.evaluate((num) => {
+    
+                    }, num);
                 }else if(workerData.platform == "Offerup"){
-                    postObj = await itemPage.evaluate(() => {
-
-                    })
+                    return await mainPage.evaluate((num) => {
+    
+                    }, num);
                 }
             } catch (error) {
                 errorMessage('Error collecting post data', error);
@@ -304,34 +304,16 @@ function interval() {
 
             //Update newPost
             postNum++;
-            try {
-                //check if there is another listing that exists
-                if(workerData.platform == "Ebay"){
-                    newPost = await mainPage.evaluate((num) => {
-                        let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`)?.href;
-                        return link?.substring(0, link?.indexOf("?"));
-                    }, postNum);
-                }else if(workerData.platform == "Craigslist"){
-                    newPost = await mainPage.evaluate((num) => {
-                        let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`)?.href;
-                        return link?.substring(0, link?.indexOf("?"));
-                    }, postNum);
-                }else if(workerData.platform == "Offerup"){
-                    newPost = await mainPage.evaluate((num) => {
-                        let link = document.querySelector(`div.x1xfsgkm > :nth-child(1) div > :nth-child(${num}) a`)?.href;
-                        return link?.substring(0, link?.indexOf("?"));
-                    }, postNum);
-                }
-            } catch (error) {
-                errorMessage('Error re-setting new post', error);
-            }
+            newPost = await getListing(1);
 
             //ping the user
             await mainChannel.send("New Notifications @everyone");
-
-            //set the main listing storage
-            listingStorage = currentListings;
         }
+
+    
+        //set the main listing storage
+        listingStorage = [await getListing(1), await getListing(2), await getListing(3), await getListing(4)];
+
         interval();
     }, getRandomInterval());
 } 

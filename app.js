@@ -557,6 +557,7 @@ const executeCommand = async (interaction) => {
                                     userObj = await userDB.findOne({UserId: taskObj.UserId});
                                 }
     
+                                console.log('create');
                                 //create a new worker and add it to the map
                                 user.set(taskObj.Name, new Worker('./facebook.js', { workerData:{
                                     name: taskObj.Name,
@@ -589,7 +590,6 @@ const executeCommand = async (interaction) => {
                                 proxy: randomProxyObj[0].Proxy
                             }}));
 
-                            Channel.send("Created " + taskObj.Name);
                         }else if(taskObj.Platform == 'craigslist' || taskObj.Platform == 'ebay' || taskObj.Platform == 'offerup'){
                             //create a new worker and add it to the map
                             user.set(taskObj.Name, new Worker('./task.js', { workerData:{
@@ -600,7 +600,6 @@ const executeCommand = async (interaction) => {
                                 channel: taskObj.ChannelId
                             }}));
 
-                            Channel.send("Created " + taskObj.Name);
                         }
                         
                         Channel.send("Created " + taskObj.Name);
