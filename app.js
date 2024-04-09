@@ -556,8 +556,7 @@ const executeCommand = async (interaction) => {
                                 if(taskObj.MessageType != 3){
                                     userObj = await userDB.findOne({UserId: taskObj.UserId});
                                 }
-    
-                                console.log('create');
+   
                                 //create a new worker and add it to the map
                                 user.set(taskObj.Name, new Worker('./facebook.js', { workerData:{
                                     name: taskObj.Name,
