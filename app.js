@@ -24,6 +24,7 @@ let staticProxyDB;
 let burnerAccountDB;
 let userDB;
 let taskDB;
+let postDB;
 let days = 24 * 60 * 60 * 1000;
 let banCount = 0;
 (async () => {
@@ -35,6 +36,7 @@ let banCount = 0;
         burnerAccountDB = mongoClient.db('Spatula-Software').collection('burnerAccounts');
         userDB = mongoClient.db('Spatula-Software').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
+        postDB = mongoClient.db('Spatula-Software').collection('Posts');
 
         //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Instant language change - Start: 1712033452459
         //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Delayed language change - Start: 1712206252459
