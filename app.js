@@ -147,7 +147,18 @@ const facebookListener = async (message, task, user) => {
                 //send the data to the task
                 users.get(user).get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
             }
+        }else if(message.action == "newPosts"){
+            for await (post of message.posts){
+                //check the post is not already processed
+                if((await postDB.findOne({URL: post?.URL})) == null){
+                    //insert in db
+                    await postDB.insertOne({Title: post?.title, Description: post?.description, Img: post?.img, Price: post?.price, Specifics: post?.specifics, URL: post?.URL, Platform: 'Facebook', UserId: user, LogTime: Date.now()});
+                }else{
+                    await logChannel.send("Post already processed: " + post.URL);
+                }
+            }
         }
+
         //**Restarting task script */
         /*else if(message.action == 'restart'){
             logChannel.send('Restarting task');

@@ -703,6 +703,7 @@ const setListingStorage = async () => {
 function interval() {
     let reloadBlock = false;
     let newPost;
+    let postArr = []; //**For SS MAX Testing */
     setTimeout(async () => {
         isDormant = false;
 
@@ -820,12 +821,7 @@ function interval() {
                             itemPage.on('request', async request => {
                                 const resource = request.resourceType();
                                 if(itemPageFullLoad){
-                                    request.continue(); //!If this doesn't change data collection error, change it back
-                                    /*if(resource != 'document' && resource != 'script' && resource != 'other' && resource != 'media' && resource != 'fetch'){
-                                        request.abort();
-                                    }else{
-                                        request.continue();
-                                    }*/
+                                    request.continue();
                                 }else{
                                     if(resource != 'document'){
                                         request.abort();
@@ -873,12 +869,13 @@ function interval() {
                             postObj = await itemPage.evaluate(() => {
 
                                 return {
-                                    img: (document.querySelector('.xcg96fm img').src).includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img').src : document.querySelector('.xcg96fm img').src,
-                                    title: document.querySelector('div.xyamay9 h1').innerText,
-                                    date: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)').innerText : " ") : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa').innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span').innerText),
-                                    description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span') != null ? document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span').innerText : ' ',
-                                    shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span').innerText : document.querySelector('div.xod5an3 div.x1gslohp span').innerText) : ' ',
-                                    price: ((document.querySelector('div.xyamay9 div.x1xmf6yo').innerText).match(/\d+/g)).join('')
+                                    img: (document.querySelector('.xcg96fm img')?.src)?.includes("video") ? document.querySelector('[aria-label="Thumbnail 1"] img')?.src : document.querySelector('.xcg96fm img')?.src,
+                                    title: document.querySelector('div.xyamay9 h1')?.innerText,
+                                    date: document.querySelector('[aria-label="Buy now"]') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)')?.innerText : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa')?.innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span')?.innerText),
+                                    description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span')?.innerText,
+                                    shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span')?.innerText : document.querySelector('div.xod5an3 div.x1gslohp span')?.innerText) : ' ',
+                                    specifics: document.querySelector("div.x1n2onr6 > div:nth-child(5) > div.x1gslohp")?.innerText,
+                                    price: ((document.querySelector('div.xyamay9 div.x1xmf6yo')?.innerText)?.match(/\d+/g))?.join('')
                                 };
                             });
 
@@ -897,7 +894,7 @@ function interval() {
                         if(postObj != null){
                             //manage description
                             if(postObj?.description != null){
-                                if(postObj?.description.length > 700){
+                                if(postObj?.description?.length > 700){
                                     postObj.description = (postObj?.description)?.substring(0, 700) + '...';
                                 }
                             }
@@ -905,14 +902,14 @@ function interval() {
                             //Handle Discord messaging
                             if(workerData.messageType != 2){//if its not manual messaging
                                 try{
-                                    mainChannel.send({ content: "$" + postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
+                                    mainChannel.send({ content: "$" + postObj?.price + " - " + postObj?.title, embeds: [new EmbedBuilder()
                                         .setColor(0x0099FF)
-                                        .setTitle("$" + postObj.price + " - " + postObj.title)
+                                        .setTitle("$" + postObj?.price + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
-                                        .setDescription(postObj.description)
-                                        .addFields({ name: postObj.date, value: postObj.shipping })
-                                        .setImage(postObj.img)
+                                        .setDescription(postObj?.description)
+                                        .addFields({ name: postObj?.date, value: postObj?.shipping })
+                                        .setImage(postObj?.img)
                                         .setTimestamp(new Date())
                                     ]});
                                 }catch(error){
@@ -921,14 +918,14 @@ function interval() {
                             }else{
                                 let notification;
                                 try{
-                                    notification = await mainChannel.send({ content: "$" + postObj.price + " - " + postObj.title, embeds: [new EmbedBuilder()
+                                    notification = await mainChannel.send({ content: "$" + postObj?.price + " - " + postObj?.title, embeds: [new EmbedBuilder()
                                         .setColor(0x0099FF)
-                                        .setTitle("$" + postObj.price + " - " + postObj.title)
+                                        .setTitle("$" + postObj?.price + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
-                                        .setDescription(postObj.description)
-                                        .addFields({ name: postObj.date, value: postObj.shipping })
-                                        .setImage(postObj.img)
+                                        .setDescription(postObj?.description)
+                                        .addFields({ name: postObj?.date, value: postObj?.shipping })
+                                        .setImage(postObj?.img)
                                         .setTimestamp(new Date())
                                     ], components: [new ActionRowBuilder()
                                         .addComponents(
@@ -959,6 +956,12 @@ function interval() {
                                     errorMessage('Error collecting new item notification button', error);
                                 }
                             }
+                        }
+
+                        //**For SS MAX Testing */
+                        if(workerData.channel == "1079237211456798941"){
+                            postObj.URL = newPost;
+                            postArr.push(postObj);
                         }
                     }else{
                         console.log("\n\nThe Price is Wrong, price: " + price + " max: " + workerData.maxPrice + "\n\n");
@@ -994,6 +997,11 @@ function interval() {
                     } catch (error) {
                         errorMessage('Error re-setting new post', error);
                     }
+                }
+
+                //**For SS MAX Testing */
+                if(workerData.channel == "1079237211456798941"){
+                    parentPort.postMessage({action: 'newPosts', posts: postArr});
                 }
 
                 //ping the user
