@@ -155,7 +155,7 @@ const facebookListener = async (message, task, user) => {
                 //check the post is not already processed
                 if((await postDB.findOne({URL: post?.URL})) == null){
                     //insert in db
-                    await postDB.insertOne({Title: post?.title, Description: post?.description, Img: post?.img, Price: post?.price, Specifics: post?.specifics, URL: post?.URL, Platform: 'Facebook', UserId: user, LogTime: Date.now()});
+                    await postDB.insertOne({Title: post?.title, Description: post?.description, Imgs: post?.imgs, Price: post?.price, Specifics: post?.specifics, URL: post?.URL, Platform: 'Facebook', UserId: user, Opened: false, LogTime: Date.now()});
                 }else{
                     await logChannel.send("Post already processed: " + post.URL);
                 }
