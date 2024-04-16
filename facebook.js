@@ -875,7 +875,7 @@ function interval() {
                                     date: document.querySelector('[aria-label="Buy now"]') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)')?.innerText : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa')?.innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span')?.innerText),
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span')?.innerText,
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span')?.innerText : document.querySelector('div.xod5an3 div.x1gslohp span')?.innerText) : ' ',
-                                    specifics: (document.querySelector("div.x1n2onr6 > div:nth-child(5) > div.x1gslohp")?.innerText).split('\n'),
+                                    specifics: (document.querySelector("div.x1n2onr6 > div:nth-child(5) > div.x1gslohp")?.innerText)?.split('\n'),
                                     price: ((document.querySelector('div.xyamay9 div.x1xmf6yo')?.innerText)?.match(/\d+/g))?.join('')
                                 };
                             });
@@ -910,7 +910,7 @@ function interval() {
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description)
                                         .addFields({ name: postObj?.date, value: postObj?.shipping })
-                                        .setImage(postObj?.img)
+                                        .setImage(postObj?.imgs[0])
                                         .setTimestamp(new Date())
                                     ]});
                                 }catch(error){
@@ -926,7 +926,7 @@ function interval() {
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description)
                                         .addFields({ name: postObj?.date, value: postObj?.shipping })
-                                        .setImage(postObj?.img)
+                                        .setImage(postObj?.imgs[0])
                                         .setTimestamp(new Date())
                                     ], components: [new ActionRowBuilder()
                                         .addComponents(
