@@ -74,12 +74,12 @@ let metricsChannel;
 discordClient.on('ready', async () => {
     try {
         //!Adjusted For Testing
-        logChannel = discordClient.channels.cache.get('1228441458697179147');
+        logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
-            logChannel = await discordClient.channels.fetch('1228441458697179147');
+            logChannel = await discordClient.channels.fetch('1091532766522376243');
         }
         
-        /*warmingLogChannel = discordClient.channels.cache.get('1196915422042259466');
+        warmingLogChannel = discordClient.channels.cache.get('1196915422042259466');
         if(warmingLogChannel == null){
             warmingLogChannel = await discordClient.channels.fetch('1196915422042259466');
         }
@@ -89,7 +89,7 @@ discordClient.on('ready', async () => {
             metricsChannel = await discordClient.channels.fetch('1223126332779794442');
         }
 
-        RunDailyTasks();*/
+        RunDailyTasks();
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
