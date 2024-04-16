@@ -228,7 +228,7 @@ const start = async () => {
                 if(redirectURL.includes('/checkpoint/')){
                     try {
                         initiationPage.waitForSelector('[aria-label="Dismiss"]', {timeout: 30000});
-                    } catch (error) {}
+                    } catch (error) {await Channel.send('no dismiss')}
 
                     if(await initiationPage.$('[aria-label="Dismiss"]') != null){
                         await pause(2);

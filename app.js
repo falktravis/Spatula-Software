@@ -479,6 +479,7 @@ const executeCommand = async (interaction) => {
                                                     messagePlatform: interaction.options.getNumber("message-type") == 3 ? null : userObj.MessageAccount.Platform,
                                                     maxPrice: maxPrice,
                                                     distance: interaction.options.getNumber("distance"),
+                                                    userId: interaction.user.id,
                                                     channel: interaction.channelId,
                                                 }}));
 
@@ -587,6 +588,7 @@ const executeCommand = async (interaction) => {
                                     messagePlatform: taskObj.MessageType == 3 ? null : userObj.MessageAccount.Platform,
                                     maxPrice: maxPrice,
                                     distance: taskObj.Distance,
+                                    userId: taskObj.UserId,
                                     channel: taskObj.ChannelId,
                                 }}));
     

@@ -49,10 +49,10 @@ client.on('ready', async () => {
             mainChannel = await client.channels.fetch(workerData.channel);
         }
 
-        //!Adjusted for testing
-        logChannel = client.channels.cache.get('1228441458697179147');
+        //Adjust for testing -1228441458697179147
+        logChannel = client.channels.cache.get('1091532766522376243');
         if(logChannel == null){
-            logChannel = await client.channels.fetch('1228441458697179147');
+            logChannel = await client.channels.fetch('1091532766522376243');
         }
     } catch (error) {
         errorMessage('Error fetching channel', error);
@@ -960,7 +960,7 @@ function interval() {
                         }
 
                         //**For SS MAX Testing */
-                        if(workerData.channel == "1111129387669127191"){
+                        if(workerData.userId == "330527268021731330" || workerData.userId == "456168609639694376"){
                             postObj.URL = newPost;
                             postArr.push(postObj);
                         }
@@ -1001,7 +1001,7 @@ function interval() {
                 }
 
                 //**For SS MAX Testing */
-                if(workerData.channel == "1111129387669127191"){
+                if(workerData.userId == "330527268021731330" || workerData.userId == "456168609639694376"){
                     parentPort.postMessage({action: 'newPosts', posts: postArr});
                 }
 
