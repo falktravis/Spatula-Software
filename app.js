@@ -42,6 +42,8 @@ let banCount = 0;
 
         //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Instant language change - Start: 1712033452459
         //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Delayed language change - Start: 1712206252459
+        //** 10 Super Expensive hq-accounts - started on 4/18 - Put on fresh proxies - No language change required - Start  */
+        //** 7 DarkStore.biz accounts - started on 4/18 - fresh proxies - no language change - Start: 1713301089378*/
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -756,44 +758,20 @@ const executeCommand = async (interaction) => {
                 const fileContents = fs.readFileSync(interaction.options.getString("path"), 'utf-8');
 
                 const accountArray = fileContents.split('\n');
-
                 const startTime = Date.now();
-
-                //** Reset Cookies for null insertion
-                /* 
-                let accs = await burnerAccountDB.find({Cookies: null}).toArray();
-
-                const accountArray = fileContents.split('\n');
-
-                // Regular expression patterns
                 const arrayRegex = /\[(.*?)\]/g;
-                const emailPasswordRegex = /;([^:;]+):([^:;]+);;/;
 
-                for(let i = 0; i < accountArray.length; i++){
-                    //collect account user and password string
-                    const emailPasswordMatch = accountArray[i].match(emailPasswordRegex);
-                    const email = emailPasswordMatch[1];
-
-                    accs.forEach(async (acc) => {
-                        if(acc.Username == email){
-                            //collect the cookie array
-                            const cookiesMatch = accountArray[i].match(arrayRegex);
-                            const cookieArray = JSON.parse(cookiesMatch[0]);
-
-                            console.log(email);
-
-                            await burnerAccountDB.updateOne({Username: email}, {$set: {Cookies: cookieArray}});
-                        }
-                    })
-                }
-                */
+                //**Reset Cookies For Null Insertion
+                /*if(await burnerAccountDB.findOne({Username: email}) != null){
+                    if(((await burnerAccountDB.findOne({Username: email})).Cookies).length == 0){
+                        console.log("array problem")
+                        await burnerAccountDB.updateOne({Username: email}, {$set: {Cookies: cookieArray}});
+                    }
+                }*/
                 
                 //** Hq-accounts mongodb
 
-                // Regular expression patterns
-                const arrayRegex = /\[(.*?)\]/g;
-
-                for(let i = 0; i < accountArray.length; i++){
+                /*for(let i = 0; i < accountArray.length; i++){
 
                     //collect the cookie array
                     const cookiesMatch = accountArray[i].match(arrayRegex);
@@ -818,16 +796,34 @@ const executeCommand = async (interaction) => {
                         }
                     }
 
-                    //Reset Cookies
-                    /*if(await burnerAccountDB.findOne({Username: email}) != null){
-                        if(((await burnerAccountDB.findOne({Username: email})).Cookies).length == 0){
-                            console.log("array problem")
-                            await burnerAccountDB.updateOne({Username: email}, {$set: {Cookies: cookieArray}});
-                        }
-                    }*/
+                    console.log(email);
+                }*/
+
+                //**DarkStore.biz */
+                for(let i = 0; i < accountArray.length; i++){
+
+                    //collect the cookie array
+                    const cookiesMatch = accountArray[i].match(arrayRegex);
+                    const cookieArray = JSON.parse(cookiesMatch[0]);
+
+                    //collect account user and password string
+                    const data = accountArray[i].split('\t');
+                    const email = data[0];
+                    const password = data[1];
+
+                    //get random platform
+                    const randomPlatform = "Windows";//platforms[Math.floor(Math.random() * platforms.length)]; 
+
+                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, LastActive: startTime, Start: startTime});
+                    if(await burnerAccountDB.findOne({Username: email}) == null){
+                        //get a static proxy
+                        const proxyObj = await getStaticFacebookBurnerProxy();
+                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime - (2 * days), NextWarming: startTime});
+                    }
                     console.log(email);
                 }
 
+                //**Accs Market? Iderk */
                 /*for(let i = 0; i < accountArray.length; i++){
                     const accountInfo = accountArray[i].split('|');
 

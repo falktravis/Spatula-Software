@@ -870,7 +870,7 @@ function interval() {
                             postObj = await itemPage.evaluate(() => {
 
                                 return {
-                                    imgs: Array.from(document.querySelectorAll('[aria-label*="Thumbnail"] img'))?.map((img) => img?.src),
+                                    imgs: Array.from(document.querySelectorAll('[aria-label*="Thumbnail"] img')) != null ? Array.from(document.querySelectorAll('[aria-label*="Thumbnail"] img'))?.map((img) => img?.src) : [document.querySelector('.xcg96fm img').src],
                                     title: document.querySelector('div.xyamay9 h1')?.innerText,
                                     date: document.querySelector('[aria-label="Buy now"]') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)')?.innerText : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa')?.innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span')?.innerText),
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span')?.innerText,
@@ -910,7 +910,7 @@ function interval() {
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description)
                                         .addFields({ name: postObj?.date, value: postObj?.shipping })
-                                        .setImage(postObj?.imgs[0])
+                                        .setImage(postObj?.imgs != null ? postObj?.imgs[0] : '')
                                         .setTimestamp(new Date())
                                     ]});
                                 }catch(error){
