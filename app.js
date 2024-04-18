@@ -23,6 +23,7 @@ const mongoClient = new MongoClient(uri, {
 let staticProxyDB;
 let burnerAccountDB;
 let userDB;
+let maxUsersDB;
 let taskDB;
 let postDB;
 let days = 24 * 60 * 60 * 1000;
@@ -35,8 +36,9 @@ let banCount = 0;
         staticProxyDB = mongoClient.db('Spatula-Software').collection('staticProxies');
         burnerAccountDB = mongoClient.db('Spatula-Software').collection('burnerAccounts');
         userDB = mongoClient.db('Spatula-Software').collection('Users');
+        maxUsersDB = mongoClient.db('Spatula-Software-Max').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
-        postDB = mongoClient.db('Spatula-Software').collection('Posts');
+        postDB = mongoClient.db('Spatula-Software-Max').collection('Posts');
 
         //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Instant language change - Start: 1712033452459
         //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Delayed language change - Start: 1712206252459
@@ -151,11 +153,18 @@ const facebookListener = async (message, task, user) => {
                 users.get(user).get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
             }
         }else if(message.action == "newPosts"){
+            const isEmail = (await maxUsersDB.findOne({UserId: user}))?.Notifications?.Email; //!Change to correct userId
+
             for await (post of message.posts){
                 //check the post is not already processed
                 if((await postDB.findOne({URL: post?.URL})) == null){
                     //insert in db
                     await postDB.insertOne({Title: post?.title, Description: post?.description, Imgs: post?.imgs, Price: post?.price, Specifics: post?.specifics, URL: post?.URL, Platform: 'Facebook', UserId: user, Opened: false, LogTime: Date.now()});
+
+                    //send email if necessary
+                    if(isEmail){
+                        //!Send Email to EACH email in list
+                    }
                 }else{
                     await logChannel.send("Post already processed: " + post.URL);
                 }
@@ -220,6 +229,9 @@ const RunDailyTasks = async () => {
         try {
             await metricsChannel.send("run daily tasks");
             scanDatabase();
+            
+            //delete week old posts
+            await postDB.deleteMany({LogTime: {$lte: Date.now() - (7 * days)}});
     
             //log metrics for the day
             const today = new Date();
@@ -238,6 +250,7 @@ const RunDailyTasks = async () => {
 //scan database for non-paying users
 const scanDatabase = async () => {
     try {
+        //scan database for non-paying users
         usersToDelete = [];
 
         //check map against db
