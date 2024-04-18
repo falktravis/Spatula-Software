@@ -75,7 +75,6 @@ let warmingLogChannel;
 let metricsChannel;
 discordClient.on('ready', async () => {
     try {
-        //!Adjusted For Testing
         logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
@@ -631,7 +630,7 @@ const executeCommand = async (interaction) => {
                         }
                         
                         Channel.send("Created " + taskObj.Name);
-                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10000 + 3000)));
+                        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 10000 + 10000)));
                     }else{
                         await taskDB.deleteOne({_id: taskObj._id});
                     }
@@ -829,16 +828,6 @@ const executeCommand = async (interaction) => {
                     console.log(email);
                 }
 
-                /**
-                 * 100 Accounts
-                 * 50 with no warming period
-                 * 30 with a 1 month warming period
-                 * 20 with a 2 month warming period
-                 * 
-                 * 
-                 * Please initiate all these....
-                 * 150 accs....
-                 */
                 /*for(let i = 0; i < accountArray.length; i++){
                     const accountInfo = accountArray[i].split('|');
 
