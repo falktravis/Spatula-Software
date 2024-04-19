@@ -62,7 +62,7 @@ process.on('unhandledRejection', async (reason, promise) => {
 //start warming accs for the day
 const warmAccs = async() => {
     try {
-        const warmingAccounts = await burnerAccountDB.find({LastActive: 10000000000000}).toArray();//!NextWarming: {$lte: Date.now()}, 
+        const warmingAccounts = await burnerAccountDB.find({LastActive: 10000000000000}).toArray();//NextWarming: {$lte: Date.now()}, 
         for(let i = 0; i < warmingAccounts.length; i++){
             await warmingLogChannel.send('new warmer: ' + warmingAccounts[i].Username);
             let randomMilliseconds;
@@ -132,8 +132,8 @@ const warmAccs = async() => {
             await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$set: {NextWarming: Date.now() + randomMilliseconds}});
 
             //wait for a calculated interval
-            //const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
-            const randomInterval = 60000;
+            const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
+            //const randomInterval = 60000;
             await new Promise(r => setTimeout(r, randomInterval));
         }
         await warmingLogChannel.send("Warming Script Finish");

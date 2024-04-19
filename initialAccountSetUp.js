@@ -156,8 +156,7 @@ const login = async () => {
             actions();
         }
     } catch (error) {
-        await Channel.send('error with re-login + ban: ' + error);
-        parentPort.postMessage({action: 'ban', username: workerData.username});
+        await Channel.send('error with re-login: ' + error);
         await initiationBrowser.close();
         await initiationPage.close();
         process.exit();
@@ -383,10 +382,10 @@ const changeLanguage = async () => {
 
 const checkNotifs = async () => {
     try {
-        await initiationPage.waitForSelector('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+        await initiationPage.waitForSelector(('div.x1a2a7pz.xzsf02u.x1rg5ohu > div > svg > g > image'));
         if(await initiationPage.$('div.x1ja2u2z > div:nth-child(2) > span > span > div > div > span > span') != null){//check for unread notifs
             await pause(1);
-            await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+            await initiationCursor.click(('div.x1a2a7pz.xzsf02u.x1rg5ohu > div > svg > g > image'));
             try {
                 await initiationPage.waitForSelector('div.x78zum5 > div:nth-child(3) > div.x4k7w5x.x1jfb8zj > div > div > div.x1n2onr6');
                 await pause(3);
@@ -402,12 +401,12 @@ const checkNotifs = async () => {
                     //scroll down
                     await initiationCursor.click('[href="/"]');
                 }else{
-                    await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+                    await initiationCursor.click(('div.x1a2a7pz.xzsf02u.x1rg5ohu > div > svg > g > image'));
                 }
                 await pause(2);
             } catch (error) {
                 Channel.send("notifs thing: " + error);
-                await initiationCursor.click('div.x1ja2u2z > div:nth-child(2) > span > span > div > a > svg');
+                await initiationCursor.click(('div.x1a2a7pz.xzsf02u.x1rg5ohu > div > svg > g > image'));
             }
         }
     } catch (error) {
