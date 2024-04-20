@@ -876,7 +876,10 @@ function interval() {
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span')?.innerText,
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span')?.innerText : document.querySelector('div.xod5an3 div.x1gslohp span')?.innerText) : ' ',
                                     specifics: Array.from(document.querySelectorAll("div.x1n2onr6 > div:nth-child(5) > div.x1gslohp > div"))?.map((el) => el.innerText),
-                                    price: ((document.querySelector('div.xyamay9 div.x1xmf6yo')?.innerText)?.match(/\d+/g))?.join('')
+                                    ownerLink: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a')?.href,
+                                    ownerName: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a')?.innerText,
+                                    ownerImg: document.querySelector('div.xjp7ctv > div > div > div > div > .xdt5ytf image')?.href?.baseVal,
+                                    //price: ((document.querySelector('div.xyamay9 div.x1xmf6yo')?.innerText)?.match(/\d+/g))?.join('')
                                 };
                             });
 
@@ -903,9 +906,9 @@ function interval() {
                             //Handle Discord messaging
                             if(workerData.messageType != 2){//if its not manual messaging
                                 try{
-                                    mainChannel.send({ content: "$" + postObj?.price + " - " + postObj?.title, embeds: [new EmbedBuilder()
+                                    mainChannel.send({ content: "$" + price?.toLocaleString() + " - " + postObj?.title, embeds: [new EmbedBuilder()
                                         .setColor(0x0099FF)
-                                        .setTitle("$" + postObj?.price + " - " + postObj?.title)
+                                        .setTitle("$" + price?.toLocaleString() + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description)
@@ -919,9 +922,9 @@ function interval() {
                             }else{
                                 let notification;
                                 try{
-                                    notification = await mainChannel.send({ content: "$" + postObj?.price + " - " + postObj?.title, embeds: [new EmbedBuilder()
+                                    notification = await mainChannel.send({ content: "$" + price?.toLocaleString() + " - " + postObj?.title, embeds: [new EmbedBuilder()
                                         .setColor(0x0099FF)
-                                        .setTitle("$" + postObj?.price + " - " + postObj?.title)
+                                        .setTitle("$" + price?.toLocaleString() + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description)
@@ -962,6 +965,7 @@ function interval() {
                         //**For SS MAX Testing */
                         if(workerData.userId == "330527268021731330" || workerData.userId == "456168609639694376"){
                             postObj.URL = newPost;
+                            postObj.price = price;
                             postArr.push(postObj);
                         }
                     }else{

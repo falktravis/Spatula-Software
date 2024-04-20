@@ -160,7 +160,7 @@ const facebookListener = async (message, task, user) => {
                 //check the post is not already processed
                 if((await postDB.findOne({URL: post?.URL})) == null){
                     //insert in db
-                    await postDB.insertOne({Title: post?.title, Description: post?.description, Imgs: post?.imgs, Price: post?.price, Specifics: post?.specifics, URL: post?.URL, Platform: 'Facebook', UserId: user, Opened: false, LogTime: Date.now()});
+                    await postDB.insertOne({Title: post?.title, Description: post?.description, Imgs: post?.imgs, Price: post?.price, Specifics: post?.specifics, URL: post?.URL, OwnerLink: post?.ownerLink, OwnerName: post?.ownerName, OwnerImg: post.ownerImg, Platform: 'Facebook', UserId: user, Opened: false, LogTime: Date.now()});
 
                     //send email if necessary
                     if(isEmail){
@@ -813,6 +813,14 @@ const executeCommand = async (interaction) => {
 
                     //get random platform
                     const randomPlatform = "Windows";//platforms[Math.floor(Math.random() * platforms.length)]; 
+
+                    //!Fix presence values
+                    //console.log(cookieArray.filter((cookie) => cookie.name == 'presence')[0].value)
+                    for(cookie in cookieArray){
+                        if(cookieArray[cookie].name == 'presence'){
+                            cookieArray[cookie].value = 'C%7B%22t3%22%3A%5B%5D%2C%22utc3%22%3A1709695902018%2C%22v%22%3A1%7D';
+                        }
+                    }
 
                     //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, LastActive: startTime, Start: startTime});
                     if(await burnerAccountDB.findOne({Username: email}) == null){
