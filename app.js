@@ -116,7 +116,7 @@ const facebookListener = async (message, task, user) => {
         if(message.action == 'rotateAccount'){
             //set lastActive to now, account is no longer in use
             await burnerAccountDB.updateOne({Username: message.username}, {$set: {LastActive: Date.now()}});
-            if(message.cookies != null && message.cookies != []){
+            if(message?.cookies != null && (message?.cookies)?.length > 0){
                 await burnerAccountDB.updateOne({Username: message.username}, {$set: {Cookies: message.cookies}});
             }
         }else if(message.action == 'languageWrong'){
@@ -360,10 +360,10 @@ const deleteTask = async (task, taskName, userId) => {
 
         if(messageSuccess){
             //set cookies in db
-            if(message.burnerCookies != null && message.burnerCookies != []){
+            if(message?.burnerCookies != null && (message?.burnerCookies)?.length > 0){
                 await burnerAccountDB.updateOne({Username: taskObj.burnerAccount}, {$set: {Cookies: message.burnerCookies}});
             }
-            if(message.messageCookies != null && message.burnerCookies != []){
+            if(message?.messageCookies != null && (message?.messageCookies)?.length > 0){
                 await userDB.updateOne({UserId: userId}, {$set: {'MessageAccount.Cookies': message.messageCookies}});
             }
         }else{
@@ -796,12 +796,11 @@ const executeCommand = async (interaction) => {
                             await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime, NextWarming: startTime});
                         }
                     }
-
                     console.log(email);
                 }*/
 
                 //**Lively Accounts */
-                for(let i = 1; i < accountArray.length; i++){
+                /*for(let i = 1; i < accountArray.length; i++){
                     //collect the cookie array
                     const cookiesMatch = accountArray[i].match(arrayRegex);
                     const stringWithoutQuotes = cookiesMatch[0].replace(/("[^"]*")/g, match => match.replace(/"/, ''));
@@ -822,7 +821,7 @@ const executeCommand = async (interaction) => {
                         await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime - (2 * days), NextWarming: startTime});
                     }
                     console.log(email);
-                }
+                }*/
 
                 //**DarkStore.biz */
                 /*for(let i = 0; i < accountArray.length; i++){
@@ -948,7 +947,7 @@ const executeCommand = async (interaction) => {
                     }});
 
                     warmer.on('message', async (message) => {
-                        if(message.cookies != null && message.cookies != []){
+                        if(message?.cookies != null && (message?.cookies)?.length > 0){
                             await burnerAccountDB.updateOne({Username: acc.Username}, {$set: {Cookies: message.cookies}});
                             console.log('updating cookies for: ' + acc.Username);//!Testing and such
                         }else if(message.action == 'ban'){

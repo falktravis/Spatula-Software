@@ -82,7 +82,7 @@ const warmAccs = async() => {
                 }
 
                 warmer.on('message', async (message) => {
-                    if(message.cookies != null && message.cookies != []){
+                    if(message?.cookies != null && (message?.cookies)?.length > 0){
                         await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {Cookies: message.cookies}});
                         await warmingLogChannel.send('updating cookies for: ' + warmingAccounts[i].Username);
                     }else if(message.action == 'ban'){

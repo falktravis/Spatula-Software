@@ -911,8 +911,8 @@ function interval() {
                                         .setTitle("$" + price?.toLocaleString() + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
-                                        .setDescription(postObj?.description)
-                                        .addFields({ name: postObj?.date, value: postObj?.shipping })
+                                        .setDescription(postObj?.description || '')
+                                        .addFields({ name: postObj?.date || '', value: postObj?.shipping || ''})
                                         .setImage(postObj?.imgs != null ? postObj?.imgs[0] : '')
                                         .setTimestamp(new Date())
                                     ]});
