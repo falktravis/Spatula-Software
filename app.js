@@ -44,6 +44,7 @@ let banCount = 0;
         //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Delayed language change - Start: 1712206252459
         //** 10 Super Expensive hq-accounts - started on 4/18 - Put on fresh proxies - No language change required - Start  */
         //** 7 DarkStore.biz accounts - started on 4/18 - fresh proxies - no language change - Start: 1713301089378*/
+        //** 50 Lively Accounts - Started on 4/21 - fresh proxies - initial script warming but no lan change - Start: 1713545617872 */
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -799,8 +800,32 @@ const executeCommand = async (interaction) => {
                     console.log(email);
                 }*/
 
+                //**Lively Accounts */
+                for(let i = 1; i < accountArray.length; i++){
+                    //collect the cookie array
+                    const cookiesMatch = accountArray[i].match(arrayRegex);
+                    const stringWithoutQuotes = cookiesMatch[0].replace(/("[^"]*")/g, match => match.replace(/"/, ''));
+                    const cookieArray = JSON.parse(stringWithoutQuotes);
+
+                    //collect account user and password string
+                    const data = accountArray[i].split(',');
+                    const email = data[1];
+                    const password = data[2];
+
+                    //get random platform
+                    const randomPlatform = platforms[Math.floor(Math.random() * platforms.length)]; 
+
+                    //console.log({Username: email, Password: password, Cookies: cookieArray, LastActive: 1, Platform: randomPlatform, LastActive: startTime, Start: startTime});
+                    if(await burnerAccountDB.findOne({Username: email}) == null){
+                        //get a static proxy
+                        const proxyObj = await getStaticFacebookBurnerProxy();
+                        await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime - (2 * days), NextWarming: startTime});
+                    }
+                    console.log(email);
+                }
+
                 //**DarkStore.biz */
-                for(let i = 0; i < accountArray.length; i++){
+                /*for(let i = 0; i < accountArray.length; i++){
 
                     //collect the cookie array
                     const cookiesMatch = accountArray[i].match(arrayRegex);
@@ -829,7 +854,7 @@ const executeCommand = async (interaction) => {
                         await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime - (2 * days), NextWarming: startTime});
                     }
                     console.log(email);
-                }
+                }*/
 
                 //**Accs Market? Iderk */
                 /*for(let i = 0; i < accountArray.length; i++){
