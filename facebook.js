@@ -115,7 +115,7 @@ const endTask = async () => {
 const getRandomInterval = () => {
     try {
         const minNumber = 520000; //9 mins
-        const maxNumber = 720000; //13 mins
+        const maxNumber = 800000; //14 mins
         const power = 1.5;
         const random = Math.random();
         const range = maxNumber - minNumber;
@@ -242,7 +242,7 @@ const accountRotation = () => {
         } catch (error) {
             errorMessage("Error with account rotation: ", error);
         }
-    }, (Math.random() * 7200000) + 10800000);//3-5 hours
+    }, (Math.random() * 7200000) + 14400000);//2-4 hours
 }
 
 const login = async () => {
