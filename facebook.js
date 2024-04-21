@@ -875,7 +875,7 @@ function interval() {
                                     date: document.querySelector('[aria-label="Buy now"]') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)')?.innerText : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa')?.innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span')?.innerText),
                                     description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span')?.innerText,
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span')?.innerText : document.querySelector('div.xod5an3 div.x1gslohp span')?.innerText) : ' ',
-                                    specifics: Array.from(document.querySelectorAll("div.x1n2onr6 > div:nth-child(5) > div.x1gslohp > div"))?.map((el) => el.innerText),
+                                    specifics: Array.from(document.querySelectorAll("div.x1n2onr6 > div:nth-child(5) > div.x1gslohp > div.xurb0ha"))?.map((el) => el.innerText),
                                     ownerLink: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a')?.href,
                                     ownerName: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a')?.innerText,
                                     ownerImg: document.querySelector('div.xjp7ctv > div > div > div > div > .xdt5ytf image')?.href?.baseVal,
@@ -918,6 +918,11 @@ function interval() {
                                     ]});
                                 }catch(error){
                                     errorMessage('Error with item notification', error);
+                                    try {
+                                        await logChannel.send(JSON.stringify(postObj));
+                                    } catch (error) {
+                                        console.log(error);
+                                    }
                                 }
                             }else{
                                 let notification;
