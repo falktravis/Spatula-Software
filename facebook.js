@@ -229,9 +229,15 @@ const getPrices = () => {
 const accountRotation = () => {
     setTimeout(async () => {
         try {
-            while(isDormant == false){
+            let trys = 0;
+            while(isDormant == false && trys < 3){
                 console.log('task non dormant');
+                trys++;
                 await new Promise(r => setTimeout(r, 10000));
+            }
+
+            if(trys == 3){
+                logChannel.send('@everyone - is dormant thing');
             }
 
             burnerCookies = await mainPage.cookies();
@@ -596,6 +602,7 @@ const start = async () => {
             await mainPage.reload({ waitUntil: 'load', timeout: 50000});
             start();
         }else{
+            isDormant = true;
             errorMessage('error with start', error);
         }
     }
@@ -906,9 +913,9 @@ function interval() {
                             //Handle Discord messaging
                             if(workerData.messageType != 2){//if its not manual messaging
                                 try{
-                                    mainChannel.send({ content: "$" + price?.toLocaleString() + " - " + postObj?.title, embeds: [new EmbedBuilder()
+                                    mainChannel.send({ content: "$" + price + " - " + postObj?.title, embeds: [new EmbedBuilder()
                                         .setColor(0x0099FF)
-                                        .setTitle("$" + price?.toLocaleString() + " - " + postObj?.title)
+                                        .setTitle("$" + price + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description || '')
@@ -918,18 +925,13 @@ function interval() {
                                     ]});
                                 }catch(error){
                                     errorMessage('Error with item notification', error);
-                                    try {
-                                        await logChannel.send(JSON.stringify(postObj));
-                                    } catch (error) {
-                                        console.log(error);
-                                    }
                                 }
                             }else{
                                 let notification;
                                 try{
-                                    notification = await mainChannel.send({ content: "$" + price?.toLocaleString() + " - " + postObj?.title, embeds: [new EmbedBuilder()
+                                    notification = await mainChannel.send({ content: "$" + price + " - " + postObj?.title, embeds: [new EmbedBuilder()
                                         .setColor(0x0099FF)
-                                        .setTitle("$" + price?.toLocaleString() + " - " + postObj?.title)
+                                        .setTitle("$" + price + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description)
