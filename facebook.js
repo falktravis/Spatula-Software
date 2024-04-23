@@ -84,7 +84,7 @@ process.on('unhandledRejection', async (reason, promise) => {
 const errorMessage = (message, error) => {
     try {
         console.log(workerData.name + ': ' + message + ': ' + error);
-        logChannel.send(workerData.name + ': ' + message + ': ' + error);//.stack
+        logChannel.send(workerData.name + ': ' + message + ': ' + error);
     } catch (error) {
         logChannel.send('error with error message??? Who tf knows...' + error)
     }
@@ -884,7 +884,7 @@ function interval() {
                                     shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span')?.innerText : document.querySelector('div.xod5an3 div.x1gslohp span')?.innerText) : ' ',
                                     specifics: Array.from(document.querySelectorAll("div.x1n2onr6 > div:nth-child(5) > div.x1gslohp > div.xurb0ha"))?.map((el) => el.innerText),
                                     ownerLink: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a')?.href,
-                                    ownerName: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a')?.innerText,
+                                    ownerName: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a > span.xzsf02u')?.innerText,
                                     ownerImg: document.querySelector('div.xjp7ctv > div > div > div > div > .xdt5ytf image')?.href?.baseVal,
                                     //price: ((document.querySelector('div.xyamay9 div.x1xmf6yo')?.innerText)?.match(/\d+/g))?.join('')
                                 };
@@ -913,25 +913,26 @@ function interval() {
                             //Handle Discord messaging
                             if(workerData.messageType != 2){//if its not manual messaging
                                 try{
-                                    mainChannel.send({ content: "$" + price + " - " + postObj?.title, embeds: [new EmbedBuilder()
+                                    mainChannel.send({ content: "$" + price.toLocaleString() + " - " + postObj?.title, embeds: [new EmbedBuilder()
                                         .setColor(0x0099FF)
-                                        .setTitle("$" + price + " - " + postObj?.title)
+                                        .setTitle("$" + price.toLocaleString() + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description || '')
                                         .addFields({ name: postObj?.date || '', value: postObj?.shipping || ''})
-                                        .setImage(postObj?.imgs != null ? postObj?.imgs[0] : '')
+                                        .setImage(postObj?.imgs?.length > 0 ? postObj?.imgs[0] : '')
                                         .setTimestamp(new Date())
                                     ]});
                                 }catch(error){
-                                    errorMessage('Error with item notification', error);
+                                    await logChannel.send(price.toLocaleString() + " - " + newPost + " - " + postObj)
+                                    errorMessage('Error with item notification', error.stack);
                                 }
                             }else{
                                 let notification;
                                 try{
-                                    notification = await mainChannel.send({ content: "$" + price + " - " + postObj?.title, embeds: [new EmbedBuilder()
+                                    notification = await mainChannel.send({ content: "$" + price.toLocaleString() + " - " + postObj?.title, embeds: [new EmbedBuilder()
                                         .setColor(0x0099FF)
-                                        .setTitle("$" + price + " - " + postObj?.title)
+                                        .setTitle("$" + price.toLocaleString() + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
                                         .setDescription(postObj?.description)
