@@ -926,7 +926,7 @@ function interval() {
                                         .setTimestamp(new Date())
                                     ]});
                                 }catch(error){
-                                    await logChannel.send(postObj)
+                                    await logChannel.send("Post Oject - " + JSON.stringify(postObj));
                                     errorMessage('Error with item notification', error);
                                 }
                             }else{

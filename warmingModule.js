@@ -94,7 +94,8 @@ const warmAccs = async() => {
                         //Delete the burner account
                         await burnerAccountDB.deleteOne({_id: oldAccountObj._id});
                     }else if(message.languageChange == true){
-                        await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {LastActive: Date.now()}});
+                        //await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {LastActive: Date.now()}});1700000000000
+                        await burnerAccountDB.updateOne({Username: warmingAccounts[i].Username}, {$set: {Start: 1700000000000}});
                         await warmingLogChannel.send('Language Change Success: ' + warmingAccounts[i].Username);
                     }
                 }); 

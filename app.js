@@ -9,7 +9,7 @@ const discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
 discordClient.login(process.env.DISCORD_BOT_TOKEN);
 
 //node mailer
-const nodemailer = require("nodemailer");
+/*const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
     host: "mail.spatulasoftware.com",
     port: 465,
@@ -25,7 +25,7 @@ transporter.verify(function (error, success) {
     } else {
       console.log("Server is ready to take our messages");
     }
-  });
+  });*/
 
 //Database connection
 const { MongoClient, ServerApiVersion } = require('mongodb');
@@ -68,6 +68,8 @@ let banCount = 0;
         //** 10 Super Expensive hq-accounts - started on 4/18 - Put on fresh proxies - No language change required - Start  */
         //** 7 DarkStore.biz accounts - started on 4/18 - fresh proxies - no language change - Start: 1713301089378*/
         //** 50 Lively Accounts - Started on 4/21 - fresh proxies - initial script warming but no lan change - Start: 1713545617872 */
+        //**33 Lively Accounts - Started on 2/24 - fresh proxies - initial script with instant push - Start: 1713761795039 */
+        //**67 Lively Accounts - Warmed on 2/24 - Started on:  - fresh proxies - initial script with staggered push - Start: 1700000000000 */
     } catch(error){
         await mongoClient.close();
         console.log("Mongo Connection " + error);
@@ -101,7 +103,7 @@ let warmingLogChannel;
 let metricsChannel;
 discordClient.on('ready', async () => {
     try {
-        logChannel = discordClient.channels.cache.get('1091532766522376243');
+        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
         }
@@ -116,7 +118,7 @@ discordClient.on('ready', async () => {
             metricsChannel = await discordClient.channels.fetch('1223126332779794442');
         }
 
-        RunDailyTasks();
+        RunDailyTasks();*/
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
@@ -784,12 +786,13 @@ const executeCommand = async (interaction) => {
                 Channel.send('finish');
             }
             else if(interaction.commandName === 'add-facebook-accounts' && interaction.user.id === '456168609639694376'){
-                const fs = require('fs');
                 const fileContents = fs.readFileSync(interaction.options.getString("path"), 'utf-8');
 
                 const accountArray = fileContents.split('\n');
                 const startTime = Date.now();
                 const arrayRegex = /\[(.*?)\]/g;
+
+                //await resetProxyTracking();
 
                 //**Reset Cookies For Null Insertion
                 /*if(await burnerAccountDB.findOne({Username: email}) != null){
@@ -829,7 +832,7 @@ const executeCommand = async (interaction) => {
                 }*/
 
                 //**Lively Accounts */
-                /*for(let i = 1; i < accountArray.length; i++){
+                for(let i = 1; i < accountArray.length; i++){
                     //collect the cookie array
                     const cookiesMatch = accountArray[i].match(arrayRegex);
                     const stringWithoutQuotes = cookiesMatch[0].replace(/("[^"]*")/g, match => match.replace(/"/, ''));
@@ -850,7 +853,7 @@ const executeCommand = async (interaction) => {
                         await burnerAccountDB.insertOne({Username: email, Password: password, Cookies: cookieArray, Proxy: proxyObj.Proxy, LastActive: 10000000000000, Platform: randomPlatform, ProxyRatio: proxyObj.TotalFacebookBurnerAccounts + 1, Start: startTime - (2 * days), NextWarming: startTime});
                     }
                     console.log(email);
-                }*/
+                }
 
                 //**DarkStore.biz */
                 /*for(let i = 0; i < accountArray.length; i++){
