@@ -611,7 +611,7 @@ const executeCommand = async (interaction) => {
                 await burnerAccountDB.updateMany({LastActive: null}, {$set: {LastActive: Date.now()}});
                 
                 let taskArray = await taskDB.find({});
-                taskArray = [...taskArray, ...(await maxTaskDB.find({}))]
+                //taskArray = [...taskArray, ...(await maxTaskDB.find({}))]
 
                 for await (const taskObj of taskArray){
                     //handle and get the user
