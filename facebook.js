@@ -875,18 +875,20 @@ function interval() {
 
                             //set post data obj
                             postObj = await itemPage.evaluate(() => {
+                                const getValueOrDefault = (value) => {
+                                    return value !== null ? value : '';
+                                };
 
                                 return {
-                                    imgs: Array.from(document.querySelectorAll('[aria-label*="Thumbnail"] img')) != null ? Array.from(document.querySelectorAll('[aria-label*="Thumbnail"] img'))?.map((img) => img?.src) : [document.querySelector('.xcg96fm img').src],
-                                    title: document.querySelector('div.xyamay9 h1')?.innerText,
-                                    date: document.querySelector('[aria-label="Buy now"]') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)')?.innerText : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa')?.innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span')?.innerText),
-                                    description: document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span')?.innerText,
-                                    shipping: document.querySelector('[aria-label="Buy now"]') != null ? (document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span')?.innerText : document.querySelector('div.xod5an3 div.x1gslohp span')?.innerText) : ' ',
+                                    imgs: Array.from(document.querySelectorAll('[aria-label*="Thumbnail"] img'))?.map((img) => img?.src),
+                                    title: getValueOrDefault(document.querySelector('div.xyamay9 h1')?.innerText),
+                                    date: getValueOrDefault(document.querySelector('[aria-label="Buy now"]') != null ? document.querySelector('div.xyamay9 div.x6ikm8r > :nth-child(2)')?.innerText : (document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa') != null ? document.querySelector('div.x1yztbdb span.x1cpjm7i.x1sibtaa')?.innerText : document.querySelector('div.x1xmf6yo > div > div:nth-child(2) span')?.innerText)),
+                                    description: getValueOrDefault(document.querySelector('div.xz9dl7a.x4uap5.xsag5q8.xkhd6sd.x126k92a span')?.innerText),
+                                    shipping: getValueOrDefault(document.querySelector('div.xyamay9 div.x6ikm8r') != null ? document.querySelector('div.xyamay9 div.x6ikm8r span')?.innerText : document.querySelector('div.xod5an3 div.x1gslohp span')?.innerText),
                                     specifics: Array.from(document.querySelectorAll("div.x1n2onr6 > div:nth-child(5) > div.x1gslohp > div.xurb0ha"))?.map((el) => el.innerText),
-                                    ownerLink: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a')?.href,
-                                    ownerName: document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a > span.xzsf02u')?.innerText,
-                                    ownerImg: document.querySelector('div.xjp7ctv > div > div > div > div > .xdt5ytf image')?.href?.baseVal,
-                                    //price: ((document.querySelector('div.xyamay9 div.x1xmf6yo')?.innerText)?.match(/\d+/g))?.join('')
+                                    ownerLink: getValueOrDefault(document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a')?.href),
+                                    ownerName: getValueOrDefault(document.querySelector('div.xjp7ctv > div > div > div > div > .x1ja2u2z a > span.xzsf02u')?.innerText),
+                                    ownerImg: getValueOrDefault(document.querySelector('div.xjp7ctv > div > div > div > div > .xdt5ytf image')?.href?.baseVal),
                                 };
                             });
 
@@ -924,8 +926,8 @@ function interval() {
                                         .setTimestamp(new Date())
                                     ]});
                                 }catch(error){
-                                    await logChannel.send(price.toLocaleString() + " - " + newPost + " - " + postObj)
-                                    errorMessage('Error with item notification', error.stack);
+                                    await logChannel.send(postObj)
+                                    errorMessage('Error with item notification', error);
                                 }
                             }else{
                                 let notification;
@@ -971,7 +973,7 @@ function interval() {
                         }
 
                         //**For SS MAX Testing */
-                        if(workerData.userId == "330527268021731330" || workerData.userId == "456168609639694376"){
+                        if(workerData.userId == "330527268021731330" || workerData.userId == "456168609639694376" || workerData.messageType == null){
                             postObj.URL = newPost;
                             postObj.price = price;
                             postArr.push(postObj);
@@ -1013,7 +1015,7 @@ function interval() {
                 }
 
                 //**For SS MAX Testing */
-                if(workerData.userId == "330527268021731330" || workerData.userId == "456168609639694376"){
+                if(workerData.userId == "330527268021731330" || workerData.userId == "456168609639694376" || workerData.messageType == null){
                     parentPort.postMessage({action: 'newPosts', posts: postArr});
                 }
 

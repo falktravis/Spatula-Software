@@ -8,6 +8,25 @@ const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
 const discordClient = new Client({ intents: [GatewayIntentBits.Guilds] });
 discordClient.login(process.env.DISCORD_BOT_TOKEN);
 
+//node mailer
+const nodemailer = require("nodemailer");
+const transporter = nodemailer.createTransport({
+    host: "mail.spatulasoftware.com",
+    port: 465,
+    auth: {
+      user: "admin@spatulasoftware.com",
+      pass: "GrumpyHowl1024",
+    },
+});
+
+transporter.verify(function (error, success) {
+    if (error) {
+      console.log(error);
+    } else {
+      console.log("Server is ready to take our messages");
+    }
+  });
+
 //Database connection
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const { Console } = require('console');
@@ -23,8 +42,10 @@ const mongoClient = new MongoClient(uri, {
 let staticProxyDB;
 let burnerAccountDB;
 let userDB;
-let maxUsersDB;
 let taskDB;
+
+let maxUsersDB;
+let maxTaskDB;
 let postDB;
 let days = 24 * 60 * 60 * 1000;
 let banCount = 0;
@@ -36,8 +57,10 @@ let banCount = 0;
         staticProxyDB = mongoClient.db('Spatula-Software').collection('staticProxies');
         burnerAccountDB = mongoClient.db('Spatula-Software').collection('burnerAccounts');
         userDB = mongoClient.db('Spatula-Software').collection('Users');
-        maxUsersDB = mongoClient.db('Spatula-Software-Max').collection('Users');
         taskDB = mongoClient.db('Spatula-Software').collection('Tasks');
+
+        maxUsersDB = mongoClient.db('Spatula-Software-Max').collection('Users');
+        maxTaskDB = mongoClient.db('Spatula-Software-Max').collection('Tasks');
         postDB = mongoClient.db('Spatula-Software-Max').collection('Posts');
 
         //** 20 burner accounts - Started on 4/4/2024 - Put on non-fresh proxies - Instant language change - Start: 1712033452459
@@ -155,7 +178,7 @@ const facebookListener = async (message, task, user) => {
                 users.get(user).get(task).postMessage({action: 'newAccount', Cookies: newAccountObj.Cookies, Proxy: newAccountObj.Proxy, Username: newAccountObj.Username, Password: newAccountObj.Password, Platform: newAccountObj.Platform});
             }
         }else if(message.action == "newPosts"){
-            const isEmail = (await maxUsersDB.findOne({UserId: user}))?.Notifications?.Email; //!Change to correct userId
+            const notificationsObj = (await maxUsersDB.findOne({UserId: user}))?.Notifications; //!Change to correct userId
 
             for await (post of message.posts){
                 //check the post is not already processed
@@ -164,11 +187,23 @@ const facebookListener = async (message, task, user) => {
                     await postDB.insertOne({Title: post?.title, Description: post?.description, Imgs: post?.imgs, Price: post?.price, Specifics: post?.specifics, URL: post?.URL, OwnerLink: post?.ownerLink, OwnerName: post?.ownerName, OwnerImg: post.ownerImg, Platform: 'Facebook', UserId: user, Opened: false, LogTime: Date.now()});
 
                     //send email if necessary
-                    if(isEmail){
-                        //!Send Email to EACH email in list
+                    if(notificationsObj?.IsEmail && notificationsObj?.EmailList?.length > 0){
+                        try {
+                            await transporter.sendMail({
+                                from: '"Spatula Software" <admin@spatulasoftware.com>',
+                                to: notificationsObj?.EmailList?.join(', '),
+                                subject: post?.title,
+                                html: `<b><a href="${post?.URL}">New Post - ${post?.title}</a></br><img src="${post?.imgs != null ? post?.imgs[0] : ''}" /></b>`,
+                            });
+                        } catch (error) {
+                            logChannel.send("Error sending email notification: " + error);
+                        }
                     }
-                }else{
-                    await logChannel.send("Post already processed: " + post.URL);
+
+                    //send msg on discord if necessary
+                    if(notificationsObj?.discordId != null){
+                        //!DM?
+                    }
                 }
             }
         }
@@ -524,44 +559,59 @@ const executeCommand = async (interaction) => {
                     Channel.send("You do not have an active plan");
                 }
             }
-            else if(interaction.commandName === 'fansfirst-create-task'){
-                await handleUser(interaction.user.id);
+            else if(interaction.commandName === 'create-max-task' && interaction.user.id === '456168609639694376'){
+                await handleUser(interaction.options.getString("user"));
+                const user = users.get(interaction.options.getString("user"));
 
-                //checks if user exists
-                if(users.has(interaction.user.id)){
-                    if(interaction.options.getString("link").includes("https://www.fansfirst.ca/seats")){
-                        //get user
-                        const user = users.get(interaction.user.id);
+                if(interaction.options.getString("link").includes("https://www.facebook.com/marketplace")){
+                    if(interaction.options.getString("link").includes("maxPrice")){
                         if(!user.has(interaction.options.getString("name"))){
-                            //set the task in db
-                            await taskDB.insertOne({Platform: 'fansfirst', UserId: interaction.user.id, Name: interaction.options.getString("name"), Link: interaction.options.getString("link")});
+                            //get max price from link 
+                            let maxPrice = interaction.options.getString("link").match(/[?&]maxPrice=(\d+)/);
+                            maxPrice = parseInt(maxPrice[1]);
 
-                            //get a random proxy
-                            const randomProxyObj = await staticProxyDB.aggregate([{ $sample: { size: 1 } }]).toArray();
+                            //burner account assignment
+                            const burnerAccountObj = await getFacebookAccount();
 
-                            //create a new worker and add it to the map
-                            user.set(interaction.options.getString("name"), new Worker('./fansfirst.js', { workerData:{
-                                name: interaction.options.getString("name"),
-                                link: interaction.options.getString("link"),
-                                proxy: randomProxyObj[0].Proxy
-                            }}));
+                            if(burnerAccountObj != null){
 
-                            Channel.send("Created " + interaction.options.getString("name"));
+                                //set the task in db
+                                await maxTaskDB.insertOne({Platform: 'facebook', Category: interaction.options.getString("category"), UserId: interaction.options.getString("user"), ChannelId: interaction.channelId, Name: interaction.options.getString("name"), burnerAccount: burnerAccountObj.Username, Link: interaction.options.getString("link").replace(/^<|>$/g, ''), MessageType: interaction.options.getNumber("message-type"), Message: interaction.options.getString("message"), Distance: interaction.options.getNumber("distance")});
+
+                                //create a new worker and add it to the map
+                                user.set(interaction.options.getString("name"), new Worker('./facebook.js', { workerData:{
+                                    name: interaction.options.getString("name"),
+                                    link: interaction.options.getString("link").replace(/^<|>$/g, '') + "&sortBy=creation_time_descend&daysSinceListed=1",
+                                    burnerUsername: burnerAccountObj.Username,
+                                    burnerPassword: burnerAccountObj.Password,
+                                    burnerProxy: burnerAccountObj.Proxy,
+                                    burnerCookies: burnerAccountObj.Cookies,
+                                    burnerPlatform: burnerAccountObj.Platform,
+                                    maxPrice: maxPrice,
+                                    distance: interaction.options.getNumber("distance"),
+                                    channel: interaction.channelId,
+                                }}));
+
+                                user.get(interaction.options.getString("name")).on('message', message => facebookListener(message, interaction.options.getString("name"), interaction.options.getString("user"))); 
+
+                                Channel.send("Created " + interaction.options.getString("name"));
+                            }
                         }else{
                             Channel.send("A task with this name already exists, restart the task with a new name.");
                         }
                     }else{
-                        Channel.send("Invalid Link");
+                        Channel.send("Your link must include a max price");
                     }
                 }else{
-                    Channel.send("You do not have an active plan");
+                    Channel.send("Invalid Link");
                 }
             }
             else if(interaction.commandName === 'start-all-tasks' && interaction.user.id === '456168609639694376'){
                 //reset burner accounts
                 await burnerAccountDB.updateMany({LastActive: null}, {$set: {LastActive: Date.now()}});
                 
-                const taskArray = taskDB.find();
+                let taskArray = await taskDB.find({});
+                taskArray = [...taskArray, ...(await maxTaskDB.find({}))]
 
                 for await (const taskObj of taskArray){
                     //handle and get the user
@@ -609,27 +659,6 @@ const executeCommand = async (interaction) => {
     
                                 user.get(taskObj.Name).on('message', message => facebookListener(message, taskObj.Name, taskObj.UserId)); 
                             }
-                        }else if(taskObj.Platform == 'fansfirst'){
-                            //get a random proxy
-                            const randomProxyObj = await staticProxyDB.aggregate([{ $sample: { size: 1 } }]).toArray();
-
-                            //create a new worker and add it to the map
-                            user.set(taskObj.Name, new Worker('./fansfirst.js', { workerData:{
-                                name: taskObj.Name,
-                                link: taskObj.Link,
-                                proxy: randomProxyObj[0].Proxy
-                            }}));
-
-                        }else if(taskObj.Platform == 'craigslist' || taskObj.Platform == 'ebay' || taskObj.Platform == 'offerup'){
-                            //create a new worker and add it to the map
-                            user.set(taskObj.Name, new Worker('./task.js', { workerData:{
-                                name: taskObj.Name,
-                                link: taskObj.Link,
-                                platform: taskObj.Platform,
-                                zipcode: taskObj.Zipcode,
-                                channel: taskObj.ChannelId
-                            }}));
-
                         }
                         
                         Channel.send("Created " + taskObj.Name);
