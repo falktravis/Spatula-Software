@@ -133,7 +133,8 @@ const warmAccs = async() => {
             await burnerAccountDB.updateOne({_id: warmingAccounts[i]._id}, {$set: {NextWarming: Date.now() + randomMilliseconds}});
 
             //wait for a calculated interval
-            const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
+            //const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.35) + ((86000000/warmingAccounts.length) * 0.65);
+            const randomInterval = Math.random() * ((86000000/warmingAccounts.length) * 0.15) + ((86000000/warmingAccounts.length) * 0.10);
             //const randomInterval = 60000;
             await new Promise(r => setTimeout(r, randomInterval));
         }
