@@ -920,9 +920,9 @@ function interval() {
                                         .setTitle("$" + price.toLocaleString() + " - " + postObj?.title)
                                         .setURL(newPost)
                                         .setAuthor({ name: workerData.name })
-                                        .setDescription(postObj?.description || '')
-                                        .addFields({ name: postObj?.date || '', value: postObj?.shipping || ''})
-                                        .setImage(postObj?.imgs?.length > 0 ? postObj?.imgs[0] : '')
+                                        .setDescription(postObj?.description || ' ')
+                                        .addFields({ name: postObj?.date || ' ', value: postObj?.shipping || ' '})
+                                        .setImage(postObj?.imgs?.length > 0 ? postObj?.imgs[0] : null)
                                         .setTimestamp(new Date())
                                     ]});
                                 }catch(error){
