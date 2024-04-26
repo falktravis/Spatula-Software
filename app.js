@@ -103,7 +103,7 @@ let warmingLogChannel;
 let metricsChannel;
 discordClient.on('ready', async () => {
     try {
-        /*logChannel = discordClient.channels.cache.get('1091532766522376243');
+        logChannel = discordClient.channels.cache.get('1091532766522376243');
         if(logChannel == null){
             logChannel = await discordClient.channels.fetch('1091532766522376243');
         }
@@ -118,7 +118,7 @@ discordClient.on('ready', async () => {
             metricsChannel = await discordClient.channels.fetch('1223126332779794442');
         }
 
-        RunDailyTasks();*/
+        RunDailyTasks();
     } catch (error) {
         console.log('Error fetching channel: ' + error)
     }
@@ -189,7 +189,7 @@ const facebookListener = async (message, task, user) => {
                     await postDB.insertOne({Title: post?.title, Description: post?.description, Imgs: post?.imgs, Price: post?.price, Specifics: post?.specifics, URL: post?.URL, OwnerLink: post?.ownerLink, OwnerName: post?.ownerName, OwnerImg: post.ownerImg, Platform: 'Facebook', UserId: user, Opened: false, LogTime: Date.now()});
 
                     //send email if necessary
-                    if(notificationsObj?.IsEmail && notificationsObj?.EmailList?.length > 0){
+                    /*if(notificationsObj?.IsEmail && notificationsObj?.EmailList?.length > 0){
                         try {
                             await transporter.sendMail({
                                 from: '"Spatula Software" <admin@spatulasoftware.com>',
@@ -200,7 +200,7 @@ const facebookListener = async (message, task, user) => {
                         } catch (error) {
                             logChannel.send("Error sending email notification: " + error);
                         }
-                    }
+                    }*/
 
                     //send msg on discord if necessary
                     if(notificationsObj?.discordId != null){
