@@ -126,13 +126,21 @@ discordClient.on('ready', async () => {
 
 // Define a global error handler
 process.on('uncaughtException', async (error) => {
-    console.error('Uncaught Exception:', error);
-    logChannel.send('Uncaught error: ' + error);
+    try {
+        console.error('Uncaught Exception:', error);
+        logChannel.send('Uncaught error: ' + error);
+    } catch (error) {
+        console.error('Uncaught Error while catching Exception:', error);
+    }
 });
 
 process.on('unhandledRejection', async (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    logChannel.send('Uncaught rejection: ' + reason);
+    try {
+        console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+        logChannel.send('Uncaught rejection: ' + reason);
+    } catch (error) {
+        console.error('Uncaught Error while catching Rejection:', error);
+    }
 });
 
 //worker login listening function
